@@ -6,8 +6,9 @@ import { stdin as input, stdout as output } from "node:process";
 dotenv.config();
 dotenv.config({ path: ".env.local", override: true });
 
+// Use the HSL router as the primary region router
 const DIGITRANSIT_ENDPOINT =
-  "https://api.digitransit.fi/routing/v2/finland/gtfs/v1";
+  "https://api.digitransit.fi/routing/v2/hsl/gtfs/v1";
 
 function parseLatLon(inputStr) {
   const cleaned = inputStr.trim();
@@ -66,11 +67,17 @@ async function fetchRoute({ from, to }) {
   }
 
   const query = `
-    query PlanRoute($fromLat: Float!, $fromLon: Float!, $toLat: Float!, $toLon: Float!) {
+    query PlanBicycleRoute(
+      $fromLat: Float!
+      $fromLon: Float!
+      $toLat: Float!
+      $toLon: Float!
+    ) {
       plan(
         from: { lat: $fromLat, lon: $fromLon }
         to: { lat: $toLat, lon: $toLon }
         numItineraries: 1
+        transportModes: [{ mode: BICYCLE }]
       ) {
         itineraries {
           duration
@@ -119,6 +126,14 @@ async function fetchRoute({ from, to }) {
   }
 
   const data = await response.json();
+
+  if (
+    process.env.DEBUG_DIGITRANSIT === "1" ||
+    (process.env.DEBUG_DIGITRANSIT ?? "").toLowerCase() === "true"
+  ) {
+    console.log("\nRaw Digitransit response:");
+    console.dir(data, { depth: null, colors: true });
+  }
 
   if (data.errors) {
     console.error("GraphQL errors:", JSON.stringify(data.errors, null, 2));
