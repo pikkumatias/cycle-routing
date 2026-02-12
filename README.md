@@ -1,73 +1,84 @@
-# React + TypeScript + Vite
+# Cycle Routing
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A small React + TypeScript + Vite project for experimenting with **bicycle routing** using the **Digitransit Routing API** (HSL router).  
+It currently has:
 
-Currently, two official plugins are available:
+- A standard Vite + React app (for future UI work)
+- A Node script that calls the Digitransit Routing API from the terminal and prints a **bicycle route** between two coordinate points
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
 
-## React Compiler
+## Prerequisites
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Node.js** (LTS recommended)
+- **npm**
+- A **Digitransit API key** from the Routing API  
+  See the Digitransit docs: [`https://digitransit.fi/en/developers/apis/1-routing-api/`](https://digitransit.fi/en/developers/apis/1-routing-api/)
 
-## Expanding the ESLint configuration
+---
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Setup
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+Install dependencies:
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Create a local environment file (not committed to git) with your Digitransit API key:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+echo "DIGITRANSIT_API_KEY=your-key-here" > .env.local
 ```
+
+The `scripts/digitransit-route.js` script uses `dotenv` to load variables from `.env` and `.env.local` (with `.env.local` taking precedence).
+
+---
+
+## Running the web app
+
+Start the Vite dev server:
+
+```bash
+npm run dev
+```
+
+Then open the printed URL (usually `http://localhost:5173`) in your browser.
+
+---
+
+## Running a bicycle routing query from the terminal
+
+There is a Node script wired to the **HSL** routing endpoint:
+
+- Endpoint: `https://api.digitransit.fi/routing/v2/hsl/gtfs/v1`
+- Mode: bicycle-only via `transportModes: [{ mode: BICYCLE }]`
+
+Run the script:
+
+```bash
+npm run route
+```
+
+You will be prompted for:
+
+- **From**: `lat,lon` (e.g. `60.192059,24.945831`)
+- **To**: `lat,lon` (e.g. `60.169857,24.938379`)
+
+The script will:
+
+- Call the Digitransit Routing API with those coordinates
+- Request a bicycle itinerary
+- Print total duration, walk distance, and all legs of the route
+
+---
+
+## Debugging the API response
+
+To see the full JSON payload returned by Digitransit (for debugging), set an environment flag when running the script:
+
+```bash
+DEBUG_DIGITRANSIT=1 npm run route
+```
+
+This will log the raw GraphQL response object in addition to the summarized itinerary.
