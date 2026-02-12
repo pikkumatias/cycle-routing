@@ -10,11 +10,10 @@ import {
   Typography,
 } from '@mui/material'
 import './App.css'
-
-type LatLonPair = {
-  lat: number
-  lon: number
-}
+import {
+  parseLatLon,
+  requestBicycleRouteViaBackend,
+} from './api/digitransit'
 
 type RouteFormState = {
   from: string
@@ -25,111 +24,6 @@ type ApiState = {
   loading: boolean
   error: string | null
   response: unknown | null
-}
-
-const DIGITRANSIT_ENDPOINT =
-  'https://api.digitransit.fi/routing/v2/hsl/gtfs/v1'
-
-function parseLatLon(input: string): LatLonPair {
-  const trimmed = input.trim()
-  if (!trimmed) {
-    throw new Error('Value is required')
-  }
-
-  const parts = trimmed.includes(',')
-    ? trimmed.split(',')
-    : trimmed.split(/\s+/)
-
-  if (parts.length !== 2) {
-    throw new Error(
-      'Use "lat,lon" or "lat lon", e.g. 60.192059,24.945831',
-    )
-  }
-
-  const lat = Number(parts[0])
-  const lon = Number(parts[1])
-
-  if (Number.isNaN(lat) || Number.isNaN(lon)) {
-    throw new Error('Latitude and longitude must be numbers')
-  }
-
-  return { lat, lon }
-}
-
-async function fetchBicycleRoute(
-  from: LatLonPair,
-  to: LatLonPair,
-): Promise<unknown> {
-  const apiKey = import.meta.env.VITE_DIGITRANSIT_API_KEY
-
-  if (!apiKey) {
-    throw new Error(
-      'VITE_DIGITRANSIT_API_KEY is not set. Add it to your .env.local file.',
-    )
-  }
-
-  const query = `
-    query PlanBicycleRoute(
-      $fromLat: Float!
-      $fromLon: Float!
-      $toLat: Float!
-      $toLon: Float!
-    ) {
-      plan(
-        from: { lat: $fromLat, lon: $fromLon }
-        to: { lat: $toLat, lon: $toLon }
-        numItineraries: 1
-        transportModes: [{ mode: BICYCLE }]
-      ) {
-        itineraries {
-          duration
-          walkDistance
-          legs {
-            mode
-            startTime
-            endTime
-            distance
-            from { name }
-            to { name }
-            route {
-              shortName
-              longName
-            }
-          }
-        }
-      }
-    }
-  `
-
-  const body = JSON.stringify({
-    query,
-    variables: {
-      fromLat: from.lat,
-      fromLon: from.lon,
-      toLat: to.lat,
-      toLon: to.lon,
-    },
-  })
-
-  const res = await fetch(DIGITRANSIT_ENDPOINT, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'digitransit-subscription-key': apiKey,
-    },
-    body,
-  })
-
-  if (!res.ok) {
-    const text = await res.text()
-    throw new Error(
-      `Routing API error: ${res.status} ${res.statusText}\n${text}`,
-    )
-  }
-
-  const data = await res.json()
-
-  return data
 }
 
 function App() {
@@ -152,7 +46,7 @@ function App() {
 
       setApiState({ loading: true, error: null, response: null })
 
-      const data = await fetchBicycleRoute(from, to)
+      const data = await requestBicycleRouteViaBackend(from, to)
 
       setApiState({ loading: false, error: null, response: data })
     } catch (error) {
