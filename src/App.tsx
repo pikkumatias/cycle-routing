@@ -1,4 +1,5 @@
-import { FormEvent, useState } from 'react'
+import { useState } from 'react'
+import type { FormEvent } from 'react'
 import {
   Alert,
   Box,
@@ -23,7 +24,7 @@ type RouteFormState = {
 type ApiState = {
   loading: boolean
   error: string | null
-  response: unknown | null
+  response: any | null
 }
 
 function App() {
@@ -108,7 +109,7 @@ function App() {
             <Alert severity="error">{apiState.error}</Alert>
           )}
 
-          {apiState.response && (
+          {apiState.response != null && (
             <Box>
               <Typography variant="h6" gutterBottom>
                 Raw API response

@@ -1,16 +1,11 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { fetchBicycleRoute, parseLatLon, type LatLonPair } from './digitransit'
 
-declare global {
-  // eslint-disable-next-line no-var
-  var fetch: typeof fetch | undefined
-}
-
 const mockFetch = vi.fn()
 
 beforeEach(() => {
   mockFetch.mockReset()
-  global.fetch = mockFetch as unknown as typeof fetch
+  globalThis.fetch = mockFetch as unknown as typeof fetch
 })
 
 describe('parseLatLon', () => {
