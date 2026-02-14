@@ -160,7 +160,6 @@ function App() {
           <div className="address-fields">
             <Stack spacing={1.5}>
               <AddressAutocomplete
-                label="From"
                 value={fromOption}
                 onChange={setFromOption}
                 inputValue={fromInput}
@@ -169,7 +168,6 @@ function App() {
                 icon="origin"
               />
               <AddressAutocomplete
-                label="To"
                 value={toOption}
                 onChange={setToOption}
                 inputValue={toInput}

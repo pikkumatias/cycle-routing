@@ -11,7 +11,6 @@ export type AddressOption = {
 }
 
 type AddressAutocompleteProps = {
-  label: string
   value: AddressOption | null
   onChange: (option: AddressOption | null) => void
   inputValue: string
@@ -24,7 +23,6 @@ const DEBOUNCE_MS = 300
 const COORD_PATTERN = /^-?\d+\.?\d*[,\s]+-?\d+\.?\d*$/
 
 export function AddressAutocomplete({
-  label,
   value,
   onChange,
   inputValue,
