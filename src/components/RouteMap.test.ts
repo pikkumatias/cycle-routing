@@ -33,9 +33,9 @@ describe('HSL_TILE_CONFIG', () => {
     expect(config.url).toContain('{z}/{x}/{y}')
   })
 
-  it('requests .png tiles', async () => {
+  it('requests @2x retina .png tiles', async () => {
     const config = await loadConfig()
-    expect(config.url).toMatch(/\{y\}\.png/)
+    expect(config.url).toMatch(/\{y\}@2x\.png/)
   })
 
   it('sets tileSize to 512 to match HSL tile dimensions', async () => {

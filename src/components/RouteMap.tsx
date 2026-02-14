@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   MapContainer,
   TileLayer,
@@ -29,7 +29,7 @@ const defaultIcon = L.icon({
 L.Marker.prototype.options.icon = defaultIcon
 
 export const HSL_TILE_CONFIG = {
-  url: `https://cdn.digitransit.fi/map/v3/hsl-map-en/{z}/{x}/{y}.png?digitransit-subscription-key=${import.meta.env.VITE_DIGITRANSIT_API_KEY}`,
+  url: `https://cdn.digitransit.fi/map/v3/hsl-map-en/{z}/{x}/{y}@2x.png?digitransit-subscription-key=${import.meta.env.VITE_DIGITRANSIT_API_KEY}`,
   tileSize: 512,
   zoomOffset: -1,
   attribution:
@@ -51,6 +51,36 @@ function FitBounds({ bounds, padding = [24, 24] }: FitBoundsProps) {
     map.fitBounds(bounds as L.LatLngBoundsExpression, { padding })
   }, [map, bounds, padding])
   return null
+}
+
+function ZoomIndicator() {
+  const map = useMap()
+  const [zoom, setZoom] = useState(map.getZoom())
+
+  useEffect(() => {
+    const onZoom = () => setZoom(map.getZoom())
+    map.on('zoomend', onZoom)
+    return () => { map.off('zoomend', onZoom) }
+  }, [map])
+
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        top: 10,
+        right: 10,
+        zIndex: 1000,
+        background: 'rgba(255,255,255,0.85)',
+        padding: '4px 8px',
+        borderRadius: 4,
+        fontSize: 12,
+        fontFamily: 'monospace',
+        pointerEvents: 'none',
+      }}
+    >
+      Zoom: {zoom}
+    </div>
+  )
 }
 
 const ALT_ROUTE_COLOR = '#9e9e9e'
@@ -124,6 +154,7 @@ export function RouteMap({
           zoomOffset={HSL_TILE_CONFIG.zoomOffset}
         />
         <FitBounds bounds={bounds.length >= 2 ? bounds : null} />
+        <ZoomIndicator />
         {altLegsArrays.map((altLegs, altIdx) =>
           altLegs.map((leg, legIdx) => (
             <Polyline
