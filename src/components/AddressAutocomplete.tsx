@@ -63,10 +63,8 @@ export function AddressAutocomplete({
       abortRef.current = controller
 
       try {
-        const apiKey = import.meta.env.VITE_DIGITRANSIT_API_KEY
         const results = await fetchGeocodingAutocomplete(
           newValue,
-          apiKey,
           controller.signal,
         )
         if (!controller.signal.aborted) {
