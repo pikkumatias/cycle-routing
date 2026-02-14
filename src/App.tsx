@@ -87,8 +87,16 @@ function App() {
       )
       const bbox = boundsToBbox(combinedBounds)
 
-      // 3. Fetch POIs within the combined bounding box
-      const pois = bbox ? await fetchParksAndWater(bbox) : []
+      // 3. Fetch POIs within the combined bounding box (non-critical, may timeout)
+      let pois: Awaited<ReturnType<typeof fetchParksAndWater>> = []
+      let poisFailed = false
+      if (bbox) {
+        try {
+          pois = await fetchParksAndWater(bbox)
+        } catch {
+          poisFailed = true
+        }
+      }
 
       // 4. Score each route
       const scored = {} as Record<RoutePresetKey, ScoredRoute>
@@ -120,7 +128,7 @@ function App() {
 
       setRoutesState({
         loading: false,
-        error: null,
+        error: poisFailed ? 'Scenic scoring unavailable — Overpass API timed out.' : null,
         routes: scored,
         selectedRoute: 'scenic',
       })
@@ -191,7 +199,9 @@ function App() {
           </Box>
 
           {routesState.error && (
-            <Alert severity="error">{routesState.error}</Alert>
+            <Alert severity={routesState.routes ? 'warning' : 'error'}>
+              {routesState.error}
+            </Alert>
           )}
 
           {routesState.routes && selectedRouteData && (
