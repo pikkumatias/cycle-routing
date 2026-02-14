@@ -28,6 +28,7 @@ const defaultIcon = L.icon({
 })
 L.Marker.prototype.options.icon = defaultIcon
 
+// TODO: Investigate tile rendering at zoom levels 17-18
 export const HSL_TILE_CONFIG = {
   url: `https://cdn.digitransit.fi/map/v3/hsl-map-en/{z}/{x}/{y}@2x.png?digitransit-subscription-key=${import.meta.env.VITE_DIGITRANSIT_API_KEY}`,
   tileSize: 512,
