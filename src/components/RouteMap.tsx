@@ -28,6 +28,8 @@ const defaultIcon = L.icon({
 })
 L.Marker.prototype.options.icon = defaultIcon
 
+const HSL_TILE_URL = `https://cdn.digitransit.fi/map/v3/hsl-map-en/{z}/{x}/{y}.png?digitransit-subscription-key=${import.meta.env.VITE_DIGITRANSIT_API_KEY}`
+
 const ROUTE_COLOR = '#1976d2'
 const ROUTE_WEIGHT = 5
 
@@ -110,8 +112,8 @@ export function RouteMap({
         scrollWheelZoom
       >
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, Tiles &copy; <a href="https://digitransit.fi">Digitransit</a>'
+          url={HSL_TILE_URL}
         />
         <FitBounds bounds={bounds.length >= 2 ? bounds : null} />
         {altLegsArrays.map((altLegs, altIdx) =>
