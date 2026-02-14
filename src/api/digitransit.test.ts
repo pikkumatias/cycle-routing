@@ -159,26 +159,19 @@ describe('fetchBicycleRoute', () => {
 })
 
 describe('fetchGeocodingAutocomplete', () => {
-  it('throws when API key is missing', async () => {
-    await expect(
-      fetchGeocodingAutocomplete('Helsinki', undefined),
-    ).rejects.toThrow(/VITE_DIGITRANSIT_API_KEY is not set/i)
-    expect(mockFetch).not.toHaveBeenCalled()
-  })
-
   it('returns empty array for empty input', async () => {
-    const result = await fetchGeocodingAutocomplete('', 'test-key')
+    const result = await fetchGeocodingAutocomplete('')
     expect(result).toEqual([])
     expect(mockFetch).not.toHaveBeenCalled()
   })
 
   it('returns empty array for whitespace-only input', async () => {
-    const result = await fetchGeocodingAutocomplete('   ', 'test-key')
+    const result = await fetchGeocodingAutocomplete('   ')
     expect(result).toEqual([])
     expect(mockFetch).not.toHaveBeenCalled()
   })
 
-  it('calls the autocomplete endpoint with correct params', async () => {
+  it('calls the backend proxy with correct params', async () => {
     const geoJsonResponse = {
       features: [
         {
@@ -193,13 +186,12 @@ describe('fetchGeocodingAutocomplete', () => {
       json: async () => geoJsonResponse,
     } as Response)
 
-    const result = await fetchGeocodingAutocomplete('Helsinki', 'test-key')
+    const result = await fetchGeocodingAutocomplete('Helsinki')
 
     expect(mockFetch).toHaveBeenCalledTimes(1)
     const [url] = mockFetch.mock.calls[0]
-    expect(url).toContain('api.digitransit.fi/geocoding/v1/autocomplete')
+    expect(url).toContain('/api/digitransit-geocode')
     expect(url).toContain('text=Helsinki')
-    expect(url).toContain('digitransit-subscription-key=test-key')
     expect(url).toContain('size=5')
     expect(url).toContain('lang=en')
 
@@ -223,7 +215,7 @@ describe('fetchGeocodingAutocomplete', () => {
       json: async () => geoJsonResponse,
     } as Response)
 
-    const result = await fetchGeocodingAutocomplete('Test', 'key')
+    const result = await fetchGeocodingAutocomplete('Test')
     expect(result[0].lon).toBe(25.0)
     expect(result[0].lat).toBe(61.5)
   })
@@ -234,7 +226,7 @@ describe('fetchGeocodingAutocomplete', () => {
       json: async () => ({ features: [] }),
     } as Response)
 
-    const result = await fetchGeocodingAutocomplete('Nonexistent', 'key')
+    const result = await fetchGeocodingAutocomplete('Nonexistent')
     expect(result).toEqual([])
   })
 
@@ -247,7 +239,7 @@ describe('fetchGeocodingAutocomplete', () => {
     } as Response)
 
     await expect(
-      fetchGeocodingAutocomplete('Helsinki', 'bad-key'),
+      fetchGeocodingAutocomplete('Helsinki'),
     ).rejects.toThrow(/Geocoding API error: 403 Forbidden/i)
   })
 
@@ -258,7 +250,7 @@ describe('fetchGeocodingAutocomplete', () => {
       json: async () => ({ features: [] }),
     } as Response)
 
-    await fetchGeocodingAutocomplete('Test', 'key', controller.signal)
+    await fetchGeocodingAutocomplete('Test', controller.signal)
 
     const [, options] = mockFetch.mock.calls[0]
     expect(options).toHaveProperty('signal', controller.signal)
