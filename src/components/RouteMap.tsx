@@ -32,6 +32,8 @@ export const HSL_TILE_CONFIG = {
   url: `https://cdn.digitransit.fi/map/v3/hsl-map-en/{z}/{x}/{y}@2x.png?digitransit-subscription-key=${import.meta.env.VITE_DIGITRANSIT_API_KEY}`,
   tileSize: 512,
   zoomOffset: -1,
+  minZoom: 5,
+  maxZoom: 20,
   attribution:
     'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, Tiles &copy; <a href="https://digitransit.fi">Digitransit</a>',
 } as const
@@ -144,6 +146,8 @@ export function RouteMap({
       <MapContainer
         center={center}
         zoom={13}
+        minZoom={HSL_TILE_CONFIG.minZoom}
+        maxZoom={HSL_TILE_CONFIG.maxZoom}
         style={{ height: '100%', width: '100%' }}
         scrollWheelZoom
       >
@@ -152,6 +156,8 @@ export function RouteMap({
           url={HSL_TILE_CONFIG.url}
           tileSize={HSL_TILE_CONFIG.tileSize}
           zoomOffset={HSL_TILE_CONFIG.zoomOffset}
+          minZoom={HSL_TILE_CONFIG.minZoom}
+          maxZoom={HSL_TILE_CONFIG.maxZoom}
         />
         <FitBounds bounds={bounds.length >= 2 ? bounds : null} />
         <ZoomIndicator />

@@ -53,4 +53,11 @@ describe('HSL_TILE_CONFIG', () => {
     expect(config.attribution).toContain('OpenStreetMap')
     expect(config.attribution).toContain('Digitransit')
   })
+
+  it('sets minZoom and maxZoom to cover available tile range', async () => {
+    const config = await loadConfig()
+    expect(config.minZoom).toBeGreaterThanOrEqual(1)
+    expect(config.maxZoom).toBe(20)
+    expect(config.maxZoom).toBeGreaterThan(config.minZoom)
+  })
 })
