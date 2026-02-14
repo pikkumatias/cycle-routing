@@ -46,16 +46,11 @@ async function fetchBicycleRoute(
         to: { lat: $toLat, lon: $toLon }
         numItineraries: 1
         transportModes: [{ mode: BICYCLE }]
-        preferences: {
-          cycling: {
-            optimization: {
-              triangle: {
-                safety: $safetyFactor
-                slope: $slopeFactor
-                time: $timeFactor
-              }
-            }
-          }
+        optimize: TRIANGLE
+        triangle: {
+          safetyFactor: $safetyFactor
+          slopeFactor: $slopeFactor
+          timeFactor: $timeFactor
         }
       ) {
         itineraries { duration walkDistance legs { mode startTime endTime distance from { name } to { name } route { shortName longName } legGeometry { length points } } }
