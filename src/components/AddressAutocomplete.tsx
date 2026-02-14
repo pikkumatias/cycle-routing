@@ -1,9 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { Autocomplete, TextField } from '@mui/material'
-import {
-  fetchGeocodingAutocomplete,
-  type GeocodingResult,
-} from '../api/digitransit'
+import { fetchGeocodingAutocomplete } from '../api/digitransit'
 import type { RecentSearch } from '../utils/recentSearches'
 
 export type AddressOption = {
