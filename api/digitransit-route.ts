@@ -31,7 +31,7 @@ async function fetchBicycleRoute(
         numItineraries: 1
         transportModes: [{ mode: BICYCLE }]
       ) {
-        itineraries { duration walkDistance legs { mode startTime endTime distance from { name } to { name } route { shortName longName } } }
+        itineraries { duration walkDistance legs { mode startTime endTime distance from { name } to { name } route { shortName longName } legGeometry { length points } } }
       }
     }
   `

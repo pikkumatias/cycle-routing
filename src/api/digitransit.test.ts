@@ -90,6 +90,60 @@ describe('fetchBicycleRoute', () => {
     })
   })
 
+  it('request body query includes legGeometry with length and points for map drawing', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ data: { plan: { itineraries: [] } } }),
+    } as Response)
+
+    await fetchBicycleRoute(from, to, 'test-key')
+
+    const [, options] = mockFetch.mock.calls[0]
+    const body = options?.body as string
+    const parsedBody = JSON.parse(body)
+    const query = parsedBody.query as string
+
+    expect(query).toContain('legGeometry')
+    expect(query).toContain('length')
+    expect(query).toContain('points')
+    expect(query).toMatch(/legGeometry\s*\{\s*length\s+points\s*}/s)
+  })
+
+  it('returns response with legGeometry on legs unchanged', async () => {
+    const encodedPolyline = '_p~iF~ps|U_ulLnnqC_mqNvxq`@'
+    const fakeItinerary = {
+      duration: 960,
+      walkDistance: 0,
+      legs: [
+        {
+          mode: 'BICYCLE',
+          startTime: 1730000000000,
+          endTime: 1730000960000,
+          distance: 2523,
+          from: { name: 'Origin' },
+          to: { name: 'Destination' },
+          route: null,
+          legGeometry: { length: 42, points: encodedPolyline },
+        },
+      ],
+    }
+    const fakeResponse = {
+      data: { plan: { itineraries: [fakeItinerary] } },
+    }
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => fakeResponse,
+    } as Response)
+
+    const result = await fetchBicycleRoute(from, to, 'test-key')
+
+    expect(result).toEqual(fakeResponse)
+    const legs = (result as any)?.data?.plan?.itineraries?.[0]?.legs
+    expect(legs).toHaveLength(1)
+    expect(legs[0].legGeometry).toEqual({ length: 42, points: encodedPolyline })
+  })
+
   it('throws a helpful error when response is not ok', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: false,

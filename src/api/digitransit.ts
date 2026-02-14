@@ -70,6 +70,10 @@ export async function fetchBicycleRoute(
               shortName
               longName
             }
+            legGeometry {
+              length
+              points
+            }
           }
         }
       }

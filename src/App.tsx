@@ -15,6 +15,8 @@ import {
   parseLatLon,
   requestBicycleRouteViaBackend,
 } from './api/digitransit'
+import { RouteMap } from './components/RouteMap'
+import type { LatLng } from './utils/routeGeometry'
 
 type RouteFormState = {
   from: string
@@ -37,6 +39,10 @@ function App() {
     error: null,
     response: null,
   })
+  const [lastCoords, setLastCoords] = useState<{
+    from: LatLng
+    to: LatLng
+  } | null>(null)
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault()
@@ -44,12 +50,15 @@ function App() {
     try {
       const from = parseLatLon(form.from)
       const to = parseLatLon(form.to)
+      const fromLatLng: LatLng = [from.lat, from.lon]
+      const toLatLng: LatLng = [to.lat, to.lon]
 
       setApiState({ loading: true, error: null, response: null })
 
       const data = await requestBicycleRouteViaBackend(from, to)
 
       setApiState({ loading: false, error: null, response: data })
+      setLastCoords({ from: fromLatLng, to: toLatLng })
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Unknown error'
@@ -110,10 +119,22 @@ function App() {
           )}
 
           {apiState.response != null && (
-            <Box>
-              <Typography variant="h6" gutterBottom>
-                Raw API response
-              </Typography>
+            <>
+              <Box>
+                <Typography variant="h6" gutterBottom>
+                  Route map
+                </Typography>
+                <RouteMap
+                  routeResponse={apiState.response}
+                  from={lastCoords?.from}
+                  to={lastCoords?.to}
+                  height={400}
+                />
+              </Box>
+              <Box>
+                <Typography variant="h6" gutterBottom>
+                  Raw API response
+                </Typography>
               <Paper
                 variant="outlined"
                 sx={{
@@ -128,6 +149,7 @@ function App() {
                 {JSON.stringify(apiState.response, null, 2)}
               </Paper>
             </Box>
+            </>
           )}
         </Stack>
       </Paper>
