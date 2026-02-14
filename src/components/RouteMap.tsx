@@ -45,6 +45,10 @@ function FitBounds({ bounds, padding = [24, 24] }: FitBoundsProps) {
   return null
 }
 
+const ALT_ROUTE_COLOR = '#9e9e9e'
+const ALT_ROUTE_WEIGHT = 3
+const ALT_ROUTE_OPACITY = 0.4
+
 export type RouteMapProps = {
   /** Digitransit plan API response (data with data.plan.itineraries[].legs) */
   routeResponse: any
@@ -54,6 +58,8 @@ export type RouteMapProps = {
   to?: LatLng
   /** Map container height */
   height?: number | string
+  /** Other route responses to render as faded alternatives */
+  alternativeResponses?: any[]
 }
 
 export function RouteMap({
@@ -61,14 +67,24 @@ export function RouteMap({
   from,
   to,
   height = 400,
+  alternativeResponses,
 }: RouteMapProps) {
   const legs = useMemo(
     () => getRouteLegsFromPlanResponse(routeResponse),
     [routeResponse],
   )
+  const altLegsArrays = useMemo(
+    () => (alternativeResponses ?? []).map((r) => getRouteLegsFromPlanResponse(r)),
+    [alternativeResponses],
+  )
+  const allLegs = useMemo(() => {
+    const all = [...legs]
+    altLegsArrays.forEach((a) => all.push(...a))
+    return all
+  }, [legs, altLegsArrays])
   const bounds = useMemo(
-    () => getBoundsFromLegsAndPoints(legs, from, to),
-    [legs, from, to],
+    () => getBoundsFromLegsAndPoints(allLegs, from, to),
+    [allLegs, from, to],
   )
   const hasRoute = legs.length > 0
   const center: LatLng = useMemo(() => {
@@ -98,6 +114,19 @@ export function RouteMap({
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         <FitBounds bounds={bounds.length >= 2 ? bounds : null} />
+        {altLegsArrays.map((altLegs, altIdx) =>
+          altLegs.map((leg, legIdx) => (
+            <Polyline
+              key={`alt-${altIdx}-${legIdx}`}
+              positions={leg.positions}
+              pathOptions={{
+                color: ALT_ROUTE_COLOR,
+                weight: ALT_ROUTE_WEIGHT,
+                opacity: ALT_ROUTE_OPACITY,
+              }}
+            />
+          )),
+        )}
         {legs.map((leg, i) => (
           <Polyline
             key={i}

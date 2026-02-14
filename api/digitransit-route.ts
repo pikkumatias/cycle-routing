@@ -3,6 +3,12 @@ const DIGITRANSIT_ENDPOINT =
 
 type LatLonPair = { lat: number; lon: number }
 
+type TriangleFactors = {
+  time: number
+  safety: number
+  slope: number
+}
+
 function parseLatLon(input: string): LatLonPair {
   const trimmed = input.trim()
   if (!trimmed) throw new Error('Value is required')
@@ -22,14 +28,35 @@ async function fetchBicycleRoute(
   from: LatLonPair,
   to: LatLonPair,
   apiKey: string,
+  triangle?: TriangleFactors,
 ): Promise<unknown> {
+  const t = triangle ?? { time: 1, safety: 0, slope: 0 }
   const query = `
-    query PlanBicycleRoute($fromLat: Float!, $fromLon: Float!, $toLat: Float!, $toLon: Float!) {
+    query PlanBicycleRoute(
+      $fromLat: Float!
+      $fromLon: Float!
+      $toLat: Float!
+      $toLon: Float!
+      $timeFactor: Float!
+      $safetyFactor: Float!
+      $slopeFactor: Float!
+    ) {
       plan(
         from: { lat: $fromLat, lon: $fromLon }
         to: { lat: $toLat, lon: $toLon }
         numItineraries: 1
         transportModes: [{ mode: BICYCLE }]
+        preferences: {
+          cycling: {
+            optimization: {
+              triangle: {
+                safety: $safetyFactor
+                slope: $slopeFactor
+                time: $timeFactor
+              }
+            }
+          }
+        }
       ) {
         itineraries { duration walkDistance legs { mode startTime endTime distance from { name } to { name } route { shortName longName } legGeometry { length points } } }
       }
@@ -37,7 +64,15 @@ async function fetchBicycleRoute(
   `
   const body = JSON.stringify({
     query,
-    variables: { fromLat: from.lat, fromLon: from.lon, toLat: to.lat, toLon: to.lon },
+    variables: {
+      fromLat: from.lat,
+      fromLon: from.lon,
+      toLat: to.lat,
+      toLon: to.lon,
+      timeFactor: t.time,
+      safetyFactor: t.safety,
+      slopeFactor: t.slope,
+    },
   })
   const res = await fetch(DIGITRANSIT_ENDPOINT, {
     method: 'POST',
@@ -55,8 +90,8 @@ async function fetchBicycleRoute(
 }
 
 type RequestBody =
-  | { from: string; to: string }
-  | { from: LatLonPair; to: LatLonPair }
+  | { from: string; to: string; triangle?: TriangleFactors }
+  | { from: LatLonPair; to: LatLonPair; triangle?: TriangleFactors }
 
 export default async function handler(req: any, res: any) {
   try {
@@ -83,7 +118,8 @@ export default async function handler(req: any, res: any) {
       typeof body.from === 'string' ? parseLatLon(body.from) : body.from
     const to = typeof body.to === 'string' ? parseLatLon(body.to) : body.to
 
-    const data = await fetchBicycleRoute(from, to, apiKey)
+    const triangle = (body as any).triangle as TriangleFactors | undefined
+    const data = await fetchBicycleRoute(from, to, apiKey, triangle)
     return res.status(200).json(data)
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error'

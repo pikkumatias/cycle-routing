@@ -13,20 +13,29 @@ import {
 import './App.css'
 import {
   parseLatLon,
-  requestBicycleRouteViaBackend,
+  requestAllRouteVariants,
+  type RoutePresetKey,
 } from './api/digitransit'
 import { RouteMap } from './components/RouteMap'
-import type { LatLng } from './utils/routeGeometry'
+import { RouteCards, type ScoredRoute } from './components/RouteCards'
+import {
+  getRouteLegsFromPlanResponse,
+  getBoundsFromLegsAndPoints,
+  type LatLng,
+} from './utils/routeGeometry'
+import { fetchParksAndWater, boundsToBbox } from './utils/overpass'
+import { scorePoisNearRoute } from './utils/scenicScore'
 
 type RouteFormState = {
   from: string
   to: string
 }
 
-type ApiState = {
+type RoutesState = {
   loading: boolean
   error: string | null
-  response: any | null
+  routes: Record<RoutePresetKey, ScoredRoute> | null
+  selectedRoute: RoutePresetKey
 }
 
 function App() {
@@ -34,10 +43,11 @@ function App() {
     from: '',
     to: '',
   })
-  const [apiState, setApiState] = useState<ApiState>({
+  const [routesState, setRoutesState] = useState<RoutesState>({
     loading: false,
     error: null,
-    response: null,
+    routes: null,
+    selectedRoute: 'scenic',
   })
   const [lastCoords, setLastCoords] = useState<{
     from: LatLng
@@ -53,18 +63,69 @@ function App() {
       const fromLatLng: LatLng = [from.lat, from.lon]
       const toLatLng: LatLng = [to.lat, to.lon]
 
-      setApiState({ loading: true, error: null, response: null })
+      setRoutesState({ loading: true, error: null, routes: null, selectedRoute: 'scenic' })
 
-      const data = await requestBicycleRouteViaBackend(from, to)
+      // 1. Fetch all 3 route variants in parallel
+      const rawRoutes = await requestAllRouteVariants(from, to)
 
-      setApiState({ loading: false, error: null, response: data })
+      // 2. Compute combined bounds across all routes for the Overpass query
+      const allLegs = Object.values(rawRoutes).flatMap((r) =>
+        getRouteLegsFromPlanResponse(r),
+      )
+      const combinedBounds = getBoundsFromLegsAndPoints(
+        allLegs,
+        fromLatLng,
+        toLatLng,
+      )
+      const bbox = boundsToBbox(combinedBounds)
+
+      // 3. Fetch POIs within the combined bounding box
+      const pois = bbox ? await fetchParksAndWater(bbox) : []
+
+      // 4. Score each route
+      const scored = {} as Record<RoutePresetKey, ScoredRoute>
+      for (const [key, response] of Object.entries(rawRoutes) as [
+        RoutePresetKey,
+        any,
+      ][]) {
+        const legs = getRouteLegsFromPlanResponse(response)
+        const polyline = legs.flatMap((l) => l.positions)
+        const itinerary = response?.data?.plan?.itineraries?.[0]
+        const durationSec = itinerary?.duration ?? 0
+        const distanceKm =
+          (itinerary?.legs ?? []).reduce(
+            (sum: number, leg: any) => sum + (leg?.distance ?? 0),
+            0,
+          ) / 1000
+        const { count } = scorePoisNearRoute(pois, polyline)
+        scored[key] = { response, durationSec, distanceKm, scenicScore: count }
+      }
+
+      setRoutesState({
+        loading: false,
+        error: null,
+        routes: scored,
+        selectedRoute: 'scenic',
+      })
       setLastCoords({ from: fromLatLng, to: toLatLng })
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Unknown error'
-      setApiState({ loading: false, error: message, response: null })
+      setRoutesState({
+        loading: false,
+        error: message,
+        routes: null,
+        selectedRoute: 'scenic',
+      })
     }
   }
+
+  const selectedRouteData = routesState.routes?.[routesState.selectedRoute]
+  const alternativeResponses = routesState.routes
+    ? Object.entries(routesState.routes)
+        .filter(([key]) => key !== routesState.selectedRoute)
+        .map(([, route]) => route.response)
+    : []
 
   return (
     <Container maxWidth="md" sx={{ py: 4 }}>
@@ -75,10 +136,8 @@ function App() {
               Cycle Routing (HSL / Digitransit)
             </Typography>
             <Typography variant="body1" color="text.secondary">
-              Enter start and destination coordinates to request a{' '}
-              <strong>bicycle</strong> route from the Digitransit
-              Routing API (HSL router) and see the raw GraphQL
-              response.
+              Enter start and destination coordinates to find{' '}
+              <strong>bicycle</strong> routes with scenic scoring.
             </Typography>
           </Box>
 
@@ -106,49 +165,36 @@ function App() {
                 <Button
                   type="submit"
                   variant="contained"
-                  disabled={apiState.loading}
+                  disabled={routesState.loading}
                 >
-                  {apiState.loading ? 'Requesting route…' : 'Get route'}
+                  {routesState.loading
+                    ? 'Finding routes\u2026'
+                    : 'Find routes'}
                 </Button>
               </Box>
             </Stack>
           </Box>
 
-          {apiState.error && (
-            <Alert severity="error">{apiState.error}</Alert>
+          {routesState.error && (
+            <Alert severity="error">{routesState.error}</Alert>
           )}
 
-          {apiState.response != null && (
+          {routesState.routes && selectedRouteData && (
             <>
-              <Box>
-                <Typography variant="h6" gutterBottom>
-                  Route map
-                </Typography>
-                <RouteMap
-                  routeResponse={apiState.response}
-                  from={lastCoords?.from}
-                  to={lastCoords?.to}
-                  height={400}
-                />
-              </Box>
-              <Box>
-                <Typography variant="h6" gutterBottom>
-                  Raw API response
-                </Typography>
-              <Paper
-                variant="outlined"
-                sx={{
-                  p: 2,
-                  maxHeight: 400,
-                  overflow: 'auto',
-                  fontFamily: 'monospace',
-                  fontSize: 12,
-                  whiteSpace: 'pre',
-                }}
-              >
-                {JSON.stringify(apiState.response, null, 2)}
-              </Paper>
-            </Box>
+              <RouteCards
+                routes={routesState.routes}
+                selectedRoute={routesState.selectedRoute}
+                onSelect={(key) =>
+                  setRoutesState((prev) => ({ ...prev, selectedRoute: key }))
+                }
+              />
+              <RouteMap
+                routeResponse={selectedRouteData.response}
+                from={lastCoords?.from}
+                to={lastCoords?.to}
+                height={400}
+                alternativeResponses={alternativeResponses}
+              />
             </>
           )}
         </Stack>

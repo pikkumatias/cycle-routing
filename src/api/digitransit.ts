@@ -3,6 +3,20 @@ export type LatLonPair = {
   lon: number
 }
 
+export type TriangleFactors = {
+  time: number
+  safety: number
+  slope: number
+}
+
+export const ROUTE_PRESETS = {
+  fastest: { time: 1.0, safety: 0, slope: 0 },
+  scenic: { time: 0.2, safety: 0.7, slope: 0.1 },
+  balanced: { time: 0.5, safety: 0.4, slope: 0.1 },
+} as const satisfies Record<string, TriangleFactors>
+
+export type RoutePresetKey = keyof typeof ROUTE_PRESETS
+
 export function parseLatLon(input: string): LatLonPair {
   const trimmed = input.trim()
   if (!trimmed) {
@@ -114,13 +128,14 @@ export async function fetchBicycleRoute(
 export async function requestBicycleRouteViaBackend(
   from: LatLonPair,
   to: LatLonPair,
+  triangle?: TriangleFactors,
 ): Promise<unknown> {
   const res = await fetch('/api/digitransit-route', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ from, to }),
+    body: JSON.stringify({ from, to, triangle }),
   })
 
   if (!res.ok) {
@@ -131,6 +146,19 @@ export async function requestBicycleRouteViaBackend(
   }
 
   return res.json()
+}
+
+export async function requestAllRouteVariants(
+  from: LatLonPair,
+  to: LatLonPair,
+): Promise<Record<RoutePresetKey, unknown>> {
+  const entries = Object.entries(ROUTE_PRESETS) as [RoutePresetKey, TriangleFactors][]
+  const results = await Promise.all(
+    entries.map(([, triangle]) => requestBicycleRouteViaBackend(from, to, triangle)),
+  )
+  return Object.fromEntries(
+    entries.map(([key], i) => [key, results[i]]),
+  ) as Record<RoutePresetKey, unknown>
 }
 
 
