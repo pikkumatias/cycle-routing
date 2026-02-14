@@ -7,7 +7,6 @@ import {
   Container,
   Paper,
   Stack,
-  TextField,
   Typography,
 } from '@mui/material'
 import './App.css'
@@ -19,17 +18,20 @@ import {
 import { RouteMap } from './components/RouteMap'
 import { RouteCards, type ScoredRoute } from './components/RouteCards'
 import {
+  AddressAutocomplete,
+  type AddressOption,
+} from './components/AddressAutocomplete'
+import {
   getRouteLegsFromPlanResponse,
   getBoundsFromLegsAndPoints,
   type LatLng,
 } from './utils/routeGeometry'
 import { fetchParksAndWater, boundsToBbox } from './utils/overpass'
 import { scorePoisNearRoute } from './utils/scenicScore'
-
-type RouteFormState = {
-  from: string
-  to: string
-}
+import {
+  getRecentSearches,
+  addRecentSearch,
+} from './utils/recentSearches'
 
 type RoutesState = {
   loading: boolean
@@ -39,10 +41,11 @@ type RoutesState = {
 }
 
 function App() {
-  const [form, setForm] = useState<RouteFormState>({
-    from: '',
-    to: '',
-  })
+  const [fromOption, setFromOption] = useState<AddressOption | null>(null)
+  const [toOption, setToOption] = useState<AddressOption | null>(null)
+  const [fromInput, setFromInput] = useState('')
+  const [toInput, setToInput] = useState('')
+  const [recentSearches, setRecentSearches] = useState(() => getRecentSearches())
   const [routesState, setRoutesState] = useState<RoutesState>({
     loading: false,
     error: null,
@@ -54,12 +57,17 @@ function App() {
     to: LatLng
   } | null>(null)
 
+  const resolveCoords = (option: AddressOption | null, input: string) => {
+    if (option) return { lat: option.lat, lon: option.lon }
+    return parseLatLon(input)
+  }
+
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault()
 
     try {
-      const from = parseLatLon(form.from)
-      const to = parseLatLon(form.to)
+      const from = resolveCoords(fromOption, fromInput)
+      const to = resolveCoords(toOption, toInput)
       const fromLatLng: LatLng = [from.lat, from.lon]
       const toLatLng: LatLng = [to.lat, to.lon]
 
@@ -101,6 +109,15 @@ function App() {
         scored[key] = { response, durationSec, distanceKm, scenicScore: count }
       }
 
+      // 5. Save geocoded selections to recent searches
+      if (fromOption) {
+        addRecentSearch({ label: fromOption.label, lat: fromOption.lat, lon: fromOption.lon })
+      }
+      if (toOption) {
+        addRecentSearch({ label: toOption.label, lat: toOption.lat, lon: toOption.lon })
+      }
+      setRecentSearches(getRecentSearches())
+
       setRoutesState({
         loading: false,
         error: null,
@@ -136,30 +153,28 @@ function App() {
               Cycle Routing (HSL / Digitransit)
             </Typography>
             <Typography variant="body1" color="text.secondary">
-              Enter start and destination coordinates to find{' '}
+              Search for addresses or enter coordinates to find{' '}
               <strong>bicycle</strong> routes with scenic scoring.
             </Typography>
           </Box>
 
           <Box component="form" onSubmit={handleSubmit}>
             <Stack spacing={2}>
-              <TextField
-                label='From (lat,lon), e.g. "60.192059,24.945831"'
-                value={form.from}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, from: e.target.value }))
-                }
-                fullWidth
-                required
+              <AddressAutocomplete
+                label="From"
+                value={fromOption}
+                onChange={setFromOption}
+                inputValue={fromInput}
+                onInputChange={setFromInput}
+                recentSearches={recentSearches}
               />
-              <TextField
-                label='To (lat,lon), e.g. "60.169857,24.938379"'
-                value={form.to}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, to: e.target.value }))
-                }
-                fullWidth
-                required
+              <AddressAutocomplete
+                label="To"
+                value={toOption}
+                onChange={setToOption}
+                inputValue={toInput}
+                onInputChange={setToInput}
+                recentSearches={recentSearches}
               />
               <Box>
                 <Button

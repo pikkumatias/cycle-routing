@@ -148,6 +148,53 @@ export async function requestBicycleRouteViaBackend(
   return res.json()
 }
 
+export type GeocodingResult = {
+  label: string
+  lat: number
+  lon: number
+}
+
+const GEOCODING_ENDPOINT =
+  'https://api.digitransit.fi/geocoding/v1/autocomplete'
+
+export async function fetchGeocodingAutocomplete(
+  text: string,
+  apiKey: string | undefined,
+  signal?: AbortSignal,
+): Promise<GeocodingResult[]> {
+  if (!apiKey) {
+    throw new Error(
+      'VITE_DIGITRANSIT_API_KEY is not set. Add it to your .env.local file.',
+    )
+  }
+  if (!text.trim()) return []
+
+  const url = new URL(GEOCODING_ENDPOINT)
+  url.searchParams.set('text', text)
+  url.searchParams.set('size', '5')
+  url.searchParams.set('lang', 'en')
+  url.searchParams.set('focus.point.lat', '60.17')
+  url.searchParams.set('focus.point.lon', '24.94')
+  url.searchParams.set('digitransit-subscription-key', apiKey)
+
+  const res = await fetch(url.toString(), { signal })
+  if (!res.ok) {
+    const body = await res.text()
+    throw new Error(
+      `Geocoding API error: ${res.status} ${res.statusText}\n${body}`,
+    )
+  }
+
+  const data = await res.json()
+  const features: any[] = data?.features ?? []
+
+  return features.map((f) => ({
+    label: f.properties?.label ?? '',
+    lon: f.geometry?.coordinates?.[0] ?? 0,
+    lat: f.geometry?.coordinates?.[1] ?? 0,
+  }))
+}
+
 export async function requestAllRouteVariants(
   from: LatLonPair,
   to: LatLonPair,
