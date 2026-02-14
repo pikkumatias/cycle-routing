@@ -28,7 +28,13 @@ const defaultIcon = L.icon({
 })
 L.Marker.prototype.options.icon = defaultIcon
 
-const HSL_TILE_URL = `https://cdn.digitransit.fi/map/v3/hsl-map-en/{z}/{x}/{y}.png?digitransit-subscription-key=${import.meta.env.VITE_DIGITRANSIT_API_KEY}`
+export const HSL_TILE_CONFIG = {
+  url: `https://cdn.digitransit.fi/map/v3/hsl-map-en/{z}/{x}/{y}.png?digitransit-subscription-key=${import.meta.env.VITE_DIGITRANSIT_API_KEY}`,
+  tileSize: 512,
+  zoomOffset: -1,
+  attribution:
+    'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, Tiles &copy; <a href="https://digitransit.fi">Digitransit</a>',
+} as const
 
 const ROUTE_COLOR = '#1976d2'
 const ROUTE_WEIGHT = 5
@@ -112,8 +118,10 @@ export function RouteMap({
         scrollWheelZoom
       >
         <TileLayer
-          attribution='Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, Tiles &copy; <a href="https://digitransit.fi">Digitransit</a>'
-          url={HSL_TILE_URL}
+          attribution={HSL_TILE_CONFIG.attribution}
+          url={HSL_TILE_CONFIG.url}
+          tileSize={HSL_TILE_CONFIG.tileSize}
+          zoomOffset={HSL_TILE_CONFIG.zoomOffset}
         />
         <FitBounds bounds={bounds.length >= 2 ? bounds : null} />
         {altLegsArrays.map((altLegs, altIdx) =>
