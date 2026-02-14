@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import {
   MapContainer,
   TileLayer,
@@ -15,18 +15,19 @@ import {
   type LatLng,
 } from '../utils/routeGeometry'
 
-// Fix default marker icons in Leaflet when using bundlers
-const defaultIcon = L.icon({
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  iconRetinaUrl:
-    'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
+const originIcon = L.divIcon({
+  className: '',
+  html: '<div style="width:20px;height:20px;border-radius:50%;background:#4CAF50;border:3px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.3)"></div>',
+  iconSize: [20, 20],
+  iconAnchor: [10, 10],
 })
-L.Marker.prototype.options.icon = defaultIcon
+
+const destinationIcon = L.divIcon({
+  className: '',
+  html: '<div style="width:20px;height:20px;border-radius:50%;background:#E91E63;border:3px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.3)"></div>',
+  iconSize: [20, 20],
+  iconAnchor: [10, 10],
+})
 
 // TODO: Investigate tile rendering at zoom levels 17-18
 export const HSL_TILE_CONFIG = {
@@ -39,51 +40,23 @@ export const HSL_TILE_CONFIG = {
     'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, Tiles &copy; <a href="https://digitransit.fi">Digitransit</a>',
 } as const
 
-const ROUTE_COLOR = '#1976d2'
+const ROUTE_COLOR = '#007AC9'
 const ROUTE_WEIGHT = 5
 
 type FitBoundsProps = {
   bounds: LatLng[] | null
-  padding?: [number, number]
 }
 
-function FitBounds({ bounds, padding = [24, 24] }: FitBoundsProps) {
+function FitBounds({ bounds }: FitBoundsProps) {
   const map = useMap()
   useEffect(() => {
     if (!bounds || bounds.length < 2) return
-    map.fitBounds(bounds as L.LatLngBoundsExpression, { padding })
-  }, [map, bounds, padding])
+    map.fitBounds(bounds as L.LatLngBoundsExpression, {
+      paddingTopLeft: [40, 40],
+      paddingBottomRight: [40, 200],
+    })
+  }, [map, bounds])
   return null
-}
-
-function ZoomIndicator() {
-  const map = useMap()
-  const [zoom, setZoom] = useState(map.getZoom())
-
-  useEffect(() => {
-    const onZoom = () => setZoom(map.getZoom())
-    map.on('zoomend', onZoom)
-    return () => { map.off('zoomend', onZoom) }
-  }, [map])
-
-  return (
-    <div
-      style={{
-        position: 'absolute',
-        top: 10,
-        right: 10,
-        zIndex: 1000,
-        background: 'rgba(255,255,255,0.85)',
-        padding: '4px 8px',
-        borderRadius: 4,
-        fontSize: 12,
-        fontFamily: 'monospace',
-        pointerEvents: 'none',
-      }}
-    >
-      Zoom: {zoom}
-    </div>
-  )
 }
 
 const ALT_ROUTE_COLOR = '#9e9e9e'
@@ -91,15 +64,10 @@ const ALT_ROUTE_WEIGHT = 3
 const ALT_ROUTE_OPACITY = 0.4
 
 export type RouteMapProps = {
-  /** Digitransit plan API response (data with data.plan.itineraries[].legs) */
   routeResponse: any
-  /** Start point [lat, lng] for marker */
   from?: LatLng
-  /** End point [lat, lng] for marker */
   to?: LatLng
-  /** Map container height */
   height?: number | string
-  /** Other route responses to render as faded alternatives */
   alternativeResponses?: any[]
 }
 
@@ -107,7 +75,7 @@ export function RouteMap({
   routeResponse,
   from,
   to,
-  height = 400,
+  height = '100%',
   alternativeResponses,
 }: RouteMapProps) {
   const legs = useMemo(
@@ -127,7 +95,6 @@ export function RouteMap({
     () => getBoundsFromLegsAndPoints(allLegs, from, to),
     [allLegs, from, to],
   )
-  const hasRoute = legs.length > 0
   const center: LatLng = useMemo(() => {
     if (bounds.length >= 2) {
       return [
@@ -137,13 +104,11 @@ export function RouteMap({
     }
     if (from) return from
     if (to) return to
-    return [60.1699, 24.9384] // Helsinki default
+    return [60.1699, 24.9384]
   }, [bounds, from, to])
 
-  if (!hasRoute && !from && !to) return null
-
   return (
-    <div style={{ height, width: '100%', minHeight: 300 }}>
+    <div style={{ height, width: '100%' }}>
       <MapContainer
         center={center}
         zoom={13}
@@ -151,6 +116,7 @@ export function RouteMap({
         maxZoom={HSL_TILE_CONFIG.maxZoom}
         style={{ height: '100%', width: '100%' }}
         scrollWheelZoom
+        zoomControl={false}
       >
         <TileLayer
           attribution={HSL_TILE_CONFIG.attribution}
@@ -161,7 +127,6 @@ export function RouteMap({
           maxZoom={HSL_TILE_CONFIG.maxZoom}
         />
         <FitBounds bounds={bounds.length >= 2 ? bounds : null} />
-        <ZoomIndicator />
         {altLegsArrays.map((altLegs, altIdx) =>
           altLegs.map((leg, legIdx) => (
             <Polyline
@@ -187,12 +152,12 @@ export function RouteMap({
           />
         ))}
         {from && (
-          <Marker position={from}>
+          <Marker position={from} icon={originIcon}>
             <Popup>Start</Popup>
           </Marker>
         )}
         {to && (
-          <Marker position={to}>
+          <Marker position={to} icon={destinationIcon}>
             <Popup>End</Popup>
           </Marker>
         )}

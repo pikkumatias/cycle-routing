@@ -1,9 +1,7 @@
 import {
   Card,
-  CardActionArea,
   CardContent,
   Chip,
-  Stack,
   Typography,
 } from '@mui/material'
 import type { RoutePresetKey } from '../api/digitransit'
@@ -22,8 +20,8 @@ type RouteCardsProps = {
 }
 
 const ROUTE_LABELS: Record<RoutePresetKey, string> = {
-  fastest: 'Fastest Route',
-  scenic: 'Most Scenic',
+  fastest: 'Fastest',
+  scenic: 'Scenic',
   balanced: 'Balanced',
 }
 
@@ -36,7 +34,7 @@ export function RouteCards({ routes, selectedRoute, onSelect }: RouteCardsProps)
   const maxScenic = Math.max(...Object.values(routes).map((r) => r.scenicScore))
 
   return (
-    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+    <div className="route-chips-scroll">
       {(Object.entries(routes) as [RoutePresetKey, ScoredRoute][]).map(
         ([key, route]) => {
           const isSelected = key === selectedRoute
@@ -45,38 +43,49 @@ export function RouteCards({ routes, selectedRoute, onSelect }: RouteCardsProps)
           return (
             <Card
               key={key}
-              variant={isSelected ? 'elevation' : 'outlined'}
-              elevation={isSelected ? 6 : 0}
               sx={{
-                flex: 1,
-                border: isSelected ? '2px solid' : undefined,
-                borderColor: isSelected ? 'primary.main' : undefined,
+                minWidth: 140,
+                flex: '0 0 auto',
+                border: isSelected ? '2px solid' : '1px solid',
+                borderColor: isSelected ? 'primary.main' : 'grey.300',
+                bgcolor: isSelected ? 'primary.main' : 'background.paper',
+                color: isSelected ? 'white' : 'text.primary',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
               }}
+              onClick={() => onSelect(key)}
             >
-              <CardActionArea onClick={() => onSelect(key)}>
-                <CardContent>
-                  <Typography variant="subtitle1" fontWeight="bold">
-                    {ROUTE_LABELS[key]} {isMostScenic && '\u2B50'}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {formatDuration(route.durationSec)},{' '}
-                    {route.distanceKm.toFixed(1)} km
-                  </Typography>
-                  {route.scenicScore > 0 && (
-                    <Chip
-                      label={`passes ${route.scenicScore} parks`}
-                      size="small"
-                      color="success"
-                      variant="outlined"
-                      sx={{ mt: 1 }}
-                    />
-                  )}
-                </CardContent>
-              </CardActionArea>
+              <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
+                <Typography variant="body2" fontWeight={700} noWrap>
+                  {ROUTE_LABELS[key]} {isMostScenic && '\u2B50'}
+                </Typography>
+                <Typography
+                  variant="caption"
+                  sx={{ opacity: 0.8, display: 'block' }}
+                >
+                  {formatDuration(route.durationSec)} &middot;{' '}
+                  {route.distanceKm.toFixed(1)} km
+                </Typography>
+                {route.scenicScore > 0 && (
+                  <Chip
+                    label={`${route.scenicScore} parks`}
+                    size="small"
+                    sx={{
+                      mt: 0.5,
+                      height: 20,
+                      fontSize: '0.7rem',
+                      bgcolor: isSelected
+                        ? 'rgba(255,255,255,0.2)'
+                        : 'rgba(76,175,80,0.1)',
+                      color: isSelected ? 'white' : 'success.main',
+                    }}
+                  />
+                )}
+              </CardContent>
             </Card>
           )
         },
       )}
-    </Stack>
+    </div>
   )
 }

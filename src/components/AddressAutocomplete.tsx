@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Autocomplete, TextField } from '@mui/material'
+import { Autocomplete, Box, InputAdornment, TextField } from '@mui/material'
 import { fetchGeocodingAutocomplete } from '../api/digitransit'
 import type { RecentSearch } from '../utils/recentSearches'
 
@@ -17,6 +17,7 @@ type AddressAutocompleteProps = {
   inputValue: string
   onInputChange: (value: string) => void
   recentSearches: RecentSearch[]
+  icon?: 'origin' | 'destination'
 }
 
 const DEBOUNCE_MS = 300
@@ -29,6 +30,7 @@ export function AddressAutocomplete({
   inputValue,
   onInputChange,
   recentSearches,
+  icon,
 }: AddressAutocompleteProps) {
   const [suggestions, setSuggestions] = useState<AddressOption[]>([])
   const [loading, setLoading] = useState(false)
@@ -45,11 +47,9 @@ export function AddressAutocomplete({
   const handleInputChange = (newValue: string) => {
     onInputChange(newValue)
 
-    // Cancel in-flight request and pending timer
     abortRef.current?.abort()
     if (timerRef.current) clearTimeout(timerRef.current)
 
-    // Skip API call for empty input or raw coordinates
     if (!newValue.trim() || COORD_PATTERN.test(newValue.trim())) {
       setSuggestions([])
       setLoading(false)
@@ -76,7 +76,7 @@ export function AddressAutocomplete({
           )
           setLoading(false)
         }
-      } catch (err) {
+      } catch {
         if (!controller.signal.aborted) {
           setSuggestions([])
           setLoading(false)
@@ -85,7 +85,6 @@ export function AddressAutocomplete({
     }, DEBOUNCE_MS)
   }
 
-  // Build the combined options list: suggestions first, then filtered recents
   const recentOptions: AddressOption[] = recentSearches
     .filter(
       (r) =>
@@ -96,6 +95,8 @@ export function AddressAutocomplete({
 
   const options: AddressOption[] =
     suggestions.length > 0 ? [...suggestions, ...recentOptions] : recentOptions
+
+  const placeholder = icon === 'origin' ? 'Origin' : 'Where to?'
 
   return (
     <Autocomplete
@@ -127,7 +128,44 @@ export function AddressAutocomplete({
         }
       }}
       renderInput={(params) => (
-        <TextField {...params} label={label} fullWidth />
+        <TextField
+          {...params}
+          placeholder={placeholder}
+          fullWidth
+          slotProps={{
+            input: {
+              ...params.InputProps,
+              startAdornment: icon ? (
+                <>
+                  <InputAdornment position="start">
+                    <Box
+                      sx={{
+                        width: 12,
+                        height: 12,
+                        borderRadius: '50%',
+                        bgcolor: icon === 'origin' ? 'success.main' : 'error.main',
+                      }}
+                    />
+                  </InputAdornment>
+                  {params.InputProps.startAdornment}
+                </>
+              ) : (
+                params.InputProps.startAdornment
+              ),
+            },
+          }}
+          sx={{
+            '& .MuiOutlinedInput-root': {
+              bgcolor: '#F5F5F5',
+              '& fieldset': { border: 'none' },
+              '&:hover fieldset': { border: 'none' },
+              '&.Mui-focused fieldset': {
+                border: '2px solid',
+                borderColor: 'primary.main',
+              },
+            },
+          }}
+        />
       )}
     />
   )
