@@ -170,7 +170,6 @@ export function useBottomSheet() {
     if (!content) return
 
     let startY = 0
-    let startScrollTop = 0
     let isExpanding = false
 
     const onTouchStart = (e: TouchEvent) => {
