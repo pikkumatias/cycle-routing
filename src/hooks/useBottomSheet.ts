@@ -6,6 +6,7 @@ const VELOCITY_THRESHOLD = 0.5 // px/ms
 const DEAD_ZONE = 5 // px — ignore micro-movements (protects taps)
 const HANDLE_HEIGHT = 36 // px — handle area including padding
 const SNAP_TRANSITION = 'transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)'
+const SNAP_DURATION = 350 // ms — safety timeout, slightly longer than transition
 
 function getViewportHeight() {
   return window.innerHeight
@@ -50,32 +51,60 @@ export function useBottomSheet() {
   const prevTime = useRef(0)
   const currentTranslateY = useRef(getCollapsedTranslateY())
   const isAnimating = useRef(false)
+  const animationTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Keep ref in sync with state
   useEffect(() => {
     currentTranslateY.current = translateY
   }, [translateY])
 
+  const finishAnimation = useCallback(() => {
+    isAnimating.current = false
+    if (animationTimer.current) {
+      clearTimeout(animationTimer.current)
+      animationTimer.current = null
+    }
+    const sheet = sheetRef.current
+    if (sheet) sheet.style.transition = ''
+  }, [])
+
   const snapTo = useCallback((target: 'collapsed' | 'expanded') => {
     const newTY = target === 'collapsed'
       ? getCollapsedTranslateY()
       : getExpandedTranslateY(contentRef.current)
+
+    // If already at target, skip animation entirely
+    if (Math.abs(currentTranslateY.current - newTY) < 1) {
+      currentTranslateY.current = newTY
+      setTranslateY(newTY)
+      setSnapPoint(target)
+      isAnimating.current = false
+      return
+    }
 
     isAnimating.current = true
     const sheet = sheetRef.current
     if (sheet) {
       sheet.style.transition = SNAP_TRANSITION
       const onEnd = () => {
-        sheet.style.transition = ''
-        isAnimating.current = false
         sheet.removeEventListener('transitionend', onEnd)
+        finishAnimation()
       }
       sheet.addEventListener('transitionend', onEnd)
     }
 
+    // Safety timeout: clear isAnimating even if transitionend doesn't fire
+    if (animationTimer.current) clearTimeout(animationTimer.current)
+    animationTimer.current = setTimeout(finishAnimation, SNAP_DURATION)
+
+    // Apply transform directly to DOM so it's immediate
+    if (sheet) {
+      sheet.style.transform = `translateY(${newTY}px)`
+    }
+    currentTranslateY.current = newTY
     setTranslateY(newTY)
     setSnapPoint(target)
-  }, [])
+  }, [finishAnimation])
 
   const applyTranslateY = useCallback((ty: number) => {
     const sheet = sheetRef.current
@@ -284,6 +313,13 @@ export function useBottomSheet() {
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [snapPoint, applyTranslateY])
+
+  // Cleanup animation timer on unmount
+  useEffect(() => {
+    return () => {
+      if (animationTimer.current) clearTimeout(animationTimer.current)
+    }
+  }, [])
 
   const sheetStyle = useMemo<React.CSSProperties>(() => ({
     transform: `translateY(${translateY}px)`,
