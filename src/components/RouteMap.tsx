@@ -45,17 +45,22 @@ const ROUTE_WEIGHT = 5
 
 type FitBoundsProps = {
   bounds: LatLng[] | null
+  from?: LatLng
+  to?: LatLng
 }
 
-function FitBounds({ bounds }: FitBoundsProps) {
+function FitBounds({ bounds, from, to }: FitBoundsProps) {
   const map = useMap()
+  // Only re-fit when the origin/destination changes, not on route variant switch
   useEffect(() => {
     if (!bounds || bounds.length < 2) return
     map.fitBounds(bounds as L.LatLngBoundsExpression, {
       paddingTopLeft: [40, 40],
       paddingBottomRight: [40, 200],
+      maxZoom: 16,
     })
-  }, [map, bounds])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map, from?.[0], from?.[1], to?.[0], to?.[1]])
   return null
 }
 
@@ -126,7 +131,7 @@ export function RouteMap({
           minZoom={HSL_TILE_CONFIG.minZoom}
           maxZoom={HSL_TILE_CONFIG.maxZoom}
         />
-        <FitBounds bounds={bounds.length >= 2 ? bounds : null} />
+        <FitBounds bounds={bounds.length >= 2 ? bounds : null} from={from} to={to} />
         {altLegsArrays.map((altLegs, altIdx) =>
           altLegs.map((leg, legIdx) => (
             <Polyline
