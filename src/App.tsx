@@ -28,6 +28,7 @@ import {
   getRecentSearches,
   addRecentSearch,
 } from './utils/recentSearches'
+import { useBottomSheet } from './hooks/useBottomSheet'
 
 type RoutesState = {
   loading: boolean
@@ -52,6 +53,8 @@ function App() {
     from: LatLng
     to: LatLng
   } | null>(null)
+
+  const { sheetRef, handleRef, contentRef, sheetStyle, contentStyle } = useBottomSheet()
 
   const resolveCoords = (option: AddressOption | null, input: string) => {
     if (option) return { lat: option.lat, lon: option.lon }
@@ -155,58 +158,61 @@ function App() {
         />
       </div>
 
-      <div className="bottom-panel">
-        <form onSubmit={handleSubmit}>
-          <div className="address-fields">
-            <Stack spacing={1.5}>
-              <AddressAutocomplete
-                value={fromOption}
-                onChange={setFromOption}
-                inputValue={fromInput}
-                onInputChange={setFromInput}
-                recentSearches={recentSearches}
-                icon="origin"
-              />
-              <AddressAutocomplete
-                value={toOption}
-                onChange={setToOption}
-                inputValue={toInput}
-                onInputChange={setToInput}
-                recentSearches={recentSearches}
-                icon="destination"
+      <div className="bottom-panel" ref={sheetRef} style={sheetStyle}>
+        <div className="bottom-panel-handle" ref={handleRef} />
+        <div className="bottom-panel-content" ref={contentRef} style={contentStyle}>
+          <form onSubmit={handleSubmit}>
+            <div className="address-fields">
+              <Stack spacing={1.5}>
+                <AddressAutocomplete
+                  value={fromOption}
+                  onChange={setFromOption}
+                  inputValue={fromInput}
+                  onInputChange={setFromInput}
+                  recentSearches={recentSearches}
+                  icon="origin"
+                />
+                <AddressAutocomplete
+                  value={toOption}
+                  onChange={setToOption}
+                  inputValue={toInput}
+                  onInputChange={setToInput}
+                  recentSearches={recentSearches}
+                  icon="destination"
+                />
+              </Stack>
+            </div>
+            <Button
+              type="submit"
+              variant="contained"
+              fullWidth
+              disabled={routesState.loading}
+              sx={{ mt: 2 }}
+            >
+              {routesState.loading
+                ? 'Finding routes\u2026'
+                : 'Find routes'}
+            </Button>
+          </form>
+
+          {routesState.error && (
+            <Alert severity={routesState.routes ? 'warning' : 'error'} sx={{ mt: 2 }}>
+              {routesState.error}
+            </Alert>
+          )}
+
+          {routesState.routes && selectedRouteData && (
+            <Stack spacing={2} sx={{ mt: 2 }}>
+              <RouteCards
+                routes={routesState.routes}
+                selectedRoute={routesState.selectedRoute}
+                onSelect={(key) =>
+                  setRoutesState((prev) => ({ ...prev, selectedRoute: key }))
+                }
               />
             </Stack>
-          </div>
-          <Button
-            type="submit"
-            variant="contained"
-            fullWidth
-            disabled={routesState.loading}
-            sx={{ mt: 2 }}
-          >
-            {routesState.loading
-              ? 'Finding routes\u2026'
-              : 'Find routes'}
-          </Button>
-        </form>
-
-        {routesState.error && (
-          <Alert severity={routesState.routes ? 'warning' : 'error'} sx={{ mt: 2 }}>
-            {routesState.error}
-          </Alert>
-        )}
-
-        {routesState.routes && selectedRouteData && (
-          <Stack spacing={2} sx={{ mt: 2 }}>
-            <RouteCards
-              routes={routesState.routes}
-              selectedRoute={routesState.selectedRoute}
-              onSelect={(key) =>
-                setRoutesState((prev) => ({ ...prev, selectedRoute: key }))
-              }
-            />
-          </Stack>
-        )}
+          )}
+        </div>
       </div>
     </div>
   )
