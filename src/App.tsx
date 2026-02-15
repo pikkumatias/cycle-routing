@@ -13,10 +13,8 @@ import {
 } from './api/digitransit'
 import { RouteMap } from './components/RouteMap'
 import { RouteCards, type ScoredRoute } from './components/RouteCards'
-import {
-  AddressAutocomplete,
-  type AddressOption,
-} from './components/AddressAutocomplete'
+import { SearchDrawer, type AddressOption } from './components/SearchDrawer'
+import { AddressTrigger } from './components/AddressTrigger'
 import {
   getRouteLegsFromPlanResponse,
   getBoundsFromLegsAndPoints,
@@ -54,11 +52,34 @@ function App() {
     to: LatLng
   } | null>(null)
 
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [activeField, setActiveField] = useState<'origin' | 'destination'>('origin')
+
   const { sheetRef, handleRef, contentRef, sheetStyle, contentStyle } = useBottomSheet()
 
   const resolveCoords = (option: AddressOption | null, input: string) => {
     if (option) return { lat: option.lat, lon: option.lon }
     return parseLatLon(input)
+  }
+
+  const openDrawer = (field: 'origin' | 'destination') => {
+    setActiveField(field)
+    setDrawerOpen(true)
+  }
+
+  const handleDrawerSelect = (option: AddressOption) => {
+    if (activeField === 'origin') {
+      setFromOption(option)
+      setFromInput(option.label)
+    } else {
+      setToOption(option)
+      setToInput(option.label)
+    }
+    setDrawerOpen(false)
+  }
+
+  const handleDrawerClose = () => {
+    setDrawerOpen(false)
   }
 
   const handleSubmit = async (event: FormEvent) => {
@@ -164,21 +185,17 @@ function App() {
           <form onSubmit={handleSubmit}>
             <div className="address-fields">
               <Stack spacing={1.5}>
-                <AddressAutocomplete
-                  value={fromOption}
-                  onChange={setFromOption}
-                  inputValue={fromInput}
-                  onInputChange={setFromInput}
-                  recentSearches={recentSearches}
+                <AddressTrigger
                   icon="origin"
+                  placeholder="Origin"
+                  value={fromOption?.label ?? ''}
+                  onClick={() => openDrawer('origin')}
                 />
-                <AddressAutocomplete
-                  value={toOption}
-                  onChange={setToOption}
-                  inputValue={toInput}
-                  onInputChange={setToInput}
-                  recentSearches={recentSearches}
+                <AddressTrigger
                   icon="destination"
+                  placeholder="Where to?"
+                  value={toOption?.label ?? ''}
+                  onClick={() => openDrawer('destination')}
                 />
               </Stack>
             </div>
@@ -214,6 +231,15 @@ function App() {
           )}
         </div>
       </div>
+
+      <SearchDrawer
+        open={drawerOpen}
+        onClose={handleDrawerClose}
+        onSelect={handleDrawerSelect}
+        fieldType={activeField}
+        initialInputValue={activeField === 'origin' ? fromInput : toInput}
+        recentSearches={recentSearches}
+      />
     </div>
   )
 }
