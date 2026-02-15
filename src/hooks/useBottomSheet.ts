@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect, useCallback, useMemo } from 'react'
 
-const COLLAPSED_FRACTION = 0.20
+const COLLAPSED_FRACTION = 0.30
 const MAX_EXPANDED_FRACTION = 0.85
 const VELOCITY_THRESHOLD = 0.5 // px/ms
 const DEAD_ZONE = 5 // px — ignore micro-movements (protects taps)
