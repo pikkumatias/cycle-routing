@@ -13,6 +13,7 @@ export const ROUTE_PRESETS = {
   fastest: { time: 1.0, safety: 0, slope: 0 },
   scenic: { time: 0.2, safety: 0.7, slope: 0.1 },
   balanced: { time: 0.5, safety: 0.4, slope: 0.1 },
+  calm: { time: 0.3, safety: 0.6, slope: 0.1 },
 } as const satisfies Record<string, TriangleFactors>
 
 export type RoutePresetKey = keyof typeof ROUTE_PRESETS

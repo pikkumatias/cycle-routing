@@ -36,6 +36,30 @@ export function getRouteLegsFromPlanResponse(response: any): RouteLeg[] {
 }
 
 /**
+ * Estimate a bounding box from just origin and destination with padding.
+ * Bicycle routes typically stay within ~20% beyond the endpoint bounding box.
+ * Used to start Overpass fetch in parallel with route requests.
+ */
+export function estimateBboxFromEndpoints(
+  from: LatLng,
+  to: LatLng,
+  paddingFraction: number = 0.2,
+): [LatLng, LatLng] {
+  const minLat = Math.min(from[0], to[0])
+  const maxLat = Math.max(from[0], to[0])
+  const minLon = Math.min(from[1], to[1])
+  const maxLon = Math.max(from[1], to[1])
+
+  const latPad = (maxLat - minLat) * paddingFraction || 0.005
+  const lonPad = (maxLon - minLon) * paddingFraction || 0.005
+
+  return [
+    [minLat - latPad, minLon - lonPad],
+    [maxLat + latPad, maxLon + lonPad],
+  ]
+}
+
+/**
  * Get combined bounds [[south, west], [north, east]] from legs and optional points.
  */
 export function getBoundsFromLegsAndPoints(

@@ -71,12 +71,14 @@ describe('fetchParksAndWater', () => {
       lon: 24.94,
       type: 'node',
       tags: { leisure: 'park' },
+      category: 'park',
     })
     expect(result[1]).toEqual({
       lat: 60.175,
       lon: 24.95,
       type: 'way',
       tags: { natural: 'water' },
+      category: 'water',
     })
     expect(mockFetch).toHaveBeenCalledWith(
       'https://overpass-api.de/api/interpreter',

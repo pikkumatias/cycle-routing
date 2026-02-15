@@ -1,5 +1,5 @@
 /**
- * Overpass API client for OSM POIs (parks, water) in a bounding box.
+ * Overpass API client for OSM POIs and cycling infrastructure in a bounding box.
  * No API key required. See https://wiki.openstreetmap.org/wiki/Overpass_API
  */
 
@@ -13,33 +13,107 @@ export type Bbox = {
   east: number
 }
 
+export type PoiCategory =
+  | 'park'
+  | 'garden'
+  | 'nature_reserve'
+  | 'forest'
+  | 'wood'
+  | 'meadow'
+  | 'grass'
+  | 'water'
+  | 'fountain'
+  | 'river_stream'
+  | 'cycleway_separated'
+  | 'cycleway_designated'
+  | 'cycleway_lane'
+
 export type OsmPoi = {
   lat: number
   lon: number
   type?: 'node' | 'way'
   tags?: Record<string, string>
+  category?: PoiCategory
 }
 
 /**
- * Build Overpass QL query for parks and water in a bbox.
+ * Classify an OSM element by its tags into a PoiCategory.
+ * Cycling infrastructure is checked first, then scenic/nature categories.
+ */
+export function classifyPoi(tags: Record<string, string> | undefined): PoiCategory | undefined {
+  if (!tags) return undefined
+
+  // Cycling infrastructure
+  if (tags.highway === 'cycleway') return 'cycleway_separated'
+  if (
+    tags.cycleway === 'track' ||
+    tags['cycleway:left'] === 'track' ||
+    tags['cycleway:right'] === 'track'
+  ) return 'cycleway_separated'
+  if (tags.cycleway === 'lane') return 'cycleway_lane'
+  if (
+    tags.bicycle === 'designated' &&
+    (tags.highway === 'path' || tags.highway === 'footway')
+  ) return 'cycleway_designated'
+
+  // Scenic / nature
+  if (tags.leisure === 'park') return 'park'
+  if (tags.leisure === 'garden') return 'garden'
+  if (tags.leisure === 'nature_reserve') return 'nature_reserve'
+  if (tags.landuse === 'forest') return 'forest'
+  if (tags.natural === 'wood') return 'wood'
+  if (tags.landuse === 'meadow') return 'meadow'
+  if (tags.landuse === 'grass') return 'grass'
+  if (tags.natural === 'water') return 'water'
+  if (tags.amenity === 'fountain') return 'fountain'
+  if (tags.waterway === 'river' || tags.waterway === 'stream') return 'river_stream'
+
+  return undefined
+}
+
+/**
+ * Build Overpass QL query for scenic POIs and cycling infrastructure in a bbox.
  * Uses nodes and ways; for ways we request center so we get a single point per feature.
  */
-function buildParksAndWaterQuery(bbox: Bbox, timeoutSec: number): string {
+function buildCombinedQuery(bbox: Bbox, timeoutSec: number): string {
   const { south, west, north, east } = bbox
+  const b = `(${south},${west},${north},${east})`
   return `[out:json][timeout:${timeoutSec}];
 (
-  node["leisure"="park"](${south},${west},${north},${east});
-  node["landuse"="grass"](${south},${west},${north},${east});
-  node["landuse"="forest"](${south},${west},${north},${east});
-  node["natural"="water"](${south},${west},${north},${east});
-  way["leisure"="park"](${south},${west},${north},${east});
-  way["natural"="water"](${south},${west},${north},${east});
+  node["leisure"="park"]${b};
+  way["leisure"="park"]${b};
+  node["leisure"="garden"]${b};
+  way["leisure"="garden"]${b};
+  node["leisure"="nature_reserve"]${b};
+  way["leisure"="nature_reserve"]${b};
+  node["landuse"="grass"]${b};
+  way["landuse"="grass"]${b};
+  node["landuse"="forest"]${b};
+  way["landuse"="forest"]${b};
+  node["natural"="wood"]${b};
+  way["natural"="wood"]${b};
+  node["landuse"="meadow"]${b};
+  way["landuse"="meadow"]${b};
+  node["natural"="water"]${b};
+  way["natural"="water"]${b};
+  node["amenity"="fountain"]${b};
+  node["waterway"="river"]${b};
+  node["waterway"="stream"]${b};
+  way["waterway"="river"]${b};
+  way["waterway"="stream"]${b};
+  way["highway"="cycleway"]${b};
+  way["cycleway"="track"]${b};
+  way["cycleway"="lane"]${b};
+  way["cycleway:left"="track"]${b};
+  way["cycleway:right"="track"]${b};
+  way["bicycle"="designated"]["highway"="path"]${b};
+  way["bicycle"="designated"]["highway"="footway"]${b};
 );
 out center;`
 }
 
 /**
- * Parse Overpass JSON response into an array of { lat, lon } (and optional tags).
+ * Parse Overpass JSON response into an array of classified POIs.
  */
 function parseOverpassResponse(data: any): OsmPoi[] {
   const elements = data?.elements
@@ -57,11 +131,13 @@ function parseOverpassResponse(data: any): OsmPoi[] {
       lon = el.center.lon
     }
     if (lat != null && lon != null) {
+      const tags = el.tags && typeof el.tags === 'object' ? el.tags : undefined
       result.push({
         lat,
         lon,
         type: el.type,
-        tags: el.tags && typeof el.tags === 'object' ? el.tags : undefined,
+        tags,
+        category: classifyPoi(tags),
       })
     }
   }
@@ -69,15 +145,15 @@ function parseOverpassResponse(data: any): OsmPoi[] {
 }
 
 /**
- * Fetch parks and water POIs from OpenStreetMap via the Overpass API.
+ * Fetch scenic POIs and cycling infrastructure from OpenStreetMap via Overpass API.
  * No registration or API key required. Use a tight bbox and reasonable timeout.
  */
-export async function fetchParksAndWater(
+export async function fetchPoisAndInfrastructure(
   bbox: Bbox,
   options?: { timeoutSec?: number; signal?: AbortSignal },
 ): Promise<OsmPoi[]> {
   const timeoutSec = options?.timeoutSec ?? DEFAULT_TIMEOUT_SEC
-  const query = buildParksAndWaterQuery(bbox, timeoutSec)
+  const query = buildCombinedQuery(bbox, timeoutSec)
 
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), (timeoutSec + 5) * 1000)
@@ -103,6 +179,9 @@ export async function fetchParksAndWater(
     throw new Error('Overpass request failed')
   }
 }
+
+/** Backward-compatible alias for the original fetch function. */
+export const fetchParksAndWater = fetchPoisAndInfrastructure
 
 /**
  * Convert route bounds from getBoundsFromLegsAndPoints format to Overpass Bbox.

@@ -17,11 +17,12 @@ import { SearchDrawer, type AddressOption } from './components/SearchDrawer'
 import { AddressTrigger } from './components/AddressTrigger'
 import {
   getRouteLegsFromPlanResponse,
-  getBoundsFromLegsAndPoints,
+  estimateBboxFromEndpoints,
   type LatLng,
 } from './utils/routeGeometry'
-import { fetchParksAndWater, boundsToBbox } from './utils/overpass'
-import { scorePoisNearRoute } from './utils/scenicScore'
+import { fetchPoisAndInfrastructure, boundsToBbox } from './utils/overpass'
+import type { OsmPoi } from './utils/overpass'
+import { scoreRouteDetailed, normalizeScores } from './utils/scenicScore'
 import {
   getRecentSearches,
   addRecentSearch,
@@ -45,7 +46,7 @@ function App() {
     loading: false,
     error: null,
     routes: null,
-    selectedRoute: 'scenic',
+    selectedRoute: 'calm',
   })
   const [lastCoords, setLastCoords] = useState<{
     from: LatLng
@@ -91,37 +92,39 @@ function App() {
       const fromLatLng: LatLng = [from.lat, from.lon]
       const toLatLng: LatLng = [to.lat, to.lon]
 
-      setRoutesState({ loading: true, error: null, routes: null, selectedRoute: 'scenic' })
+      setRoutesState({ loading: true, error: null, routes: null, selectedRoute: 'calm' })
 
-      const rawRoutes = await requestAllRouteVariants(from, to)
+      // Estimate bbox from endpoints so Overpass can start in parallel with routes
+      const estimatedBounds = estimateBboxFromEndpoints(fromLatLng, toLatLng)
+      const estimatedBbox = boundsToBbox(estimatedBounds)
 
-      const allLegs = Object.values(rawRoutes).flatMap((r) =>
-        getRouteLegsFromPlanResponse(r),
-      )
-      const combinedBounds = getBoundsFromLegsAndPoints(
-        allLegs,
-        fromLatLng,
-        toLatLng,
-      )
-      const bbox = boundsToBbox(combinedBounds)
+      // Launch routes + Overpass in parallel
+      const [rawRoutes, poisResult] = await Promise.all([
+        requestAllRouteVariants(from, to),
+        estimatedBbox
+          ? fetchPoisAndInfrastructure(estimatedBbox).then(
+              (pois) => ({ pois, failed: false }),
+              () => ({ pois: [] as OsmPoi[], failed: true }),
+            )
+          : Promise.resolve({ pois: [] as OsmPoi[], failed: false }),
+      ])
 
-      let pois: Awaited<ReturnType<typeof fetchParksAndWater>> = []
-      let poisFailed = false
-      if (bbox) {
-        try {
-          pois = await fetchParksAndWater(bbox)
-        } catch {
-          poisFailed = true
-        }
-      }
+      const { pois, failed: poisFailed } = poisResult
 
-      const scored = {} as Record<RoutePresetKey, ScoredRoute>
-      for (const [key, response] of Object.entries(rawRoutes) as [
-        RoutePresetKey,
-        any,
-      ][]) {
+      // Score each route with weighted categories
+      const rawScores: Record<string, ReturnType<typeof scoreRouteDetailed>> = {}
+      for (const [key, response] of Object.entries(rawRoutes) as [RoutePresetKey, any][]) {
         const legs = getRouteLegsFromPlanResponse(response)
         const polyline = legs.flatMap((l) => l.positions)
+        rawScores[key] = scoreRouteDetailed(pois, polyline)
+      }
+
+      // Normalize calm scores across all route variants (0-100)
+      const normalizedScores = normalizeScores(rawScores)
+
+      // Build scored routes with duration, distance, and all score fields
+      const scored = {} as Record<RoutePresetKey, ScoredRoute>
+      for (const [key, response] of Object.entries(rawRoutes) as [RoutePresetKey, any][]) {
         const itinerary = response?.data?.plan?.itineraries?.[0]
         const durationSec = itinerary?.duration ?? 0
         const distanceKm =
@@ -129,8 +132,17 @@ function App() {
             (sum: number, leg: any) => sum + (leg?.distance ?? 0),
             0,
           ) / 1000
-        const { count } = scorePoisNearRoute(pois, polyline)
-        scored[key] = { response, durationSec, distanceKm, scenicScore: count }
+        const ns = normalizedScores[key]
+        scored[key] = {
+          response,
+          durationSec,
+          distanceKm,
+          scenicScore: ns.scenicScore,
+          infraScore: ns.infraScore,
+          calmScore: ns.calmScore,
+          scenicPoiCount: ns.scenicPoiCount,
+          infraSegmentCount: ns.infraSegmentCount,
+        }
       }
 
       if (fromOption) {
@@ -143,9 +155,9 @@ function App() {
 
       setRoutesState({
         loading: false,
-        error: poisFailed ? 'Scenic scoring unavailable \u2014 Overpass API timed out.' : null,
+        error: poisFailed ? 'Scoring unavailable \u2014 Overpass API timed out.' : null,
         routes: scored,
-        selectedRoute: 'scenic',
+        selectedRoute: 'calm',
       })
       setLastCoords({ from: fromLatLng, to: toLatLng })
     } catch (error) {
@@ -155,7 +167,7 @@ function App() {
         loading: false,
         error: message,
         routes: null,
-        selectedRoute: 'scenic',
+        selectedRoute: 'calm',
       })
     }
   }

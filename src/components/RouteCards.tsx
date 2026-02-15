@@ -2,6 +2,7 @@ import {
   Card,
   CardContent,
   Chip,
+  Stack,
   Typography,
 } from '@mui/material'
 import StarIcon from '@mui/icons-material/Star'
@@ -12,6 +13,10 @@ export type ScoredRoute = {
   durationSec: number
   distanceKm: number
   scenicScore: number
+  infraScore: number
+  calmScore: number
+  scenicPoiCount: number
+  infraSegmentCount: number
 }
 
 type RouteCardsProps = {
@@ -24,6 +29,7 @@ const ROUTE_LABELS: Record<RoutePresetKey, string> = {
   fastest: 'Fastest',
   scenic: 'Scenic',
   balanced: 'Balanced',
+  calm: 'Calm',
 }
 
 function formatDuration(seconds: number): string {
@@ -32,20 +38,20 @@ function formatDuration(seconds: number): string {
 }
 
 export function RouteCards({ routes, selectedRoute, onSelect }: RouteCardsProps) {
-  const maxScenic = Math.max(...Object.values(routes).map((r) => r.scenicScore))
+  const maxCalm = Math.max(...Object.values(routes).map((r) => r.calmScore))
 
   return (
     <div className="route-chips-scroll">
       {(Object.entries(routes) as [RoutePresetKey, ScoredRoute][]).map(
         ([key, route]) => {
           const isSelected = key === selectedRoute
-          const isMostScenic = route.scenicScore === maxScenic && maxScenic > 0
+          const isCalmest = route.calmScore === maxCalm && maxCalm > 0
 
           return (
             <Card
               key={key}
               sx={{
-                minWidth: 140,
+                minWidth: 130,
                 flex: '0 0 auto',
                 border: isSelected ? '2px solid' : '1px solid',
                 borderColor: isSelected ? 'primary.main' : 'grey.300',
@@ -59,7 +65,7 @@ export function RouteCards({ routes, selectedRoute, onSelect }: RouteCardsProps)
               <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
                 <Typography variant="body2" fontWeight={700} noWrap sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                   {ROUTE_LABELS[key]}
-                  {isMostScenic && (
+                  {isCalmest && (
                     <StarIcon sx={{ fontSize: 16, color: isSelected ? 'white' : '#FFB300' }} />
                   )}
                 </Typography>
@@ -70,21 +76,36 @@ export function RouteCards({ routes, selectedRoute, onSelect }: RouteCardsProps)
                   {formatDuration(route.durationSec)} &middot;{' '}
                   {route.distanceKm.toFixed(1)} km
                 </Typography>
-                {route.scenicScore > 0 && (
-                  <Chip
-                    label={`${route.scenicScore} parks`}
-                    size="small"
-                    sx={{
-                      mt: 0.5,
-                      height: 20,
-                      fontSize: '0.7rem',
-                      bgcolor: isSelected
-                        ? 'rgba(255,255,255,0.2)'
-                        : 'rgba(76,175,80,0.1)',
-                      color: isSelected ? 'white' : 'success.main',
-                    }}
-                  />
-                )}
+                <Stack direction="row" spacing={0.5} sx={{ mt: 0.5, flexWrap: 'wrap' }}>
+                  {route.calmScore > 0 && (
+                    <Chip
+                      label={`Calm ${route.calmScore}`}
+                      size="small"
+                      sx={{
+                        height: 20,
+                        fontSize: '0.7rem',
+                        bgcolor: isSelected
+                          ? 'rgba(255,255,255,0.2)'
+                          : 'rgba(76,175,80,0.1)',
+                        color: isSelected ? 'white' : 'success.main',
+                      }}
+                    />
+                  )}
+                  {route.infraSegmentCount > 0 && (
+                    <Chip
+                      label={`${route.infraSegmentCount} paths`}
+                      size="small"
+                      sx={{
+                        height: 20,
+                        fontSize: '0.7rem',
+                        bgcolor: isSelected
+                          ? 'rgba(255,255,255,0.2)'
+                          : 'rgba(25,118,210,0.08)',
+                        color: isSelected ? 'white' : 'primary.main',
+                      }}
+                    />
+                  )}
+                </Stack>
               </CardContent>
             </Card>
           )

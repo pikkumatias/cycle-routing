@@ -60,9 +60,9 @@ describe('scorePoisNearRoute', () => {
   ]
 
   const pois: OsmPoi[] = [
-    { lat: 60.1701, lon: 24.9401, tags: { leisure: 'park' } }, // very close
-    { lat: 60.175, lon: 24.945, tags: { leisure: 'park' } }, // on the route
-    { lat: 60.2, lon: 25.0, tags: { natural: 'water' } }, // far away
+    { lat: 60.1701, lon: 24.9401, tags: { leisure: 'park' }, category: 'park' }, // very close
+    { lat: 60.175, lon: 24.945, tags: { leisure: 'park' }, category: 'park' }, // on the route
+    { lat: 60.2, lon: 25.0, tags: { natural: 'water' }, category: 'water' }, // far away
   ]
 
   it('counts nearby POIs within the threshold', () => {
