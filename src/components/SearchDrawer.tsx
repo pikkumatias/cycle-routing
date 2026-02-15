@@ -13,6 +13,11 @@ import {
   InputAdornment,
   CircularProgress,
 } from '@mui/material'
+import ArrowBackIcon from '@mui/icons-material/ArrowBack'
+import ClearIcon from '@mui/icons-material/Clear'
+import AccessTimeIcon from '@mui/icons-material/AccessTime'
+import LocationOnIcon from '@mui/icons-material/LocationOn'
+import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import { fetchGeocodingAutocomplete } from '../api/digitransit'
 import type { RecentSearch } from '../utils/recentSearches'
 
@@ -158,12 +163,7 @@ export function SearchDrawer({
           sx={{ color: 'primary.main', mt: 0.5 }}
           aria-label="Back"
         >
-          <Box
-            component="span"
-            sx={{ fontSize: 24, fontWeight: 300, lineHeight: 1 }}
-          >
-            &#8249;
-          </Box>
+          <ArrowBackIcon />
         </IconButton>
         <Box sx={{ flex: 1 }}>
           <Typography
@@ -192,9 +192,7 @@ export function SearchDrawer({
                       onClick={() => handleInputChange('')}
                       aria-label="Clear"
                     >
-                      <Box component="span" sx={{ fontSize: 18, lineHeight: 1 }}>
-                        &#10005;
-                      </Box>
+                      <ClearIcon fontSize="small" />
                     </IconButton>
                   </InputAdornment>
                 ) : undefined,
@@ -226,15 +224,11 @@ export function SearchDrawer({
               sx={{ px: 2, py: 1.5 }}
             >
               <ListItemIcon sx={{ minWidth: 40 }}>
-                <Box
-                  component="span"
-                  sx={{
-                    fontSize: 20,
-                    color: item.group === 'Recent' ? 'text.secondary' : 'primary.main',
-                  }}
-                >
-                  {item.group === 'Recent' ? '\u{1F551}' : '\uD83D\uDCCD'}
-                </Box>
+                {item.group === 'Recent' ? (
+                  <AccessTimeIcon sx={{ color: 'text.secondary' }} />
+                ) : (
+                  <LocationOnIcon sx={{ color: 'primary.main' }} />
+                )}
               </ListItemIcon>
               <ListItemText
                 primary={
@@ -250,12 +244,7 @@ export function SearchDrawer({
                   ) : undefined
                 }
               />
-              <Box
-                component="span"
-                sx={{ color: 'text.secondary', fontSize: 20, ml: 1 }}
-              >
-                &#8250;
-              </Box>
+              <ChevronRightIcon sx={{ color: 'text.secondary', ml: 1 }} />
             </ListItemButton>
             <Divider component="li" />
           </Box>

@@ -4,6 +4,7 @@ import {
   Chip,
   Typography,
 } from '@mui/material'
+import StarIcon from '@mui/icons-material/Star'
 import type { RoutePresetKey } from '../api/digitransit'
 
 export type ScoredRoute = {
@@ -56,8 +57,11 @@ export function RouteCards({ routes, selectedRoute, onSelect }: RouteCardsProps)
               onClick={() => onSelect(key)}
             >
               <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
-                <Typography variant="body2" fontWeight={700} noWrap>
-                  {ROUTE_LABELS[key]} {isMostScenic && '\u2B50'}
+                <Typography variant="body2" fontWeight={700} noWrap sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  {ROUTE_LABELS[key]}
+                  {isMostScenic && (
+                    <StarIcon sx={{ fontSize: 16, color: isSelected ? 'white' : '#FFB300' }} />
+                  )}
                 </Typography>
                 <Typography
                   variant="caption"

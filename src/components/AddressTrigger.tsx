@@ -1,4 +1,6 @@
 import { ButtonBase, Box, Typography } from '@mui/material'
+import TripOriginIcon from '@mui/icons-material/TripOrigin'
+import LocationOnIcon from '@mui/icons-material/LocationOn'
 
 type AddressTriggerProps = {
   icon: 'origin' | 'destination'
@@ -28,16 +30,11 @@ export function AddressTrigger({ icon, placeholder, value, onClick }: AddressTri
           py: 1.25,
         }}
       >
-        <Box
-          sx={{
-            width: 12,
-            height: 12,
-            borderRadius: '50%',
-            bgcolor: icon === 'origin' ? 'success.main' : 'error.main',
-            mr: 1.5,
-            flexShrink: 0,
-          }}
-        />
+        {icon === 'origin' ? (
+          <TripOriginIcon sx={{ color: 'success.main', fontSize: 20, mr: 1.5, flexShrink: 0 }} />
+        ) : (
+          <LocationOnIcon sx={{ color: 'error.main', fontSize: 20, mr: 1.5, flexShrink: 0 }} />
+        )}
         <Typography
           sx={{
             color: value ? 'text.primary' : 'text.secondary',
