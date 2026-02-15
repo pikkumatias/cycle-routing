@@ -1,19 +1,38 @@
 import { useRef, useState, useEffect, useCallback, useMemo } from 'react'
 
-const EXPANDED_FRACTION = 0.85
 const COLLAPSED_FRACTION = 0.20
+const MAX_EXPANDED_FRACTION = 0.85
 const VELOCITY_THRESHOLD = 0.5 // px/ms
 const DEAD_ZONE = 5 // px — ignore micro-movements (protects taps)
-const HANDLE_HEIGHT = 36 // px — handle area including margin
+const HANDLE_HEIGHT = 36 // px — handle area including padding
 const SNAP_TRANSITION = 'transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)'
 
 function getViewportHeight() {
   return window.innerHeight
 }
 
-function getMaxTranslateY() {
+/** How far to push the panel down so only COLLAPSED_FRACTION is visible */
+function getCollapsedTranslateY() {
   const vh = getViewportHeight()
-  return vh * (EXPANDED_FRACTION - COLLAPSED_FRACTION)
+  const panelHeight = vh * MAX_EXPANDED_FRACTION
+  const collapsedVisible = vh * COLLAPSED_FRACTION
+  return panelHeight - collapsedVisible
+}
+
+/**
+ * How far to push the panel down when "expanded".
+ * Only open as far as the content needs, capped at MAX_EXPANDED_FRACTION.
+ */
+function getExpandedTranslateY(contentEl: HTMLElement | null) {
+  const vh = getViewportHeight()
+  const panelHeight = vh * MAX_EXPANDED_FRACTION
+  if (!contentEl) return 0
+
+  const neededHeight = contentEl.scrollHeight + HANDLE_HEIGHT
+  if (neededHeight >= panelHeight) return 0 // content fills the full panel
+
+  // Panel only needs to show neededHeight, push the rest down
+  return panelHeight - neededHeight
 }
 
 export function useBottomSheet() {
@@ -22,14 +41,14 @@ export function useBottomSheet() {
   const contentRef = useRef<HTMLDivElement>(null)
 
   const [snapPoint, setSnapPoint] = useState<'collapsed' | 'expanded'>('collapsed')
-  const [translateY, setTranslateY] = useState(() => getMaxTranslateY())
+  const [translateY, setTranslateY] = useState(() => getCollapsedTranslateY())
 
   const isDragging = useRef(false)
   const dragStartY = useRef(0)
   const dragStartTranslateY = useRef(0)
   const prevY = useRef(0)
   const prevTime = useRef(0)
-  const currentTranslateY = useRef(getMaxTranslateY())
+  const currentTranslateY = useRef(getCollapsedTranslateY())
   const isAnimating = useRef(false)
 
   // Keep ref in sync with state
@@ -38,8 +57,9 @@ export function useBottomSheet() {
   }, [translateY])
 
   const snapTo = useCallback((target: 'collapsed' | 'expanded') => {
-    const maxTY = getMaxTranslateY()
-    const newTY = target === 'collapsed' ? maxTY : 0
+    const newTY = target === 'collapsed'
+      ? getCollapsedTranslateY()
+      : getExpandedTranslateY(contentRef.current)
 
     isAnimating.current = true
     const sheet = sheetRef.current
@@ -70,6 +90,12 @@ export function useBottomSheet() {
     const handle = handleRef.current
     if (!handle) return
 
+    const getClampRange = () => {
+      const minTY = getExpandedTranslateY(contentRef.current)
+      const maxTY = getCollapsedTranslateY()
+      return { minTY, maxTY }
+    }
+
     const onTouchStart = (e: TouchEvent) => {
       if (isAnimating.current) return
       const touch = e.touches[0]
@@ -87,8 +113,8 @@ export function useBottomSheet() {
       e.preventDefault()
       const touch = e.touches[0]
       const delta = touch.clientY - dragStartY.current
-      const maxTY = getMaxTranslateY()
-      const newTY = Math.max(0, Math.min(maxTY, dragStartTranslateY.current + delta))
+      const { minTY, maxTY } = getClampRange()
+      const newTY = Math.max(minTY, Math.min(maxTY, dragStartTranslateY.current + delta))
       applyTranslateY(newTY)
       prevY.current = touch.clientY
       prevTime.current = Date.now()
@@ -97,14 +123,15 @@ export function useBottomSheet() {
     const onTouchEnd = () => {
       if (!isDragging.current) return
       isDragging.current = false
-      const maxTY = getMaxTranslateY()
+      const { minTY, maxTY } = getClampRange()
+      const midpoint = (minTY + maxTY) / 2
       const velocity = (prevY.current - dragStartY.current) / (Date.now() - prevTime.current + 1)
       const ty = currentTranslateY.current
 
       if (Math.abs(velocity) > VELOCITY_THRESHOLD) {
         snapTo(velocity > 0 ? 'collapsed' : 'expanded')
       } else {
-        snapTo(ty > maxTY / 2 ? 'collapsed' : 'expanded')
+        snapTo(ty > midpoint ? 'collapsed' : 'expanded')
       }
     }
 
@@ -123,8 +150,8 @@ export function useBottomSheet() {
       const onMouseMove = (ev: MouseEvent) => {
         if (!isDragging.current) return
         const delta = ev.clientY - dragStartY.current
-        const maxTY = getMaxTranslateY()
-        const newTY = Math.max(0, Math.min(maxTY, dragStartTranslateY.current + delta))
+        const { minTY, maxTY } = getClampRange()
+        const newTY = Math.max(minTY, Math.min(maxTY, dragStartTranslateY.current + delta))
         applyTranslateY(newTY)
         prevY.current = ev.clientY
         prevTime.current = Date.now()
@@ -136,14 +163,15 @@ export function useBottomSheet() {
         window.removeEventListener('mousemove', onMouseMove)
         window.removeEventListener('mouseup', onMouseUp)
 
-        const maxTY = getMaxTranslateY()
+        const { minTY, maxTY } = getClampRange()
+        const midpoint = (minTY + maxTY) / 2
         const velocity = (prevY.current - dragStartY.current) / (Date.now() - prevTime.current + 1)
         const ty = currentTranslateY.current
 
         if (Math.abs(velocity) > VELOCITY_THRESHOLD) {
           snapTo(velocity > 0 ? 'collapsed' : 'expanded')
         } else {
-          snapTo(ty > maxTY / 2 ? 'collapsed' : 'expanded')
+          snapTo(ty > midpoint ? 'collapsed' : 'expanded')
         }
       }
 
@@ -187,23 +215,24 @@ export function useBottomSheet() {
       const incrementalDelta = prevY.current - touch.clientY
 
       const ty = currentTranslateY.current
-      const isFullyExpanded = ty <= 0
+      const expandedTY = getExpandedTranslateY(content)
+      const isFullyExpanded = ty <= expandedTY
 
       if (!isFullyExpanded) {
         // Panel not fully expanded — move the panel
         if (Math.abs(deltaFromStart) < DEAD_ZONE && !isExpanding) return
         isExpanding = true
         e.preventDefault()
-        const maxTY = getMaxTranslateY()
-        const newTY = Math.max(0, Math.min(maxTY, ty - incrementalDelta))
+        const maxTY = getCollapsedTranslateY()
+        const newTY = Math.max(expandedTY, Math.min(maxTY, ty - incrementalDelta))
         applyTranslateY(newTY)
       } else {
         // Panel is fully expanded
         if (content.scrollTop <= 0 && incrementalDelta < 0) {
           // At top of scroll, pulling down — collapse
           e.preventDefault()
-          const maxTY = getMaxTranslateY()
-          const newTY = Math.max(0, Math.min(maxTY, ty - incrementalDelta))
+          const maxTY = getCollapsedTranslateY()
+          const newTY = Math.max(expandedTY, Math.min(maxTY, ty - incrementalDelta))
           applyTranslateY(newTY)
           isExpanding = true
         }
@@ -219,14 +248,16 @@ export function useBottomSheet() {
       if (!isExpanding) return
       isExpanding = false
 
-      const maxTY = getMaxTranslateY()
+      const minTY = getExpandedTranslateY(content)
+      const maxTY = getCollapsedTranslateY()
+      const midpoint = (minTY + maxTY) / 2
       const ty = currentTranslateY.current
       const velocity = (prevY.current - startY) / (Date.now() - prevTime.current + 1)
 
       if (Math.abs(velocity) > VELOCITY_THRESHOLD) {
         snapTo(velocity > 0 ? 'collapsed' : 'expanded')
       } else {
-        snapTo(ty > maxTY / 2 ? 'collapsed' : 'expanded')
+        snapTo(ty > midpoint ? 'collapsed' : 'expanded')
       }
     }
 
@@ -244,10 +275,10 @@ export function useBottomSheet() {
   // --- Viewport resize ---
   useEffect(() => {
     const handleResize = () => {
-      const maxTY = getMaxTranslateY()
-      const newTY = snapPoint === 'collapsed' ? maxTY : 0
+      const newTY = snapPoint === 'collapsed'
+        ? getCollapsedTranslateY()
+        : getExpandedTranslateY(contentRef.current)
       setTranslateY(newTY)
-      // Also apply immediately in case state batching delays
       applyTranslateY(newTY)
     }
     window.addEventListener('resize', handleResize)
@@ -260,7 +291,7 @@ export function useBottomSheet() {
 
   const contentStyle = useMemo<React.CSSProperties>(() => {
     const vh = getViewportHeight()
-    const panelHeight = vh * EXPANDED_FRACTION
+    const panelHeight = vh * MAX_EXPANDED_FRACTION
     const maxHeight = panelHeight - HANDLE_HEIGHT
     return {
       maxHeight,
