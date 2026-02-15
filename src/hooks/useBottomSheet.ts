@@ -175,7 +175,6 @@ export function useBottomSheet() {
     const onTouchStart = (e: TouchEvent) => {
       if (isAnimating.current || isDragging.current) return
       startY = e.touches[0].clientY
-      startScrollTop = content.scrollTop
       prevY.current = startY
       prevTime.current = Date.now()
       isExpanding = false
