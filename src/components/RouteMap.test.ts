@@ -33,10 +33,9 @@ describe('HSL_TILE_CONFIG', () => {
     expect(config.url).toContain('{z}/{x}/{y}')
   })
 
-  it('uses the {r} retina placeholder instead of a hardcoded @2x suffix', async () => {
+  it('does not use the Leaflet {r} placeholder (retina handled at module level)', async () => {
     const config = await loadConfig()
-    expect(config.url).toContain('{r}')
-    expect(config.url).not.toContain('@2x')
+    expect(config.url).not.toContain('{r}')
   })
 
   it('sets maxNativeZoom to cap CDN requests below the maxZoom threshold', async () => {

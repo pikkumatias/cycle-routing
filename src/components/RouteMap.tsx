@@ -29,11 +29,14 @@ const destinationIcon = L.divIcon({
   iconAnchor: [10, 10],
 })
 
+const retinaParam = window.devicePixelRatio > 1 ? '@2x' : ''
+
 export const HSL_TILE_CONFIG = {
-  url: `https://cdn.digitransit.fi/map/v3/hsl-map-en/{z}/{x}/{y}{r}.png?digitransit-subscription-key=${import.meta.env.VITE_DIGITRANSIT_API_KEY}`,
+  url: `https://cdn.digitransit.fi/map/v3/hsl-map-en/{z}/{x}/{y}${retinaParam}.png?digitransit-subscription-key=${import.meta.env.VITE_DIGITRANSIT_API_KEY}`,
   minZoom: 5,
   maxZoom: 20,
   maxNativeZoom: 18,
+  tileSize: 256,
   attribution:
     'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, Tiles &copy; <a href="https://digitransit.fi">Digitransit</a>',
 } as const
@@ -127,7 +130,9 @@ export function RouteMap({
           minZoom={HSL_TILE_CONFIG.minZoom}
           maxZoom={HSL_TILE_CONFIG.maxZoom}
           maxNativeZoom={HSL_TILE_CONFIG.maxNativeZoom}
-          detectRetina={true}
+          tileSize={HSL_TILE_CONFIG.tileSize}
+          keepBuffer={4}
+          updateWhenIdle={false}
           eventHandlers={{
             tileerror: (e) => {
               console.warn('Tile failed to load:', e.tile.src)
