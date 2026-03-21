@@ -29,6 +29,7 @@ async function fetchBicycleRoute(
   to: LatLonPair,
   apiKey: string,
   triangle?: TriangleFactors,
+  numItineraries: number = 1,
 ): Promise<unknown> {
   const t = triangle ?? { time: 1, safety: 0, slope: 0 }
   const query = `
@@ -40,11 +41,12 @@ async function fetchBicycleRoute(
       $timeFactor: Float!
       $safetyFactor: Float!
       $slopeFactor: Float!
+      $numItineraries: Int!
     ) {
       plan(
         from: { lat: $fromLat, lon: $fromLon }
         to: { lat: $toLat, lon: $toLon }
-        numItineraries: 1
+        numItineraries: $numItineraries
         transportModes: [{ mode: BICYCLE }]
         optimize: TRIANGLE
         triangle: {
@@ -67,6 +69,7 @@ async function fetchBicycleRoute(
       timeFactor: t.time,
       safetyFactor: t.safety,
       slopeFactor: t.slope,
+      numItineraries,
     },
   })
   const res = await fetch(DIGITRANSIT_ENDPOINT, {
@@ -85,8 +88,8 @@ async function fetchBicycleRoute(
 }
 
 type RequestBody =
-  | { from: string; to: string; triangle?: TriangleFactors }
-  | { from: LatLonPair; to: LatLonPair; triangle?: TriangleFactors }
+  | { from: string; to: string; triangle?: TriangleFactors; numItineraries?: number }
+  | { from: LatLonPair; to: LatLonPair; triangle?: TriangleFactors; numItineraries?: number }
 
 export default async function handler(req: any, res: any) {
   try {
@@ -114,7 +117,8 @@ export default async function handler(req: any, res: any) {
     const to = typeof body.to === 'string' ? parseLatLon(body.to) : body.to
 
     const triangle = (body as any).triangle as TriangleFactors | undefined
-    const data = await fetchBicycleRoute(from, to, apiKey, triangle)
+    const numItineraries = (body as any).numItineraries as number | undefined
+    const data = await fetchBicycleRoute(from, to, apiKey, triangle, numItineraries ?? 1)
     return res.status(200).json(data)
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error'

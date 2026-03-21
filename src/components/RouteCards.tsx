@@ -6,7 +6,7 @@ import {
   Typography,
 } from '@mui/material'
 import StarIcon from '@mui/icons-material/Star'
-import type { RoutePresetKey } from '../api/digitransit'
+import type { RouteCategory } from '../api/digitransit'
 
 export type ScoredRoute = {
   response: unknown
@@ -20,15 +20,14 @@ export type ScoredRoute = {
 }
 
 type RouteCardsProps = {
-  routes: Record<RoutePresetKey, ScoredRoute>
-  selectedRoute: RoutePresetKey
-  onSelect: (key: RoutePresetKey) => void
+  routes: Record<RouteCategory, ScoredRoute>
+  selectedRoute: RouteCategory
+  onSelect: (key: RouteCategory) => void
 }
 
-const ROUTE_LABELS: Record<RoutePresetKey, string> = {
+const ROUTE_LABELS: Record<RouteCategory, string> = {
   fastest: 'Fastest',
   scenic: 'Scenic',
-  balanced: 'Balanced',
   calm: 'Calm',
 }
 
@@ -42,7 +41,7 @@ export function RouteCards({ routes, selectedRoute, onSelect }: RouteCardsProps)
 
   return (
     <div className="route-chips-scroll">
-      {(Object.entries(routes) as [RoutePresetKey, ScoredRoute][]).map(
+      {(Object.entries(routes) as [RouteCategory, ScoredRoute][]).map(
         ([key, route]) => {
           const isSelected = key === selectedRoute
           const isCalmest = route.calmScore === maxCalm && maxCalm > 0

@@ -9,14 +9,13 @@ export type TriangleFactors = {
   slope: number
 }
 
-export const ROUTE_PRESETS = {
-  fastest: { time: 1.0, safety: 0, slope: 0 },
-  scenic: { time: 0.2, safety: 0.7, slope: 0.1 },
-  balanced: { time: 0.5, safety: 0.4, slope: 0.1 },
-  calm: { time: 0.3, safety: 0.6, slope: 0.1 },
-} as const satisfies Record<string, TriangleFactors>
+export type RouteCategory = 'fastest' | 'scenic' | 'calm'
 
-export type RoutePresetKey = keyof typeof ROUTE_PRESETS
+/** Two maximally spread presets to generate diverse candidate routes. */
+const CANDIDATE_PRESETS: TriangleFactors[] = [
+  { time: 1.0, safety: 0, slope: 0 },   // speed-optimized
+  { time: 0, safety: 1.0, slope: 0 },    // infra-optimized
+]
 
 export function parseLatLon(input: string): LatLonPair {
   const trimmed = input.trim()
@@ -130,13 +129,14 @@ export async function requestBicycleRouteViaBackend(
   from: LatLonPair,
   to: LatLonPair,
   triangle?: TriangleFactors,
+  numItineraries?: number,
 ): Promise<unknown> {
   const res = await fetch('/api/digitransit-route', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ from, to, triangle }),
+    body: JSON.stringify({ from, to, triangle, numItineraries }),
   })
 
   if (!res.ok) {
@@ -186,17 +186,49 @@ export async function fetchGeocodingAutocomplete(
   }))
 }
 
-export async function requestAllRouteVariants(
-  from: LatLonPair,
-  to: LatLonPair,
-): Promise<Record<RoutePresetKey, unknown>> {
-  const entries = Object.entries(ROUTE_PRESETS) as [RoutePresetKey, TriangleFactors][]
-  const results = await Promise.all(
-    entries.map(([, triangle]) => requestBicycleRouteViaBackend(from, to, triangle)),
-  )
-  return Object.fromEntries(
-    entries.map(([key], i) => [key, results[i]]),
-  ) as Record<RoutePresetKey, unknown>
+import { decodePolyline, type LatLng } from '../utils/routeGeometry'
+
+export type CandidateRoute = {
+  /** Wrapped as single-itinerary response for getRouteLegsFromPlanResponse compatibility */
+  response: unknown
+  durationSec: number
+  distanceKm: number
+  polyline: LatLng[]
 }
 
+/**
+ * Fetch a diverse pool of candidate routes by making 2 OTP calls with
+ * maximally spread triangle factors, each requesting multiple itineraries.
+ */
+export async function fetchCandidateRoutes(
+  from: LatLonPair,
+  to: LatLonPair,
+): Promise<CandidateRoute[]> {
+  const responses = await Promise.all(
+    CANDIDATE_PRESETS.map((triangle) =>
+      requestBicycleRouteViaBackend(from, to, triangle, 3),
+    ),
+  )
 
+  const candidates: CandidateRoute[] = []
+
+  for (const raw of responses) {
+    const itineraries = (raw as any)?.data?.plan?.itineraries ?? []
+    for (const it of itineraries) {
+      const durationSec: number = it?.duration ?? 0
+      const legs: any[] = it?.legs ?? []
+      const distanceKm =
+        legs.reduce((sum: number, leg: any) => sum + (leg?.distance ?? 0), 0) / 1000
+      const polyline = legs.flatMap((leg: any) =>
+        decodePolyline(leg?.legGeometry?.points),
+      )
+
+      // Wrap as single-itinerary response so getRouteLegsFromPlanResponse works
+      const response = { data: { plan: { itineraries: [it] } } }
+
+      candidates.push({ response, durationSec, distanceKm, polyline })
+    }
+  }
+
+  return candidates
+}

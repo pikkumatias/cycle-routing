@@ -8,21 +8,20 @@ import {
 import './App.css'
 import {
   parseLatLon,
-  requestAllRouteVariants,
-  type RoutePresetKey,
+  fetchCandidateRoutes,
+  type RouteCategory,
 } from './api/digitransit'
 import { RouteMap } from './components/RouteMap'
 import { RouteCards, type ScoredRoute } from './components/RouteCards'
 import { SearchDrawer, type AddressOption } from './components/SearchDrawer'
 import { AddressTrigger } from './components/AddressTrigger'
 import {
-  getRouteLegsFromPlanResponse,
   estimateBboxFromEndpoints,
   type LatLng,
 } from './utils/routeGeometry'
 import { fetchPoisAndInfrastructure, boundsToBbox } from './utils/overpass'
 import type { OsmPoi } from './utils/overpass'
-import { scoreRouteDetailed, normalizeScores } from './utils/scenicScore'
+import { deduplicateRoutes, selectRoutes } from './utils/routeSelection'
 import {
   getRecentSearches,
   addRecentSearch,
@@ -32,8 +31,8 @@ import { useBottomSheet } from './hooks/useBottomSheet'
 type RoutesState = {
   loading: boolean
   error: string | null
-  routes: Record<RoutePresetKey, ScoredRoute> | null
-  selectedRoute: RoutePresetKey
+  routes: Record<RouteCategory, ScoredRoute> | null
+  selectedRoute: RouteCategory
 }
 
 function App() {
@@ -99,8 +98,8 @@ function App() {
       const estimatedBbox = boundsToBbox(estimatedBounds)
 
       // Launch routes + Overpass in parallel
-      const [rawRoutes, poisResult] = await Promise.all([
-        requestAllRouteVariants(from, to),
+      const [candidates, poisResult] = await Promise.all([
+        fetchCandidateRoutes(from, to),
         estimatedBbox
           ? fetchPoisAndInfrastructure(estimatedBbox).then(
               (pois) => ({ pois, failed: false }),
@@ -111,39 +110,9 @@ function App() {
 
       const { pois, failed: poisFailed } = poisResult
 
-      // Score each route with weighted categories
-      const rawScores: Record<string, ReturnType<typeof scoreRouteDetailed>> = {}
-      for (const [key, response] of Object.entries(rawRoutes) as [RoutePresetKey, any][]) {
-        const legs = getRouteLegsFromPlanResponse(response)
-        const polyline = legs.flatMap((l) => l.positions)
-        rawScores[key] = scoreRouteDetailed(pois, polyline)
-      }
-
-      // Normalize calm scores across all route variants (0-100)
-      const normalizedScores = normalizeScores(rawScores)
-
-      // Build scored routes with duration, distance, and all score fields
-      const scored = {} as Record<RoutePresetKey, ScoredRoute>
-      for (const [key, response] of Object.entries(rawRoutes) as [RoutePresetKey, any][]) {
-        const itinerary = response?.data?.plan?.itineraries?.[0]
-        const durationSec = itinerary?.duration ?? 0
-        const distanceKm =
-          (itinerary?.legs ?? []).reduce(
-            (sum: number, leg: any) => sum + (leg?.distance ?? 0),
-            0,
-          ) / 1000
-        const ns = normalizedScores[key]
-        scored[key] = {
-          response,
-          durationSec,
-          distanceKm,
-          scenicScore: ns.scenicScore,
-          infraScore: ns.infraScore,
-          calmScore: ns.calmScore,
-          scenicPoiCount: ns.scenicPoiCount,
-          infraSegmentCount: ns.infraSegmentCount,
-        }
-      }
+      // De-duplicate near-identical routes, then select best per category
+      const unique = deduplicateRoutes(candidates)
+      const scored = selectRoutes(unique, pois)
 
       if (fromOption) {
         addRecentSearch({ label: fromOption.label, lat: fromOption.lat, lon: fromOption.lon })
