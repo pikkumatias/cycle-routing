@@ -29,13 +29,11 @@ const destinationIcon = L.divIcon({
   iconAnchor: [10, 10],
 })
 
-// TODO: Investigate tile rendering at zoom levels 17-18
 export const HSL_TILE_CONFIG = {
-  url: `https://cdn.digitransit.fi/map/v3/hsl-map-en/{z}/{x}/{y}@2x.png?digitransit-subscription-key=${import.meta.env.VITE_DIGITRANSIT_API_KEY}`,
-  tileSize: 512,
-  zoomOffset: -1,
+  url: `https://cdn.digitransit.fi/map/v3/hsl-map-en/{z}/{x}/{y}{r}.png?digitransit-subscription-key=${import.meta.env.VITE_DIGITRANSIT_API_KEY}`,
   minZoom: 5,
   maxZoom: 20,
+  maxNativeZoom: 18,
   attribution:
     'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, Tiles &copy; <a href="https://digitransit.fi">Digitransit</a>',
 } as const
@@ -126,10 +124,15 @@ export function RouteMap({
         <TileLayer
           attribution={HSL_TILE_CONFIG.attribution}
           url={HSL_TILE_CONFIG.url}
-          tileSize={HSL_TILE_CONFIG.tileSize}
-          zoomOffset={HSL_TILE_CONFIG.zoomOffset}
           minZoom={HSL_TILE_CONFIG.minZoom}
           maxZoom={HSL_TILE_CONFIG.maxZoom}
+          maxNativeZoom={HSL_TILE_CONFIG.maxNativeZoom}
+          detectRetina={true}
+          eventHandlers={{
+            tileerror: (e) => {
+              console.warn('Tile failed to load:', e.tile.src)
+            },
+          }}
         />
         <FitBounds bounds={bounds.length >= 2 ? bounds : null} from={from} to={to} />
         {altLegsArrays.map((altLegs, altIdx) =>

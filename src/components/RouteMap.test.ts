@@ -33,19 +33,17 @@ describe('HSL_TILE_CONFIG', () => {
     expect(config.url).toContain('{z}/{x}/{y}')
   })
 
-  it('requests @2x retina .png tiles', async () => {
+  it('uses the {r} retina placeholder instead of a hardcoded @2x suffix', async () => {
     const config = await loadConfig()
-    expect(config.url).toMatch(/\{y\}@2x\.png/)
+    expect(config.url).toContain('{r}')
+    expect(config.url).not.toContain('@2x')
   })
 
-  it('sets tileSize to 512 to match HSL tile dimensions', async () => {
+  it('sets maxNativeZoom to cap CDN requests below the maxZoom threshold', async () => {
     const config = await loadConfig()
-    expect(config.tileSize).toBe(512)
-  })
-
-  it('sets zoomOffset to -1 to compensate for 512px tiles', async () => {
-    const config = await loadConfig()
-    expect(config.zoomOffset).toBe(-1)
+    expect(config.maxNativeZoom).toBeDefined()
+    expect(config.maxNativeZoom).toBeLessThan(config.maxZoom)
+    expect(config.maxNativeZoom).toBeGreaterThanOrEqual(17)
   })
 
   it('includes attribution for both OpenStreetMap and Digitransit', async () => {
