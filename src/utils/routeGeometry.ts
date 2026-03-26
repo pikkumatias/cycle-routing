@@ -19,7 +19,7 @@ export type RouteLeg = {
   mode?: string
 }
 
-function smoothPolyline(points: LatLng[], iterations = 2): LatLng[] {
+function smoothPolyline(points: LatLng[], iterations = 3): LatLng[] {
   if (points.length < 3) return points
   let pts = points
   for (let iter = 0; iter < iterations; iter++) {
