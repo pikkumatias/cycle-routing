@@ -4,7 +4,11 @@
  */
 
 const OVERPASS_ENDPOINT = 'https://overpass-api.de/api/interpreter'
-const DEFAULT_TIMEOUT_SEC = 25
+const OVERPASS_FALLBACK_ENDPOINT = 'https://overpass.kumi.systems/api/interpreter'
+const DEFAULT_TIMEOUT_SEC = 15
+
+// Cap bbox to prevent oversized queries (~39km lat × ~24km lon at 60°N)
+const MAX_BBOX_SPAN = 0.35
 
 export type Bbox = {
   south: number
@@ -71,11 +75,23 @@ export function classifyPoi(tags: Record<string, string> | undefined): PoiCatego
   return undefined
 }
 
+function capBbox(bbox: Bbox): Bbox {
+  const latMid = (bbox.south + bbox.north) / 2
+  const lngMid = (bbox.west + bbox.east) / 2
+  const latHalf = Math.min((bbox.north - bbox.south) / 2, MAX_BBOX_SPAN / 2)
+  const lngHalf = Math.min((bbox.east - bbox.west) / 2, MAX_BBOX_SPAN / 2)
+  return {
+    south: latMid - latHalf,
+    west: lngMid - lngHalf,
+    north: latMid + latHalf,
+    east: lngMid + lngHalf,
+  }
+}
+
 /**
- * Build Overpass QL query for scenic POIs and cycling infrastructure in a bbox.
- * Uses nodes and ways; for ways we request center so we get a single point per feature.
+ * Scenic POIs query: parks, nature, water features.
  */
-function buildCombinedQuery(bbox: Bbox, timeoutSec: number): string {
+function buildScenicQuery(bbox: Bbox, timeoutSec: number): string {
   const { south, west, north, east } = bbox
   const b = `(${south},${west},${north},${east})`
   return `[out:json][timeout:${timeoutSec}];
@@ -101,6 +117,18 @@ function buildCombinedQuery(bbox: Bbox, timeoutSec: number): string {
   node["waterway"="stream"]${b};
   way["waterway"="river"]${b};
   way["waterway"="stream"]${b};
+);
+out center;`
+}
+
+/**
+ * Cycling infrastructure query: cycleways, lanes, designated paths.
+ */
+function buildInfraQuery(bbox: Bbox, timeoutSec: number): string {
+  const { south, west, north, east } = bbox
+  const b = `(${south},${west},${north},${east})`
+  return `[out:json][timeout:${timeoutSec}];
+(
   way["highway"="cycleway"]${b};
   way["cycleway"="track"]${b};
   way["cycleway"="lane"]${b};
@@ -145,39 +173,76 @@ function parseOverpassResponse(data: any): OsmPoi[] {
 }
 
 /**
+ * Fetch a single Overpass query, retrying on the fallback endpoint if the primary fails.
+ * Throws if all endpoints fail.
+ */
+async function fetchQuery(
+  query: string,
+  timeoutSec: number,
+  callerSignal?: AbortSignal,
+): Promise<OsmPoi[]> {
+  const endpoints = [OVERPASS_ENDPOINT, OVERPASS_FALLBACK_ENDPOINT]
+
+  for (let i = 0; i < endpoints.length; i++) {
+    if (callerSignal?.aborted) throw new DOMException('Aborted', 'AbortError')
+
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), (timeoutSec + 3) * 1000)
+    const onCallerAbort = () => controller.abort()
+    callerSignal?.addEventListener('abort', onCallerAbort, { once: true })
+
+    try {
+      const res = await fetch(endpoints[i], {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `data=${encodeURIComponent(query)}`,
+        signal: controller.signal,
+      })
+      if (!res.ok) {
+        const text = await res.text()
+        throw new Error(`Overpass API error: ${res.status} ${res.statusText}\n${text.slice(0, 500)}`)
+      }
+      return parseOverpassResponse(await res.json())
+    } catch (err) {
+      if (callerSignal?.aborted) throw err
+      if (i === endpoints.length - 1) throw err
+      // Brief pause before trying fallback endpoint
+      await new Promise<void>((r) => setTimeout(r, 300))
+    } finally {
+      clearTimeout(timeoutId)
+      callerSignal?.removeEventListener('abort', onCallerAbort)
+    }
+  }
+
+  return []
+}
+
+/**
  * Fetch scenic POIs and cycling infrastructure from OpenStreetMap via Overpass API.
- * No registration or API key required. Use a tight bbox and reasonable timeout.
+ * Runs scenic and infrastructure queries in parallel. If one fails, the other still
+ * contributes to scoring. Throws only if both queries fail on all endpoints.
  */
 export async function fetchPoisAndInfrastructure(
   bbox: Bbox,
   options?: { timeoutSec?: number; signal?: AbortSignal },
 ): Promise<OsmPoi[]> {
   const timeoutSec = options?.timeoutSec ?? DEFAULT_TIMEOUT_SEC
-  const query = buildCombinedQuery(bbox, timeoutSec)
+  const capped = capBbox(bbox)
 
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), (timeoutSec + 5) * 1000)
-  const signal = options?.signal ?? controller.signal
+  const [scenic, infra] = await Promise.allSettled([
+    fetchQuery(buildScenicQuery(capped, timeoutSec), timeoutSec, options?.signal),
+    fetchQuery(buildInfraQuery(capped, timeoutSec), timeoutSec, options?.signal),
+  ])
 
-  try {
-    const res = await fetch(OVERPASS_ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: `data=${encodeURIComponent(query)}`,
-      signal,
-    })
-    clearTimeout(timeoutId)
-    if (!res.ok) {
-      const text = await res.text()
-      throw new Error(`Overpass API error: ${res.status} ${res.statusText}\n${text.slice(0, 500)}`)
-    }
-    const data = await res.json()
-    return parseOverpassResponse(data)
-  } catch (err) {
-    clearTimeout(timeoutId)
-    if (err instanceof Error) throw err
-    throw new Error('Overpass request failed')
+  const result: OsmPoi[] = []
+  if (scenic.status === 'fulfilled') result.push(...scenic.value)
+  if (infra.status === 'fulfilled') result.push(...infra.value)
+
+  if (scenic.status === 'rejected' && infra.status === 'rejected') {
+    throw scenic.reason
   }
+
+  return result
 }
 
 /** Backward-compatible alias for the original fetch function. */
