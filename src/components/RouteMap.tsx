@@ -1,7 +1,6 @@
 import { useEffect, useMemo } from 'react'
 import {
   MapContainer,
-  TileLayer,
   Polyline,
   Marker,
   Popup,
@@ -40,6 +39,74 @@ export const HSL_TILE_CONFIG = {
   attribution:
     'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, Tiles &copy; <a href="https://digitransit.fi">Digitransit</a>',
 } as const
+
+const TILE_CACHE_NAME = 'hsl-tiles-v1'
+
+class HslCachingTileLayer extends L.TileLayer {
+  override createTile(coords: L.Coords, done?: L.DoneCallback): HTMLElement {
+    const img = document.createElement('img')
+    if (!done) return img
+    const url = this.getTileUrl(coords)
+
+    const load = async (attemptsLeft: number): Promise<void> => {
+      try {
+        if (typeof caches !== 'undefined') {
+          const cache = await caches.open(TILE_CACHE_NAME)
+          const cached = await cache.match(url)
+          if (cached) {
+            const blob = await cached.blob()
+            const objUrl = URL.createObjectURL(blob)
+            img.onload = () => { URL.revokeObjectURL(objUrl); done(undefined, img) }
+            img.onerror = () => { URL.revokeObjectURL(objUrl); done(new Error('img load'), img) }
+            img.src = objUrl
+            return
+          }
+        }
+
+        const resp = await fetch(url)
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+        const forCache = resp.clone()
+        const blob = await resp.blob()
+
+        if (typeof caches !== 'undefined') {
+          caches.open(TILE_CACHE_NAME).then((c) => c.put(url, forCache)).catch(() => {})
+        }
+
+        const objUrl = URL.createObjectURL(blob)
+        img.onload = () => { URL.revokeObjectURL(objUrl); done(undefined, img) }
+        img.onerror = () => { URL.revokeObjectURL(objUrl); done(new Error('img load'), img) }
+        img.src = objUrl
+      } catch (err) {
+        if (attemptsLeft > 1) {
+          setTimeout(() => load(attemptsLeft - 1), 400)
+        } else {
+          done(err instanceof Error ? err : new Error(String(err)), img)
+        }
+      }
+    }
+
+    load(3)
+    return img
+  }
+}
+
+function HslTileLayer() {
+  const map = useMap()
+  useEffect(() => {
+    const layer = new HslCachingTileLayer(HSL_TILE_CONFIG.url, {
+      attribution: HSL_TILE_CONFIG.attribution,
+      minZoom: HSL_TILE_CONFIG.minZoom,
+      maxZoom: HSL_TILE_CONFIG.maxZoom,
+      maxNativeZoom: HSL_TILE_CONFIG.maxNativeZoom,
+      tileSize: HSL_TILE_CONFIG.tileSize,
+      keepBuffer: 4,
+      updateWhenIdle: false,
+    })
+    layer.addTo(map)
+    return () => { layer.remove() }
+  }, [map])
+  return null
+}
 
 const ROUTE_COLOR = '#007AC9'
 const ROUTE_WEIGHT = 5
@@ -124,21 +191,7 @@ export function RouteMap({
         scrollWheelZoom
         zoomControl={false}
       >
-        <TileLayer
-          attribution={HSL_TILE_CONFIG.attribution}
-          url={HSL_TILE_CONFIG.url}
-          minZoom={HSL_TILE_CONFIG.minZoom}
-          maxZoom={HSL_TILE_CONFIG.maxZoom}
-          maxNativeZoom={HSL_TILE_CONFIG.maxNativeZoom}
-          tileSize={HSL_TILE_CONFIG.tileSize}
-          keepBuffer={4}
-          updateWhenIdle={false}
-          eventHandlers={{
-            tileerror: (e) => {
-              console.warn('Tile failed to load:', e.tile.src)
-            },
-          }}
-        />
+        <HslTileLayer />
         <FitBounds bounds={bounds.length >= 2 ? bounds : null} from={from} to={to} />
         {altLegsArrays.map((altLegs, altIdx) =>
           altLegs.map((leg, legIdx) => (
