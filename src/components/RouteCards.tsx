@@ -50,8 +50,7 @@ export function RouteCards({ routes, selectedRoute, onSelect }: RouteCardsProps)
             <Card
               key={key}
               sx={{
-                minWidth: 130,
-                flex: '0 0 auto',
+                width: '100%',
                 border: isSelected ? '2px solid' : '1px solid',
                 borderColor: isSelected ? 'primary.main' : 'grey.300',
                 bgcolor: isSelected ? 'primary.main' : 'background.paper',

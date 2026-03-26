@@ -61,15 +61,8 @@
 
 .route-chips-scroll {
   display: flex;
+  flex-direction: column;
   gap: 8px;
-  overflow-x: auto;
-  padding-bottom: 4px;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-}
-
-.route-chips-scroll::-webkit-scrollbar {
-  display: none;
 }
 
 @media (min-width: 600px) {
