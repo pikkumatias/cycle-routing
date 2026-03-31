@@ -8,6 +8,8 @@ const HANDLE_HEIGHT = 36 // px — handle area including padding
 const SNAP_TRANSITION = 'transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)'
 const SNAP_DURATION = 350 // ms — safety timeout, slightly longer than transition
 
+type SnapPoint = 'collapsed' | 'expanded' | 'full'
+
 function getViewportHeight() {
   return window.innerHeight
 }
@@ -36,12 +38,51 @@ function getExpandedTranslateY(contentEl: HTMLElement | null) {
   return panelHeight - neededHeight
 }
 
+/**
+ * Pick the best snap point after a drag ends.
+ *
+ * - Fast swipe: steps exactly one snap level in the swipe direction.
+ * - Slow drag: picks the nearest snap by position.
+ *
+ * Snap points that fall within 10px of each other are deduplicated so that
+ * 'full' and 'expanded' merge when content fills the panel.
+ */
+function pickSnap(ty: number, velocity: number, expandedTY: number): SnapPoint {
+  const snaps: [SnapPoint, number][] = [
+    ['full', 0],
+    ['expanded', expandedTY],
+    ['collapsed', getCollapsedTranslateY()],
+  ]
+
+  // Remove positions that are effectively identical to a higher-priority snap
+  const unique = snaps.filter(([, s], i) =>
+    !snaps.slice(0, i).some(([, prev]) => Math.abs(prev - s) < 10),
+  )
+
+  if (Math.abs(velocity) > VELOCITY_THRESHOLD) {
+    if (velocity > 0) {
+      // Swiping down — step to next snap with higher translateY
+      const next = unique.find(([, s]) => s > ty + 5)
+      return next ? next[0] : unique[unique.length - 1][0]
+    } else {
+      // Swiping up — step to next snap with lower translateY
+      const next = [...unique].reverse().find(([, s]) => s < ty - 5)
+      return next ? next[0] : unique[0][0]
+    }
+  }
+
+  // Slow drag — nearest snap by position
+  return unique.reduce((best, curr) =>
+    Math.abs(curr[1] - ty) < Math.abs(best[1] - ty) ? curr : best,
+  )[0]
+}
+
 export function useBottomSheet() {
   const sheetRef = useRef<HTMLDivElement>(null)
   const handleRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
 
-  const [snapPoint, setSnapPoint] = useState<'collapsed' | 'expanded'>('collapsed')
+  const [snapPoint, setSnapPoint] = useState<SnapPoint>('collapsed')
   const [translateY, setTranslateY] = useState(() => getCollapsedTranslateY())
 
   const isDragging = useRef(false)
@@ -68,10 +109,11 @@ export function useBottomSheet() {
     if (sheet) sheet.style.transition = ''
   }, [])
 
-  const snapTo = useCallback((target: 'collapsed' | 'expanded') => {
-    const newTY = target === 'collapsed'
-      ? getCollapsedTranslateY()
-      : getExpandedTranslateY(contentRef.current)
+  const snapTo = useCallback((target: SnapPoint) => {
+    const newTY =
+      target === 'collapsed' ? getCollapsedTranslateY()
+      : target === 'full'   ? 0
+      :                        getExpandedTranslateY(contentRef.current)
 
     // If already at target, skip animation entirely
     if (Math.abs(currentTranslateY.current - newTY) < 1) {
@@ -119,11 +161,10 @@ export function useBottomSheet() {
     const handle = handleRef.current
     if (!handle) return
 
-    const getClampRange = () => {
-      const minTY = getExpandedTranslateY(contentRef.current)
-      const maxTY = getCollapsedTranslateY()
-      return { minTY, maxTY }
-    }
+    const getClampRange = () => ({
+      minTY: 0,
+      maxTY: getCollapsedTranslateY(),
+    })
 
     const onTouchStart = (e: TouchEvent) => {
       if (isAnimating.current) return
@@ -152,16 +193,9 @@ export function useBottomSheet() {
     const onTouchEnd = () => {
       if (!isDragging.current) return
       isDragging.current = false
-      const { minTY, maxTY } = getClampRange()
-      const midpoint = (minTY + maxTY) / 2
       const velocity = (prevY.current - dragStartY.current) / (Date.now() - prevTime.current + 1)
-      const ty = currentTranslateY.current
-
-      if (Math.abs(velocity) > VELOCITY_THRESHOLD) {
-        snapTo(velocity > 0 ? 'collapsed' : 'expanded')
-      } else {
-        snapTo(ty > midpoint ? 'collapsed' : 'expanded')
-      }
+      const expandedTY = getExpandedTranslateY(contentRef.current)
+      snapTo(pickSnap(currentTranslateY.current, velocity, expandedTY))
     }
 
     // Mouse events for desktop
@@ -192,16 +226,9 @@ export function useBottomSheet() {
         window.removeEventListener('mousemove', onMouseMove)
         window.removeEventListener('mouseup', onMouseUp)
 
-        const { minTY, maxTY } = getClampRange()
-        const midpoint = (minTY + maxTY) / 2
         const velocity = (prevY.current - dragStartY.current) / (Date.now() - prevTime.current + 1)
-        const ty = currentTranslateY.current
-
-        if (Math.abs(velocity) > VELOCITY_THRESHOLD) {
-          snapTo(velocity > 0 ? 'collapsed' : 'expanded')
-        } else {
-          snapTo(ty > midpoint ? 'collapsed' : 'expanded')
-        }
+        const expandedTY = getExpandedTranslateY(contentRef.current)
+        snapTo(pickSnap(currentTranslateY.current, velocity, expandedTY))
       }
 
       window.addEventListener('mousemove', onMouseMove)
@@ -253,15 +280,15 @@ export function useBottomSheet() {
         isExpanding = true
         e.preventDefault()
         const maxTY = getCollapsedTranslateY()
-        const newTY = Math.max(expandedTY, Math.min(maxTY, ty - incrementalDelta))
+        const newTY = Math.max(0, Math.min(maxTY, ty - incrementalDelta))
         applyTranslateY(newTY)
       } else {
-        // Panel is fully expanded
+        // Panel is fully expanded (at expanded or full position)
         if (content.scrollTop <= 0 && incrementalDelta < 0) {
-          // At top of scroll, pulling down — collapse
+          // At top of scroll, pulling down — step down one snap level
           e.preventDefault()
           const maxTY = getCollapsedTranslateY()
-          const newTY = Math.max(expandedTY, Math.min(maxTY, ty - incrementalDelta))
+          const newTY = Math.max(0, Math.min(maxTY, ty - incrementalDelta))
           applyTranslateY(newTY)
           isExpanding = true
         }
@@ -277,17 +304,10 @@ export function useBottomSheet() {
       if (!isExpanding) return
       isExpanding = false
 
-      const minTY = getExpandedTranslateY(content)
-      const maxTY = getCollapsedTranslateY()
-      const midpoint = (minTY + maxTY) / 2
       const ty = currentTranslateY.current
       const velocity = (prevY.current - startY) / (Date.now() - prevTime.current + 1)
-
-      if (Math.abs(velocity) > VELOCITY_THRESHOLD) {
-        snapTo(velocity > 0 ? 'collapsed' : 'expanded')
-      } else {
-        snapTo(ty > midpoint ? 'collapsed' : 'expanded')
-      }
+      const expandedTY = getExpandedTranslateY(content)
+      snapTo(pickSnap(ty, velocity, expandedTY))
     }
 
     content.addEventListener('touchstart', onTouchStart, { passive: true })
@@ -304,9 +324,10 @@ export function useBottomSheet() {
   // --- Viewport resize ---
   useEffect(() => {
     const handleResize = () => {
-      const newTY = snapPoint === 'collapsed'
-        ? getCollapsedTranslateY()
-        : getExpandedTranslateY(contentRef.current)
+      const newTY =
+        snapPoint === 'collapsed' ? getCollapsedTranslateY()
+        : snapPoint === 'full'   ? 0
+        :                           getExpandedTranslateY(contentRef.current)
       setTranslateY(newTY)
       applyTranslateY(newTY)
     }
