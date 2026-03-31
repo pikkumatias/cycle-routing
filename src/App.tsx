@@ -142,10 +142,10 @@ function App() {
   }
 
   const selectedRouteData = routesState.routes?.[routesState.selectedRoute]
-  const alternativeResponses = routesState.routes
-    ? Object.entries(routesState.routes)
+  const alternativeRoutes = routesState.routes
+    ? (Object.entries(routesState.routes) as [RouteCategory, ScoredRoute][])
         .filter(([key]) => key !== routesState.selectedRoute)
-        .map(([, route]) => route.response)
+        .map(([key, route]) => ({ category: key, response: route.response }))
     : []
 
   return (
@@ -156,7 +156,10 @@ function App() {
           from={lastCoords?.from}
           to={lastCoords?.to}
           height="100%"
-          alternativeResponses={alternativeResponses}
+          alternativeRoutes={alternativeRoutes}
+          onSelectRoute={(key) =>
+            setRoutesState((prev) => ({ ...prev, selectedRoute: key }))
+          }
         />
       </div>
 

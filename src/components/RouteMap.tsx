@@ -13,6 +13,7 @@ import {
   getBoundsFromLegsAndPoints,
   type LatLng,
 } from '../utils/routeGeometry'
+import type { RouteCategory } from '../api/digitransit'
 
 const originIcon = L.divIcon({
   className: '',
@@ -136,12 +137,18 @@ const ALT_ROUTE_COLOR = '#9e9e9e'
 const ALT_ROUTE_WEIGHT = 3
 const ALT_ROUTE_OPACITY = 0.4
 
+export type AlternativeRoute = {
+  category: RouteCategory
+  response: any
+}
+
 export type RouteMapProps = {
   routeResponse: any
   from?: LatLng
   to?: LatLng
   height?: number | string
-  alternativeResponses?: any[]
+  alternativeRoutes?: AlternativeRoute[]
+  onSelectRoute?: (category: RouteCategory) => void
 }
 
 export function RouteMap({
@@ -149,19 +156,23 @@ export function RouteMap({
   from,
   to,
   height = '100%',
-  alternativeResponses,
+  alternativeRoutes,
+  onSelectRoute,
 }: RouteMapProps) {
   const legs = useMemo(
     () => getRouteLegsFromPlanResponse(routeResponse),
     [routeResponse],
   )
   const altLegsArrays = useMemo(
-    () => (alternativeResponses ?? []).map((r) => getRouteLegsFromPlanResponse(r)),
-    [alternativeResponses],
+    () => (alternativeRoutes ?? []).map((r) => ({
+      category: r.category,
+      legs: getRouteLegsFromPlanResponse(r.response),
+    })),
+    [alternativeRoutes],
   )
   const allLegs = useMemo(() => {
     const all = [...legs]
-    altLegsArrays.forEach((a) => all.push(...a))
+    altLegsArrays.forEach((a) => all.push(...a.legs))
     return all
   }, [legs, altLegsArrays])
   const bounds = useMemo(
@@ -193,15 +204,32 @@ export function RouteMap({
       >
         <HslTileLayer />
         <FitBounds bounds={bounds.length >= 2 ? bounds : null} from={from} to={to} />
-        {altLegsArrays.map((altLegs, altIdx) =>
-          altLegs.map((leg, legIdx) => (
+        {altLegsArrays.map((altRoute, altIdx) =>
+          altRoute.legs.map((leg, legIdx) => (
             <Polyline
-              key={`alt-${altIdx}-${legIdx}`}
+              key={`alt-visual-${altIdx}-${legIdx}`}
               positions={leg.positions}
               pathOptions={{
                 color: ALT_ROUTE_COLOR,
                 weight: ALT_ROUTE_WEIGHT,
                 opacity: ALT_ROUTE_OPACITY,
+                interactive: false,
+              }}
+            />
+          )),
+        )}
+        {altLegsArrays.map((altRoute, altIdx) =>
+          altRoute.legs.map((leg, legIdx) => (
+            <Polyline
+              key={`alt-hit-${altIdx}-${legIdx}`}
+              positions={leg.positions}
+              pathOptions={{
+                color: ALT_ROUTE_COLOR,
+                weight: 16,
+                opacity: 0.01,
+              }}
+              eventHandlers={{
+                click: () => onSelectRoute?.(altRoute.category),
               }}
             />
           )),
