@@ -11,10 +11,13 @@ export type TriangleFactors = {
 
 export type RouteCategory = 'fastest' | 'scenic' | 'calm'
 
-/** Two maximally spread presets to generate diverse candidate routes. */
+/** Five spread presets to generate diverse candidate routes (factors must sum to 1.0). */
 const CANDIDATE_PRESETS: TriangleFactors[] = [
-  { time: 1.0, safety: 0, slope: 0 },   // speed-optimized
-  { time: 0, safety: 1.0, slope: 0 },    // infra-optimized
+  { time: 1.0,  safety: 0.0,  slope: 0.0  },  // fastest possible
+  { time: 0.0,  safety: 1.0,  slope: 0.0  },  // best cycling infra
+  { time: 0.0,  safety: 0.0,  slope: 1.0  },  // flattest route
+  { time: 0.33, safety: 0.34, slope: 0.33 },  // balanced
+  { time: 0.1,  safety: 0.6,  slope: 0.3  },  // safe + flat hybrid
 ]
 
 export function parseLatLon(input: string): LatLonPair {
@@ -206,7 +209,7 @@ export async function fetchCandidateRoutes(
 ): Promise<CandidateRoute[]> {
   const responses = await Promise.all(
     CANDIDATE_PRESETS.map((triangle) =>
-      requestBicycleRouteViaBackend(from, to, triangle, 3),
+      requestBicycleRouteViaBackend(from, to, triangle, 2),
     ),
   )
 
