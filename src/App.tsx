@@ -12,7 +12,7 @@ import {
   type RouteCategory,
 } from './api/digitransit'
 import { RouteMap } from './components/RouteMap'
-import { RouteCards, type ScoredRoute } from './components/RouteCards'
+import { RouteCards, RouteCardsSkeleton, type ScoredRoute } from './components/RouteCards'
 import { SearchDrawer, type AddressOption } from './components/SearchDrawer'
 import { AddressTrigger } from './components/AddressTrigger'
 import {
@@ -198,6 +198,8 @@ function App() {
               {routesState.error}
             </Alert>
           )}
+
+          {routesState.loading && <RouteCardsSkeleton />}
 
           {routesState.routes && selectedRouteData && (
             <Stack spacing={2} sx={{ mt: 2 }}>

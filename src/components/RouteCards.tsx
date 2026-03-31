@@ -2,6 +2,7 @@ import {
   Card,
   CardContent,
   Chip,
+  Skeleton,
   Stack,
   Typography,
 } from '@mui/material'
@@ -34,6 +35,25 @@ const ROUTE_LABELS: Record<RouteCategory, string> = {
 function formatDuration(seconds: number): string {
   const mins = Math.round(seconds / 60)
   return `${mins} min`
+}
+
+export function RouteCardsSkeleton() {
+  return (
+    <div className="route-chips-scroll">
+      {[0, 1, 2].map((i) => (
+        <Card key={i} sx={{ width: '100%', border: '1px solid', borderColor: 'grey.300' }}>
+          <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
+            <Skeleton animation="wave" variant="text" width={60} sx={{ fontSize: '0.875rem' }} />
+            <Skeleton animation="wave" variant="text" width={100} sx={{ fontSize: '0.75rem' }} />
+            <Stack direction="row" spacing={0.5} sx={{ mt: 0.5 }}>
+              <Skeleton animation="wave" variant="rounded" width={56} height={20} />
+              <Skeleton animation="wave" variant="rounded" width={56} height={20} />
+            </Stack>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  )
 }
 
 export function RouteCards({ routes, selectedRoute, onSelect }: RouteCardsProps) {
