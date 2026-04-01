@@ -140,11 +140,19 @@ function buildInfraQuery(bbox: Bbox, timeoutSec: number): string {
 out center;`
 }
 
+type OverpassElement = {
+  type?: 'node' | 'way'
+  lat?: number
+  lon?: number
+  center?: { lat?: number; lon?: number }
+  tags?: Record<string, string>
+}
+
 /**
  * Parse Overpass JSON response into an array of classified POIs.
  */
-function parseOverpassResponse(data: any): OsmPoi[] {
-  const elements = data?.elements
+function parseOverpassResponse(data: unknown): OsmPoi[] {
+  const elements = (data as { elements?: OverpassElement[] })?.elements
   if (!Array.isArray(elements)) return []
 
   const result: OsmPoi[] = []

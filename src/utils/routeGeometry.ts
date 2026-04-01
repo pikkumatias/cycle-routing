@@ -36,17 +36,26 @@ function smoothPolyline(points: LatLng[], iterations = 3): LatLng[] {
   return pts
 }
 
+type OtpLeg = {
+  legGeometry?: { points?: string }
+  mode?: string
+}
+
+type OtpResponse = {
+  data?: { plan?: { itineraries?: { legs?: OtpLeg[] }[] } }
+}
+
 /**
  * Extract route legs with decoded geometry from Digitransit plan response.
  */
-export function getRouteLegsFromPlanResponse(response: any): RouteLeg[] {
-  const legs = response?.data?.plan?.itineraries?.[0]?.legs
+export function getRouteLegsFromPlanResponse(response: unknown): RouteLeg[] {
+  const legs = (response as OtpResponse)?.data?.plan?.itineraries?.[0]?.legs
   if (!Array.isArray(legs)) return []
 
   return legs
-    .map((leg: any) => {
+    .map((leg) => {
       const encoded = leg?.legGeometry?.points
-      const positions = smoothPolyline(decodePolyline(encoded))
+      const positions = smoothPolyline(decodePolyline(encoded ?? ''))
       return { positions, mode: leg?.mode }
     })
     .filter((leg: RouteLeg) => leg.positions.length > 0)

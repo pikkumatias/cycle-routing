@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { fetchBicycleRoute, fetchGeocodingAutocomplete, parseLatLon, type LatLonPair } from './digitransit'
+import { fetchBicycleRoute, fetchGeocodingAutocomplete, parseLatLon, type LatLonPair, type OtpPlanResponse } from './digitransit'
 
 const mockFetch = vi.fn()
 
@@ -139,9 +139,9 @@ describe('fetchBicycleRoute', () => {
     const result = await fetchBicycleRoute(from, to, 'test-key')
 
     expect(result).toEqual(fakeResponse)
-    const legs = (result as any)?.data?.plan?.itineraries?.[0]?.legs
+    const legs = (result as OtpPlanResponse)?.data?.plan?.itineraries?.[0]?.legs
     expect(legs).toHaveLength(1)
-    expect(legs[0].legGeometry).toEqual({ length: 42, points: encodedPolyline })
+    expect(legs![0].legGeometry).toEqual({ length: 42, points: encodedPolyline })
   })
 
   it('throws a helpful error when response is not ok', async () => {

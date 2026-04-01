@@ -91,7 +91,17 @@ type RequestBody =
   | { from: string; to: string; triangle?: TriangleFactors; numItineraries?: number }
   | { from: LatLonPair; to: LatLonPair; triangle?: TriangleFactors; numItineraries?: number }
 
-export default async function handler(req: any, res: any) {
+interface VercelReq {
+  method?: string
+  body: unknown
+}
+interface VercelRes {
+  setHeader(name: string, value: string): void
+  status(code: number): VercelRes
+  json(data: unknown): VercelRes
+}
+
+export default async function handler(req: VercelReq, res: VercelRes) {
   try {
     if (req.method !== 'POST') {
       res.setHeader('Allow', 'POST')
@@ -116,8 +126,8 @@ export default async function handler(req: any, res: any) {
       typeof body.from === 'string' ? parseLatLon(body.from) : body.from
     const to = typeof body.to === 'string' ? parseLatLon(body.to) : body.to
 
-    const triangle = (body as any).triangle as TriangleFactors | undefined
-    const numItineraries = (body as any).numItineraries as number | undefined
+    const triangle = body.triangle
+    const numItineraries = body.numItineraries
     const data = await fetchBicycleRoute(from, to, apiKey, triangle, numItineraries ?? 1)
     return res.status(200).json(data)
   } catch (error) {

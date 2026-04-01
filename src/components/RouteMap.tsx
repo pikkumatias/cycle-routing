@@ -139,11 +139,11 @@ const ALT_ROUTE_OPACITY = 0.4
 
 export type AlternativeRoute = {
   category: RouteCategory
-  response: any
+  response: unknown
 }
 
 export type RouteMapProps = {
-  routeResponse: any
+  routeResponse: unknown
   from?: LatLng
   to?: LatLng
   height?: number | string

@@ -58,6 +58,7 @@ export function SearchDrawer({
   // Reset state when drawer opens
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setInputValue(initialInputValue)
       setSuggestions([])
       setLoading(false)

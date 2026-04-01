@@ -1,7 +1,17 @@
 const GEOCODING_ENDPOINT =
   'https://api.digitransit.fi/geocoding/v1/autocomplete'
 
-export default async function handler(req: any, res: any) {
+interface VercelReq {
+  method?: string
+  query: Record<string, string | string[] | undefined>
+}
+interface VercelRes {
+  setHeader(name: string, value: string): void
+  status(code: number): VercelRes
+  json(data: unknown): VercelRes
+}
+
+export default async function handler(req: VercelReq, res: VercelRes) {
   try {
     if (req.method !== 'GET') {
       res.setHeader('Allow', 'GET')

@@ -11,6 +11,20 @@ export type TriangleFactors = {
 
 export type RouteCategory = 'fastest' | 'scenic' | 'calm'
 
+type OtpLeg = {
+  distance?: number
+  legGeometry?: { points?: string }
+}
+
+type OtpItinerary = {
+  duration?: number
+  legs?: OtpLeg[]
+}
+
+export type OtpPlanResponse = {
+  data?: { plan?: { itineraries?: OtpItinerary[] } }
+}
+
 /** Five spread presets to generate diverse candidate routes (factors must sum to 1.0). */
 const CANDIDATE_PRESETS: TriangleFactors[] = [
   { time: 1.0,  safety: 0.0,  slope: 0.0  },  // fastest possible
@@ -180,7 +194,11 @@ export async function fetchGeocodingAutocomplete(
   }
 
   const data = await res.json()
-  const features: any[] = data?.features ?? []
+  type GeoJsonFeature = {
+    properties?: { label?: string }
+    geometry?: { coordinates?: [number, number] }
+  }
+  const features: GeoJsonFeature[] = (data as { features?: GeoJsonFeature[] })?.features ?? []
 
   return features.map((f) => ({
     label: f.properties?.label ?? '',
@@ -216,14 +234,14 @@ export async function fetchCandidateRoutes(
   const candidates: CandidateRoute[] = []
 
   for (const raw of responses) {
-    const itineraries = (raw as any)?.data?.plan?.itineraries ?? []
+    const itineraries = (raw as OtpPlanResponse)?.data?.plan?.itineraries ?? []
     for (const it of itineraries) {
       const durationSec: number = it?.duration ?? 0
-      const legs: any[] = it?.legs ?? []
+      const legs: OtpLeg[] = it?.legs ?? []
       const distanceKm =
-        legs.reduce((sum: number, leg: any) => sum + (leg?.distance ?? 0), 0) / 1000
-      const polyline = legs.flatMap((leg: any) =>
-        decodePolyline(leg?.legGeometry?.points),
+        legs.reduce((sum: number, leg) => sum + (leg?.distance ?? 0), 0) / 1000
+      const polyline = legs.flatMap((leg) =>
+        decodePolyline(leg?.legGeometry?.points ?? ''),
       )
 
       // Wrap as single-itinerary response so getRouteLegsFromPlanResponse works
