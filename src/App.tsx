@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import {
   Alert,
+  Box,
   Button,
   Stack,
 } from '@mui/material'
@@ -202,7 +203,11 @@ function App() {
             </Alert>
           )}
 
-          {routesState.loading && <RouteCardsSkeleton />}
+          {routesState.loading && (
+            <Box sx={{ mt: 2 }}>
+              <RouteCardsSkeleton />
+            </Box>
+          )}
 
           {routesState.routes && selectedRouteData && (
             <Stack spacing={2} sx={{ mt: 2 }}>
