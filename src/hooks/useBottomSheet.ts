@@ -354,7 +354,7 @@ export function useBottomSheet() {
       maxHeight,
       overflowY: 'auto' as const,
     }
-  }, [translateY]) // recalc when snap changes (viewport may have changed)
+  }, [])
 
   return {
     sheetRef,
