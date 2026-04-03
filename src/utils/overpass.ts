@@ -10,6 +10,7 @@ const DEFAULT_TIMEOUT_SEC = 15
 // Cap bbox to prevent oversized queries (~39km lat × ~24km lon at 60°N)
 const MAX_BBOX_SPAN = 0.35
 
+
 export type Bbox = {
   south: number
   west: number
@@ -89,9 +90,10 @@ function capBbox(bbox: Bbox): Bbox {
 }
 
 /**
- * Scenic POIs query: parks, nature, water features.
+ * Combined scenic POIs + cycling infrastructure query in a single Overpass request.
+ * Uses `out center qt` — `qt` (quadtile sort) speeds up server-side processing.
  */
-function buildScenicQuery(bbox: Bbox, timeoutSec: number): string {
+function buildCombinedQuery(bbox: Bbox, timeoutSec: number): string {
   const { south, west, north, east } = bbox
   const b = `(${south},${west},${north},${east})`
   return `[out:json][timeout:${timeoutSec}];
@@ -117,18 +119,6 @@ function buildScenicQuery(bbox: Bbox, timeoutSec: number): string {
   node["waterway"="stream"]${b};
   way["waterway"="river"]${b};
   way["waterway"="stream"]${b};
-);
-out center;`
-}
-
-/**
- * Cycling infrastructure query: cycleways, lanes, designated paths.
- */
-function buildInfraQuery(bbox: Bbox, timeoutSec: number): string {
-  const { south, west, north, east } = bbox
-  const b = `(${south},${west},${north},${east})`
-  return `[out:json][timeout:${timeoutSec}];
-(
   way["highway"="cycleway"]${b};
   way["cycleway"="track"]${b};
   way["cycleway"="lane"]${b};
@@ -137,7 +127,7 @@ function buildInfraQuery(bbox: Bbox, timeoutSec: number): string {
   way["bicycle"="designated"]["highway"="path"]${b};
   way["bicycle"="designated"]["highway"="footway"]${b};
 );
-out center;`
+out center qt;`
 }
 
 type OverpassElement = {
@@ -225,10 +215,19 @@ async function fetchQuery(
   return []
 }
 
+// In-memory cache: quantized bbox key → POI results. Quantized to 0.01° grid (~1km) so
+// nearby queries share the same cache entry. OSM data rarely changes within a session.
+const poiCache = new Map<string, OsmPoi[]>()
+
+function bboxCacheKey(bbox: Bbox): string {
+  const q = (n: number) => Math.round(n / 0.01) * 0.01
+  return `${q(bbox.south)},${q(bbox.west)},${q(bbox.north)},${q(bbox.east)}`
+}
+
 /**
  * Fetch scenic POIs and cycling infrastructure from OpenStreetMap via Overpass API.
- * Runs scenic and infrastructure queries in parallel. If one fails, the other still
- * contributes to scoring. Throws only if both queries fail on all endpoints.
+ * Uses a single combined query (one HTTP round-trip). Results are cached in memory
+ * for the session, keyed by a quantized bbox (~1km grid) to share nearby lookups.
  */
 export async function fetchPoisAndInfrastructure(
   bbox: Bbox,
@@ -236,20 +235,13 @@ export async function fetchPoisAndInfrastructure(
 ): Promise<OsmPoi[]> {
   const timeoutSec = options?.timeoutSec ?? DEFAULT_TIMEOUT_SEC
   const capped = capBbox(bbox)
+  const cacheKey = bboxCacheKey(capped)
 
-  const [scenic, infra] = await Promise.allSettled([
-    fetchQuery(buildScenicQuery(capped, timeoutSec), timeoutSec, options?.signal),
-    fetchQuery(buildInfraQuery(capped, timeoutSec), timeoutSec, options?.signal),
-  ])
+  const cached = poiCache.get(cacheKey)
+  if (cached) return cached
 
-  const result: OsmPoi[] = []
-  if (scenic.status === 'fulfilled') result.push(...scenic.value)
-  if (infra.status === 'fulfilled') result.push(...infra.value)
-
-  if (scenic.status === 'rejected' && infra.status === 'rejected') {
-    throw scenic.reason
-  }
-
+  const result = await fetchQuery(buildCombinedQuery(capped, timeoutSec), timeoutSec, options?.signal)
+  poiCache.set(cacheKey, result)
   return result
 }
 
