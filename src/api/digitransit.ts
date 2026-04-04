@@ -217,23 +217,55 @@ export type CandidateRoute = {
   polyline: LatLng[]
 }
 
+async function requestBatchRoutesViaBackend(
+  from: LatLonPair,
+  to: LatLonPair,
+  presets: TriangleFactors[],
+  numItineraries: number,
+): Promise<Array<unknown | null>> {
+  const res = await fetch('/api/digitransit-route-batch', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from, to, presets, numItineraries }),
+  })
+
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(`Backend batch route API error: ${res.status} ${res.statusText}\n${text}`)
+  }
+
+  const data = (await res.json()) as { results: Array<unknown> }
+  return data.results.map((r) =>
+    r != null && typeof r === 'object' && 'error' in r ? null : r,
+  )
+}
+
+const MAX_ROUTE_CACHE = 20
+const routeCache = new Map<string, CandidateRoute[]>()
+
+function routeCacheKey(from: LatLonPair, to: LatLonPair): string {
+  const q = (n: number) => Math.round(n / 0.001) * 0.001
+  return `${q(from.lat)},${q(from.lon)}->${q(to.lat)},${q(to.lon)}`
+}
+
 /**
- * Fetch a diverse pool of candidate routes by making 2 OTP calls with
- * maximally spread triangle factors, each requesting multiple itineraries.
+ * Fetch a diverse pool of candidate routes by sending all OTP presets in a
+ * single batch request, then caching results keyed by quantized coordinates.
  */
 export async function fetchCandidateRoutes(
   from: LatLonPair,
   to: LatLonPair,
 ): Promise<CandidateRoute[]> {
-  const responses = await Promise.all(
-    CANDIDATE_PRESETS.map((triangle) =>
-      requestBicycleRouteViaBackend(from, to, triangle, 2),
-    ),
-  )
+  const cacheKey = routeCacheKey(from, to)
+  const cached = routeCache.get(cacheKey)
+  if (cached) return cached
+
+  const responses = await requestBatchRoutesViaBackend(from, to, CANDIDATE_PRESETS, 2)
 
   const candidates: CandidateRoute[] = []
 
   for (const raw of responses) {
+    if (raw == null) continue
     const itineraries = (raw as OtpPlanResponse)?.data?.plan?.itineraries ?? []
     for (const it of itineraries) {
       const durationSec: number = it?.duration ?? 0
@@ -250,6 +282,11 @@ export async function fetchCandidateRoutes(
       candidates.push({ response, durationSec, distanceKm, polyline })
     }
   }
+
+  if (routeCache.size >= MAX_ROUTE_CACHE) {
+    routeCache.delete(routeCache.keys().next().value!)
+  }
+  routeCache.set(cacheKey, candidates)
 
   return candidates
 }

@@ -25,13 +25,20 @@ The app is a bicycle route planner for the Helsinki region. The user enters orig
 **Routing flow** (`src/App.tsx`):
 1. User selects addresses via geocoding autocomplete (`SearchDrawer` → `/api/digitransit-geocode`)
 2. On submit, two parallel fetches fire:
-   - `fetchCandidateRoutes` — calls `api/digitransit-route` with 2 OTP triangle presets (speed-optimized and infra-optimized), each requesting 3 itineraries → up to 6 candidate routes
-   - `fetchPoisAndInfrastructure` — Overpass API query for scenic POIs + cycling infrastructure in an estimated bbox
+   - `fetchCandidateRoutes` — calls `api/digitransit-route` with 5 OTP triangle presets, each requesting 2 itineraries → up to 10 candidate routes
+   - `fetchPoisAndInfrastructure` — single combined Overpass API query for scenic POIs + cycling infrastructure in an estimated bbox (results cached in-memory by quantized bbox)
 3. `deduplicateRoutes` removes near-identical candidates (>85% bidirectional polyline overlap)
 4. `selectRoutes` scores all candidates and picks the best per category:
    - **Fastest**: lowest duration
    - **Scenic**: highest scenic POI score (parks, nature, water)
    - **Calm**: highest cycling infrastructure score (cycleways, bike lanes)
+
+**Triangle presets** (5 OTP optimization factors):
+1. `{ time: 1, safety: 0, slope: 0 }` — fastest
+2. `{ time: 0, safety: 1, slope: 0 }` — best infrastructure
+3. `{ time: 0, safety: 0, slope: 1 }` — flattest
+4. `{ time: 0.33, safety: 0.34, slope: 0.33 }` — balanced
+5. `{ time: 0.1, safety: 0.6, slope: 0.3 }` — safe + flat hybrid
 
 ### Scoring System (`src/utils/scenicScore.ts`, `src/utils/overpass.ts`)
 
@@ -52,11 +59,15 @@ Vercel-style serverless functions that proxy Digitransit API calls to keep the A
 
 - `src/utils/routeGeometry.ts` — Polyline decoding (`@mapbox/polyline`), bbox estimation, bounds calculation
 - `src/utils/routeSelection.ts` — Route deduplication (polyline overlap) and per-category selection
-- `src/utils/overpass.ts` — Overpass QL query builder, POI classification by OSM tags
-- `src/components/RouteMap.tsx` — Leaflet map with HSL tiles, route polylines, origin/destination markers
-- `src/components/RouteCards.tsx` — Route variant selector cards showing duration, distance, and scores
-- `src/hooks/useBottomSheet.ts` — Touch-draggable bottom sheet for mobile UI
+- `src/utils/overpass.ts` — Combined Overpass QL query builder, POI classification by OSM tags, in-memory bbox cache
+- `src/utils/scenicScore.ts` — Haversine distance, polyline sampling, per-route scoring, cross-route normalization
+- `src/utils/recentSearches.ts` — localStorage-backed recent search history (max 10 entries)
+- `src/components/RouteMap.tsx` — Leaflet map with HSL tiles (CacheStorage + 3× retry), route polylines, origin/destination markers, click-to-select alternatives
+- `src/components/RouteCards.tsx` — Route variant selector cards showing duration, distance, calm score, and infra badge; includes `RouteCardsSkeleton`
+- `src/components/SearchDrawer.tsx` — Right-side drawer with debounced autocomplete (300ms), recent searches, coordinate input support
+- `src/components/AddressTrigger.tsx` — Tap target button that opens the search drawer
+- `src/hooks/useBottomSheet.ts` — Touch/mouse-draggable bottom sheet with three snap points and velocity-based snapping
 
 ### UI
 
-Uses MUI (Material UI) components and MUI Icons. Map tiles from Digitransit CDN (HSL map).
+Uses MUI (Material UI) v7 components and MUI Icons. Map tiles from Digitransit CDN (HSL map). Bottom sheet snaps to collapsed (30%), expanded, and full-screen positions.
