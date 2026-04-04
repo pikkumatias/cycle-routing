@@ -5,9 +5,9 @@
 
 const OVERPASS_ENDPOINT = 'https://overpass-api.de/api/interpreter'
 const OVERPASS_FALLBACK_ENDPOINT = 'https://overpass.kumi.systems/api/interpreter'
-const DEFAULT_TIMEOUT_SEC = 25
-const MAX_RETRIES = 2       // retry the full endpoint sequence up to 2 more times (3 rounds total)
-const RETRY_DELAY_MS = 1500 // wait between retry rounds
+const DEFAULT_TIMEOUT_SEC = 8
+const MAX_RETRIES = 3       // retry the full endpoint sequence up to 3 more times (4 rounds total)
+const RETRY_DELAY_MS = 0    // retry immediately after 504 — no reason to pause
 
 // Cap bbox to prevent oversized queries (~39km lat × ~24km lon at 60°N)
 const MAX_BBOX_SPAN = 0.35
