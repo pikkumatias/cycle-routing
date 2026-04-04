@@ -1,8 +1,8 @@
 # Cycle Routing
 
-A bicycle route planner for the Helsinki region. Enter an origin and destination, and the app generates three optimized route variants on an interactive map: **Fastest**, **Scenic**, and **Calm**.
+A bicycle route planner that emphasises rider experience for the Helsinki region. Enter an origin and destination, and the app generates three optimized route variants on an interactive map: **Fastest**, **Scenic**, and **Calm**.
 
-Routes come from the Digitransit/HSL routing API (OpenTripPlanner). Each route is then scored against OpenStreetMap data fetched from the Overpass API — nearby parks, nature reserves, waterways, and dedicated cycling infrastructure all influence which variant lands in which category.
+Routes come from the Digitransit/HSL routing API (OpenTripPlanner). Each route is then scored against OpenStreetMap data fetched from the Overpass API: nearby parks, nature reserves, waterways, and dedicated cycling infrastructure all influence which variant lands in which category.
 
 ---
 
