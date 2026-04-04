@@ -6,6 +6,8 @@
 const OVERPASS_ENDPOINT = 'https://overpass-api.de/api/interpreter'
 const OVERPASS_FALLBACK_ENDPOINT = 'https://overpass.kumi.systems/api/interpreter'
 const DEFAULT_TIMEOUT_SEC = 25
+const MAX_RETRIES = 2       // retry the full endpoint sequence up to 2 more times (3 rounds total)
+const RETRY_DELAY_MS = 1500 // wait between retry rounds
 
 // Cap bbox to prevent oversized queries (~39km lat × ~24km lon at 60°N)
 const MAX_BBOX_SPAN = 0.35
@@ -170,39 +172,45 @@ async function fetchQuery(
   callerSignal?: AbortSignal,
 ): Promise<OsmPoi[]> {
   const endpoints = [OVERPASS_ENDPOINT, OVERPASS_FALLBACK_ENDPOINT]
+  let lastError: unknown
 
-  for (let i = 0; i < endpoints.length; i++) {
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     if (callerSignal?.aborted) throw new DOMException('Aborted', 'AbortError')
+    if (attempt > 0) {
+      await new Promise<void>((r) => setTimeout(r, RETRY_DELAY_MS))
+    }
 
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), (timeoutSec + 3) * 1000)
-    const onCallerAbort = () => controller.abort()
-    callerSignal?.addEventListener('abort', onCallerAbort, { once: true })
+    for (let i = 0; i < endpoints.length; i++) {
+      if (callerSignal?.aborted) throw new DOMException('Aborted', 'AbortError')
 
-    try {
-      const res = await fetch(endpoints[i], {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: `data=${encodeURIComponent(query)}`,
-        signal: controller.signal,
-      })
-      if (!res.ok) {
-        const text = await res.text()
-        throw new Error(`Overpass API error: ${res.status} ${res.statusText}\n${text.slice(0, 500)}`)
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), (timeoutSec + 3) * 1000)
+      const onCallerAbort = () => controller.abort()
+      callerSignal?.addEventListener('abort', onCallerAbort, { once: true })
+
+      try {
+        const res = await fetch(endpoints[i], {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: `data=${encodeURIComponent(query)}`,
+          signal: controller.signal,
+        })
+        if (!res.ok) {
+          const text = await res.text()
+          throw new Error(`Overpass API error: ${res.status} ${res.statusText}\n${text.slice(0, 500)}`)
+        }
+        return parseOverpassResponse(await res.json())
+      } catch (err) {
+        lastError = err
+        if (callerSignal?.aborted) throw err
+      } finally {
+        clearTimeout(timeoutId)
+        callerSignal?.removeEventListener('abort', onCallerAbort)
       }
-      return parseOverpassResponse(await res.json())
-    } catch (err) {
-      if (callerSignal?.aborted) throw err
-      if (i === endpoints.length - 1) throw err
-      // Brief pause before trying fallback endpoint
-      await new Promise<void>((r) => setTimeout(r, 300))
-    } finally {
-      clearTimeout(timeoutId)
-      callerSignal?.removeEventListener('abort', onCallerAbort)
     }
   }
 
-  return []
+  throw lastError
 }
 
 // In-memory cache: quantized bbox key → POI results. Quantized to 0.01° grid (~1km) so

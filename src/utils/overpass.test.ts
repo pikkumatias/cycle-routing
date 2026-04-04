@@ -134,11 +134,11 @@ describe('fetchParksAndWater', () => {
       fetchParksAndWater(bbox),
     ).rejects.toThrow(/Overpass API error: 429/)
 
-    // 2 calls total: primary endpoint, then fallback
-    expect(mockFetch).toHaveBeenCalledTimes(2)
+    // 6 calls total: 2 endpoints × 3 rounds (initial + 2 retries)
+    expect(mockFetch).toHaveBeenCalledTimes(6)
     expect(mockFetch).toHaveBeenCalledWith(
       'https://overpass.kumi.systems/api/interpreter',
       expect.objectContaining({ method: 'POST' }),
     )
-  }, 2000)
+  }, 15000)
 })
