@@ -47,12 +47,13 @@ calmScore = 0.5 * (scenicScore / maxScenic) + 0.5 * (infraScore / maxInfra)
 
 Each preset adjusts the Digitransit / OpenTripPlanner triangle optimisation weights.
 
-| Preset   | Time | Safety | Slope | Description                      |
-| -------- | ---- | ------ | ----- | -------------------------------- |
-| Fastest  | 1.0  | 0.0    | 0.0   | Minimize travel time             |
-| Scenic   | 0.2  | 0.7    | 0.1   | Prefer safe, scenic routes       |
-| Balanced | 0.5  | 0.4    | 0.1   | Balance speed and safety         |
-| Calm     | 0.3  | 0.6    | 0.1   | Prefer calm, infrastructure-rich |
+| Preset              | Time | Safety | Slope | Description                         |
+| ------------------- | ---- | ------ | ----- | ----------------------------------- |
+| Fastest             | 1.0  | 0.0    | 0.0   | Minimize travel time                |
+| Best infrastructure | 0.0  | 1.0    | 0.0   | Maximize cycling infrastructure     |
+| Flattest            | 0.0  | 0.0    | 1.0   | Minimize elevation change           |
+| Balanced            | 0.33 | 0.34   | 0.33  | Equal weight all factors            |
+| Safe + flat         | 0.1  | 0.6    | 0.3   | Prioritize safety and flatness      |
 
 The `safety` factor in OTP internally uses OSM cycleway tags,
 so a high value already biases the router toward separated infrastructure.

@@ -10,6 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm test` — Run all tests with Vitest (jsdom environment, globals enabled)
 - `npx vitest run src/utils/scenicScore.test.ts` — Run a single test file
 - `npm run route` — CLI script to query Digitransit routing API interactively
+- `npm run benchmark` — CLI script to benchmark route scoring performance
 
 ## Environment Variables
 
@@ -25,7 +26,7 @@ The app is a bicycle route planner for the Helsinki region. The user enters orig
 **Routing flow** (`src/App.tsx`):
 1. User selects addresses via geocoding autocomplete (`SearchDrawer` → `/api/digitransit-geocode`)
 2. On submit, two parallel fetches fire:
-   - `fetchCandidateRoutes` — calls `api/digitransit-route` with 5 OTP triangle presets, each requesting 2 itineraries → up to 10 candidate routes
+   - `fetchCandidateRoutes` — calls `api/digitransit-route-batch` with 5 OTP triangle presets, each requesting 2 itineraries → up to 10 candidate routes
    - `fetchPoisAndInfrastructure` — single combined Overpass API query for scenic POIs + cycling infrastructure in an estimated bbox (results cached in-memory by quantized bbox)
 3. `deduplicateRoutes` removes near-identical candidates (>85% bidirectional polyline overlap)
 4. `selectRoutes` scores all candidates and picks the best per category:
@@ -52,11 +53,13 @@ See `SCORING.md` for full weight tables and formulas.
 ### Backend Proxy (`api/`)
 
 Vercel-style serverless functions that proxy Digitransit API calls to keep the API key server-side:
-- `api/digitransit-route.ts` — POST, forwards routing requests with triangle optimization factors
+- `api/digitransit-route.ts` — POST, forwards a single routing request with triangle optimization factors
+- `api/digitransit-route-batch.ts` — POST, accepts an array of presets and runs them in parallel via `Promise.allSettled`
 - `api/digitransit-geocode.ts` — GET, forwards geocoding autocomplete requests
 
 ### Key Modules
 
+- `src/api/digitransit.ts` — Client-side API layer: `fetchCandidateRoutes`, `fetchGeocodingAutocomplete`, route cache, triangle presets, OTP types
 - `src/utils/routeGeometry.ts` — Polyline decoding (`@mapbox/polyline`), bbox estimation, bounds calculation
 - `src/utils/routeSelection.ts` — Route deduplication (polyline overlap) and per-category selection
 - `src/utils/overpass.ts` — Combined Overpass QL query builder, POI classification by OSM tags, in-memory bbox cache
