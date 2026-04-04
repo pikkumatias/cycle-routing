@@ -5,7 +5,7 @@
 
 const OVERPASS_ENDPOINT = 'https://overpass-api.de/api/interpreter'
 const OVERPASS_FALLBACK_ENDPOINT = 'https://overpass.kumi.systems/api/interpreter'
-const DEFAULT_TIMEOUT_SEC = 15
+const DEFAULT_TIMEOUT_SEC = 25
 
 // Cap bbox to prevent oversized queries (~39km lat × ~24km lon at 60°N)
 const MAX_BBOX_SPAN = 0.35
@@ -98,25 +98,15 @@ function buildCombinedQuery(bbox: Bbox, timeoutSec: number): string {
   const b = `(${south},${west},${north},${east})`
   return `[out:json][timeout:${timeoutSec}];
 (
-  node["leisure"="park"]${b};
   way["leisure"="park"]${b};
-  node["leisure"="garden"]${b};
   way["leisure"="garden"]${b};
-  node["leisure"="nature_reserve"]${b};
   way["leisure"="nature_reserve"]${b};
-  node["landuse"="grass"]${b};
   way["landuse"="grass"]${b};
-  node["landuse"="forest"]${b};
   way["landuse"="forest"]${b};
-  node["natural"="wood"]${b};
   way["natural"="wood"]${b};
-  node["landuse"="meadow"]${b};
   way["landuse"="meadow"]${b};
-  node["natural"="water"]${b};
   way["natural"="water"]${b};
   node["amenity"="fountain"]${b};
-  node["waterway"="river"]${b};
-  node["waterway"="stream"]${b};
   way["waterway"="river"]${b};
   way["waterway"="stream"]${b};
   way["highway"="cycleway"]${b};
