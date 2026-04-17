@@ -14,6 +14,8 @@ import {
   type LatLng,
 } from '../utils/routeGeometry'
 import type { RouteCategory } from '../api/digitransit'
+import type { Hazard } from '../services/hazards'
+import { hazardToLatLng } from '../services/hazards'
 
 const originIcon = L.divIcon({
   className: '',
@@ -42,6 +44,26 @@ export const HSL_TILE_CONFIG = {
 } as const
 
 const TILE_CACHE_NAME = 'hsl-tiles-v1'
+
+const makeHazardIcon = (emoji: string, bg: string) =>
+  L.divIcon({
+    className: '',
+    html: `<div style="width:28px;height:28px;border-radius:50%;background:${bg};border:2px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;font-size:14px">${emoji}</div>`,
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
+  })
+
+const HAZARD_ICONS = {
+  excavation: makeHazardIcon('⚠️', '#FF8C00'),
+  traffic_arrangement: makeHazardIcon('🚧', '#D32F2F'),
+  area_rental: makeHazardIcon('🏗️', '#F9A825'),
+}
+
+const HAZARD_TYPE_LABELS: Record<Hazard['type'], string> = {
+  excavation: 'Excavation',
+  traffic_arrangement: 'Traffic works',
+  area_rental: 'Area rental',
+}
 
 class HslCachingTileLayer extends L.TileLayer {
   tileBlobUrls = new WeakMap<HTMLElement, string>()
@@ -183,6 +205,8 @@ export type RouteMapProps = {
   height?: number | string
   alternativeRoutes?: AlternativeRoute[]
   onSelectRoute?: (category: RouteCategory) => void
+  hazards?: Hazard[]
+  hazardsLoading?: boolean
 }
 
 export function RouteMap({
@@ -192,6 +216,7 @@ export function RouteMap({
   height = '100%',
   alternativeRoutes,
   onSelectRoute,
+  hazards,
 }: RouteMapProps) {
   const legs = useMemo(
     () => getRouteLegsFromPlanResponse(routeResponse),
@@ -289,6 +314,26 @@ export function RouteMap({
             <Popup>End</Popup>
           </Marker>
         )}
+        {(hazards ?? []).map((hazard) => {
+          const pos = hazardToLatLng(hazard)
+          if (!pos) return null
+          return (
+            <Marker key={hazard.id} position={pos} icon={HAZARD_ICONS[hazard.type]}>
+              <Popup>
+                <strong>{HAZARD_TYPE_LABELS[hazard.type]}</strong>
+                {hazard.address && <div>{hazard.address}</div>}
+                {hazard.purpose && (
+                  <div style={{ fontSize: '0.85em', color: '#555' }}>{hazard.purpose}</div>
+                )}
+                {(hazard.startDate || hazard.endDate) && (
+                  <div style={{ fontSize: '0.8em', marginTop: 4 }}>
+                    {hazard.startDate ?? '?'} – {hazard.endDate ?? '?'}
+                  </div>
+                )}
+              </Popup>
+            </Marker>
+          )
+        })}
       </MapContainer>
     </div>
   )

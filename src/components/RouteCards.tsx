@@ -24,6 +24,8 @@ type RouteCardsProps = {
   routes: Record<RouteCategory, ScoredRoute>
   selectedRoute: RouteCategory
   onSelect: (key: RouteCategory) => void
+  hazardCount?: number
+  hazardsLoading?: boolean
 }
 
 const ROUTE_LABELS: Record<RouteCategory, string> = {
@@ -56,7 +58,7 @@ export function RouteCardsSkeleton() {
   )
 }
 
-export function RouteCards({ routes, selectedRoute, onSelect }: RouteCardsProps) {
+export function RouteCards({ routes, selectedRoute, onSelect, hazardCount, hazardsLoading }: RouteCardsProps) {
   const maxCalm = Math.max(...Object.values(routes).map((r) => r.calmScore))
 
   return (
@@ -94,7 +96,7 @@ export function RouteCards({ routes, selectedRoute, onSelect }: RouteCardsProps)
                   {formatDuration(route.durationSec)} &middot;{' '}
                   {route.distanceKm.toFixed(1)} km
                 </Typography>
-                <Stack direction="row" spacing={0.5} sx={{ mt: 0.5, flexWrap: 'wrap' }}>
+                <Stack direction="row" spacing={0.5} sx={{ mt: 0.5, flexWrap: 'wrap', gap: 0.5 }}>
                   {route.calmScore > 0 && (
                     <Chip
                       label={`Calm ${route.calmScore}`}
@@ -120,6 +122,31 @@ export function RouteCards({ routes, selectedRoute, onSelect }: RouteCardsProps)
                           ? 'rgba(255,255,255,0.2)'
                           : 'rgba(25,118,210,0.08)',
                         color: isSelected ? 'white' : 'primary.main',
+                      }}
+                    />
+                  )}
+                  {isSelected && hazardsLoading && (
+                    <Chip
+                      label="Checking hazards…"
+                      size="small"
+                      sx={{
+                        height: 20,
+                        fontSize: '0.7rem',
+                        opacity: 0.6,
+                        bgcolor: 'rgba(255,255,255,0.15)',
+                        color: 'white',
+                      }}
+                    />
+                  )}
+                  {isSelected && !hazardsLoading && (hazardCount ?? 0) > 0 && (
+                    <Chip
+                      label={`⚠️ ${hazardCount} hazard${hazardCount !== 1 ? 's' : ''}`}
+                      size="small"
+                      sx={{
+                        height: 20,
+                        fontSize: '0.7rem',
+                        bgcolor: 'rgba(255,140,0,0.3)',
+                        color: 'white',
                       }}
                     />
                   )}

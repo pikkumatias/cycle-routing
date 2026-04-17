@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { FormEvent } from 'react'
 import {
   Alert,
@@ -18,8 +18,15 @@ import { SearchDrawer, type AddressOption } from './components/SearchDrawer'
 import { AddressTrigger } from './components/AddressTrigger'
 import {
   estimateBboxFromEndpoints,
+  getRouteLegsFromPlanResponse,
+  getBoundsFromLegsAndPoints,
   type LatLng,
 } from './utils/routeGeometry'
+import {
+  fetchHazards,
+  filterHazardsNearRoute,
+  type Hazard,
+} from './services/hazards'
 import { fetchPoisAndInfrastructure, boundsToBbox } from './utils/overpass'
 import type { OsmPoi } from './utils/overpass'
 import { deduplicateRoutes, selectRoutes } from './utils/routeSelection'
@@ -52,11 +59,51 @@ function App() {
     from: LatLng
     to: LatLng
   } | null>(null)
+  const [hazards, setHazards] = useState<Hazard[]>([])
+  const [hazardsLoading, setHazardsLoading] = useState(false)
 
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [activeField, setActiveField] = useState<'origin' | 'destination'>('origin')
 
   const { sheetRef, handleRef, contentRef, sheetStyle, contentStyle } = useBottomSheet()
+
+  useEffect(() => {
+    if (!routesState.routes || !lastCoords) return
+    const selectedRouteData = routesState.routes[routesState.selectedRoute]
+    if (!selectedRouteData) return
+
+    const legs = getRouteLegsFromPlanResponse(selectedRouteData.response)
+    const bounds = getBoundsFromLegsAndPoints(legs, lastCoords.from, lastCoords.to)
+    if (bounds.length < 2) return
+
+    const BUFFER = 0.002 // ~200m in degrees
+    const hazardBounds = {
+      minLat: bounds[0][0] - BUFFER,
+      minLon: bounds[0][1] - BUFFER,
+      maxLat: bounds[1][0] + BUFFER,
+      maxLon: bounds[1][1] + BUFFER,
+    }
+    const polyline = legs.flatMap((leg) => leg.positions)
+
+    setHazardsLoading(true)
+    setHazards([])
+
+    let cancelled = false
+    fetchHazards(hazardBounds)
+      .then((raw) => {
+        if (cancelled) return
+        setHazards(filterHazardsNearRoute(raw, polyline))
+        setHazardsLoading(false)
+      })
+      .catch((err) => {
+        if (cancelled) return
+        console.warn('[App] hazard fetch failed:', err)
+        setHazardsLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [routesState.selectedRoute, routesState.routes, lastCoords])
 
   const resolveCoords = (option: AddressOption | null, input: string) => {
     if (option) return { lat: option.lat, lon: option.lon }
@@ -161,6 +208,8 @@ function App() {
           onSelectRoute={(key) =>
             setRoutesState((prev) => ({ ...prev, selectedRoute: key }))
           }
+          hazards={hazards}
+          hazardsLoading={hazardsLoading}
         />
       </div>
 
@@ -217,6 +266,8 @@ function App() {
                 onSelect={(key) =>
                   setRoutesState((prev) => ({ ...prev, selectedRoute: key }))
                 }
+                hazardCount={hazards.length}
+                hazardsLoading={hazardsLoading}
               />
             </Stack>
           )}
