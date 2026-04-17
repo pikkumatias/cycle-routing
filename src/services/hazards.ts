@@ -89,7 +89,7 @@ export async function fetchHazards(bounds: HazardBounds): Promise<Hazard[]> {
   const results = await Promise.allSettled(
     HAZARD_LAYERS.map(async (layer, li) => {
       const res = await fetch(buildWfsUrl(layer, bounds), {
-        signal: AbortSignal.timeout(8000),
+        signal: AbortSignal.timeout(20000),
       })
       if (!res.ok) throw new Error(`WFS ${layer.name}: HTTP ${res.status}`)
       const data = (await res.json()) as { features?: unknown[] }
