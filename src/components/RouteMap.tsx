@@ -44,10 +44,39 @@ export const HSL_TILE_CONFIG = {
 const TILE_CACHE_NAME = 'hsl-tiles-v1'
 
 class HslCachingTileLayer extends L.TileLayer {
+  tileBlobUrls = new WeakMap<HTMLElement, string>()
+
   override createTile(coords: L.Coords, done?: L.DoneCallback): HTMLElement {
     const img = document.createElement('img')
     if (!done) return img
     const url = this.getTileUrl(coords)
+
+    let settled = false
+    const settle = (err: Error | undefined) => {
+      if (settled) return
+      settled = true
+      done(err, img)
+    }
+
+    const setImgSrc = (blob: Blob, attemptsLeft: number) => {
+      // Revoke any previous blob URL held by this img (retry path)
+      const prev = this.tileBlobUrls.get(img)
+      if (prev) URL.revokeObjectURL(prev)
+
+      const objUrl = URL.createObjectURL(blob)
+      this.tileBlobUrls.set(img, objUrl)
+      img.onload = () => settle(undefined)
+      img.onerror = () => {
+        if (attemptsLeft > 1) {
+          setTimeout(() => load(attemptsLeft - 1), 400)
+        } else {
+          URL.revokeObjectURL(objUrl)
+          this.tileBlobUrls.delete(img)
+          settle(new Error('img load'))
+        }
+      }
+      img.src = objUrl
+    }
 
     const load = async (attemptsLeft: number): Promise<void> => {
       try {
@@ -56,10 +85,7 @@ class HslCachingTileLayer extends L.TileLayer {
           const cached = await cache.match(url)
           if (cached) {
             const blob = await cached.blob()
-            const objUrl = URL.createObjectURL(blob)
-            img.onload = () => { URL.revokeObjectURL(objUrl); done(undefined, img) }
-            img.onerror = () => { URL.revokeObjectURL(objUrl); done(new Error('img load'), img) }
-            img.src = objUrl
+            setImgSrc(blob, attemptsLeft)
             return
           }
         }
@@ -73,15 +99,12 @@ class HslCachingTileLayer extends L.TileLayer {
           caches.open(TILE_CACHE_NAME).then((c) => c.put(url, forCache)).catch(() => {})
         }
 
-        const objUrl = URL.createObjectURL(blob)
-        img.onload = () => { URL.revokeObjectURL(objUrl); done(undefined, img) }
-        img.onerror = () => { URL.revokeObjectURL(objUrl); done(new Error('img load'), img) }
-        img.src = objUrl
+        setImgSrc(blob, attemptsLeft)
       } catch (err) {
         if (attemptsLeft > 1) {
           setTimeout(() => load(attemptsLeft - 1), 400)
         } else {
-          done(err instanceof Error ? err : new Error(String(err)), img)
+          settle(err instanceof Error ? err : new Error(String(err)))
         }
       }
     }
@@ -103,8 +126,19 @@ function HslTileLayer() {
       keepBuffer: 4,
       updateWhenIdle: false,
     })
+    const onTileUnload = (e: L.TileEvent) => {
+      const blobUrl = layer.tileBlobUrls.get(e.tile)
+      if (blobUrl) {
+        URL.revokeObjectURL(blobUrl)
+        layer.tileBlobUrls.delete(e.tile)
+      }
+    }
+    layer.on('tileunload', onTileUnload)
     layer.addTo(map)
-    return () => { layer.remove() }
+    return () => {
+      layer.remove()
+      layer.off('tileunload', onTileUnload)
+    }
   }, [map])
   return null
 }
