@@ -6,6 +6,8 @@ import {
   Popup,
   useMap,
 } from 'react-leaflet'
+import { MapContextMenu } from './MapContextMenu'
+import type { AddressOption } from './SearchDrawer'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import {
@@ -207,6 +209,8 @@ export type RouteMapProps = {
   onSelectRoute?: (category: RouteCategory) => void
   hazards?: Hazard[]
   hazardsLoading?: boolean
+  onSetOrigin?: (option: AddressOption) => void
+  onSetDestination?: (option: AddressOption) => void
 }
 
 export function RouteMap({
@@ -217,6 +221,8 @@ export function RouteMap({
   alternativeRoutes,
   onSelectRoute,
   hazards,
+  onSetOrigin,
+  onSetDestination,
 }: RouteMapProps) {
   const legs = useMemo(
     () => getRouteLegsFromPlanResponse(routeResponse),
@@ -334,6 +340,9 @@ export function RouteMap({
             </Marker>
           )
         })}
+        {onSetOrigin && onSetDestination && (
+          <MapContextMenu onSetOrigin={onSetOrigin} onSetDestination={onSetDestination} />
+        )}
       </MapContainer>
     </div>
   )

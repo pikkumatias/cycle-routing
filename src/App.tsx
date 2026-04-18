@@ -130,6 +130,16 @@ function App() {
     setDrawerOpen(false)
   }
 
+  const handleSetOriginFromMap = (option: AddressOption) => {
+    setFromOption(option)
+    setFromInput(option.label)
+  }
+
+  const handleSetDestinationFromMap = (option: AddressOption) => {
+    setToOption(option)
+    setToInput(option.label)
+  }
+
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault()
 
@@ -210,6 +220,8 @@ function App() {
           }
           hazards={hazards}
           hazardsLoading={hazardsLoading}
+          onSetOrigin={handleSetOriginFromMap}
+          onSetDestination={handleSetDestinationFromMap}
         />
       </div>
 

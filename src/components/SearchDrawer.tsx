@@ -25,7 +25,7 @@ export type AddressOption = {
   label: string
   lat: number
   lon: number
-  group: 'Recent' | 'Suggestions'
+  group: 'Recent' | 'Suggestions' | 'Map'
 }
 
 type SearchDrawerProps = {

@@ -207,6 +207,37 @@ export async function fetchGeocodingAutocomplete(
   }))
 }
 
+export async function fetchReverseGeocode(
+  lat: number,
+  lon: number,
+  signal?: AbortSignal,
+): Promise<GeocodingResult | null> {
+  const url = new URL('/api/digitransit-reverse-geocode', window.location.origin)
+  url.searchParams.set('point.lat', String(lat))
+  url.searchParams.set('point.lon', String(lon))
+
+  const res = await fetch(url.toString(), { signal })
+  if (!res.ok) {
+    const body = await res.text()
+    throw new Error(`Reverse geocoding API error: ${res.status} ${res.statusText}\n${body}`)
+  }
+
+  const data = await res.json()
+  type GeoJsonFeature = {
+    properties?: { label?: string }
+    geometry?: { coordinates?: [number, number] }
+  }
+  const features: GeoJsonFeature[] = (data as { features?: GeoJsonFeature[] })?.features ?? []
+  const first = features[0]
+  if (!first) return null
+
+  return {
+    label: first.properties?.label ?? '',
+    lon: first.geometry?.coordinates?.[0] ?? lon,
+    lat: first.geometry?.coordinates?.[1] ?? lat,
+  }
+}
+
 import { decodePolyline, type LatLng } from '../utils/routeGeometry'
 
 export type CandidateRoute = {

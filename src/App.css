@@ -72,3 +72,18 @@
     margin-right: auto;
   }
 }
+
+.context-menu-popup .leaflet-popup-content-wrapper {
+  padding: 0;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+}
+
+.context-menu-popup .leaflet-popup-content {
+  margin: 0;
+}
+
+.context-menu-popup .leaflet-popup-tip-container {
+  display: none;
+}
