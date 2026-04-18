@@ -59,8 +59,7 @@ function App() {
     from: LatLng
     to: LatLng
   } | null>(null)
-  const [hazards, setHazards] = useState<Hazard[]>([])
-  const [hazardsLoading, setHazardsLoading] = useState(false)
+  const [hazardsData, setHazardsData] = useState<{ loading: boolean; items: Hazard[] }>({ loading: false, items: [] })
 
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [activeField, setActiveField] = useState<'origin' | 'destination'>('origin')
@@ -85,21 +84,21 @@ function App() {
     }
     const polyline = legs.flatMap((leg) => leg.positions)
 
-    setHazardsLoading(true)
-    setHazards([])
-
     let cancelled = false
-    fetchHazards(hazardBounds)
-      .then((raw) => {
-        if (cancelled) return
-        setHazards(filterHazardsNearRoute(raw, polyline))
-        setHazardsLoading(false)
-      })
-      .catch((err) => {
-        if (cancelled) return
-        console.warn('[App] hazard fetch failed:', err)
-        setHazardsLoading(false)
-      })
+    void (async () => {
+      setHazardsData({ loading: true, items: [] })
+      try {
+        const raw = await fetchHazards(hazardBounds)
+        if (!cancelled) {
+          setHazardsData({ loading: false, items: filterHazardsNearRoute(raw, polyline) })
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.warn('[App] hazard fetch failed:', err)
+          setHazardsData((prev) => ({ ...prev, loading: false }))
+        }
+      }
+    })()
     return () => {
       cancelled = true
     }
@@ -218,8 +217,8 @@ function App() {
           onSelectRoute={(key) =>
             setRoutesState((prev) => ({ ...prev, selectedRoute: key }))
           }
-          hazards={hazards}
-          hazardsLoading={hazardsLoading}
+          hazards={hazardsData.items}
+          hazardsLoading={hazardsData.loading}
           onSetOrigin={handleSetOriginFromMap}
           onSetDestination={handleSetDestinationFromMap}
         />
@@ -278,8 +277,8 @@ function App() {
                 onSelect={(key) =>
                   setRoutesState((prev) => ({ ...prev, selectedRoute: key }))
                 }
-                hazardCount={hazards.length}
-                hazardsLoading={hazardsLoading}
+                hazardCount={hazardsData.items.length}
+                hazardsLoading={hazardsData.loading}
               />
             </Stack>
           )}
