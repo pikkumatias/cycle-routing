@@ -10,5 +10,4 @@ i18n.use(initReactI18next).init({
     fi: { translation: fi },
   },
   interpolation: { escapeValue: false },
-  initImmediate: false,
 })
