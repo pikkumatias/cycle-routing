@@ -29,7 +29,10 @@ export default async function handler(req: VercelReq, res: VercelRes) {
     try {
       const upstream = await fetch(endpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'User-Agent': 'cycle-routing/1.0 (https://github.com/matiasmerenmies/cycle-routing)',
+        },
         body: `data=${encodeURIComponent(body.query)}`,
         signal: AbortSignal.timeout(30000),
       })
