@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   MapContainer,
   Polyline,
@@ -6,6 +6,8 @@ import {
   Popup,
   useMap,
 } from 'react-leaflet'
+import 'leaflet.markercluster'
+import 'leaflet.markercluster/dist/MarkerCluster.css'
 import { useMediaQuery } from '@mui/material'
 import Dialog from '@mui/material/Dialog'
 import DialogTitle from '@mui/material/DialogTitle'
@@ -202,6 +204,63 @@ const ALT_ROUTE_COLOR = '#9e9e9e'
 const ALT_ROUTE_WEIGHT = 3
 const ALT_ROUTE_OPACITY = 0.4
 
+const esc = (s: string) =>
+  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
+type HazardClusterLayerProps = {
+  hazards: Hazard[]
+  isMobile: boolean
+  onHazardClick: (hazard: Hazard) => void
+}
+
+function HazardClusterLayer({ hazards, isMobile, onHazardClick }: HazardClusterLayerProps) {
+  const map = useMap()
+  // Keep callback ref so the effect doesn't re-run on every render
+  const onClickRef = useRef(onHazardClick)
+  useEffect(() => { onClickRef.current = onHazardClick })
+
+  useEffect(() => {
+    const group = L.markerClusterGroup({
+      maxClusterRadius: 40,
+      showCoverageOnHover: false,
+      spiderfyDistanceMultiplier: 1.4,
+      iconCreateFunction: (cluster) =>
+        L.divIcon({
+          className: '',
+          html: `<div style="width:34px;height:34px;border-radius:50%;background:#E65100;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:13px;font-family:sans-serif">${cluster.getChildCount()}</div>`,
+          iconSize: [34, 34],
+          iconAnchor: [17, 17],
+        }),
+    })
+
+    for (const hazard of hazards) {
+      const pos = hazardToLatLng(hazard)
+      if (!pos) continue
+
+      const marker = L.marker(pos, { icon: HAZARD_ICONS[hazard.type] })
+
+      if (isMobile) {
+        marker.on('click', () => onClickRef.current(hazard))
+      } else {
+        let html = `<strong>${esc(HAZARD_TYPE_LABELS[hazard.type])}</strong>`
+        if (hazard.address) html += `<div>${esc(hazard.address)}</div>`
+        if (hazard.purpose) html += `<div style="font-size:0.85em;color:#555">${esc(hazard.purpose)}</div>`
+        if (hazard.startDate || hazard.endDate) {
+          html += `<div style="font-size:0.8em;margin-top:4px">${esc(hazard.startDate ?? '?')} – ${esc(hazard.endDate ?? '?')}</div>`
+        }
+        marker.bindPopup(L.popup({ maxHeight: 300 }).setContent(html))
+      }
+
+      group.addLayer(marker)
+    }
+
+    map.addLayer(group)
+    return () => { map.removeLayer(group) }
+  }, [map, hazards, isMobile])
+
+  return null
+}
+
 export type AlternativeRoute = {
   category: RouteCategory
   response: unknown
@@ -233,6 +292,7 @@ export function RouteMap({
 }: RouteMapProps) {
   const [selectedHazard, setSelectedHazard] = useState<Hazard | null>(null)
   const isMobile = useMediaQuery('(max-width:600px)')
+  const handleHazardClick = useCallback((hazard: Hazard) => setSelectedHazard(hazard), [])
   const legs = useMemo(
     () => getRouteLegsFromPlanResponse(routeResponse),
     [routeResponse],
@@ -329,36 +389,13 @@ export function RouteMap({
             <Popup>End</Popup>
           </Marker>
         )}
-        {(hazards ?? []).map((hazard) => {
-          const pos = hazardToLatLng(hazard)
-          if (!pos) return null
-          if (isMobile) {
-            return (
-              <Marker
-                key={hazard.id}
-                position={pos}
-                icon={HAZARD_ICONS[hazard.type]}
-                eventHandlers={{ click: () => setSelectedHazard(hazard) }}
-              />
-            )
-          }
-          return (
-            <Marker key={hazard.id} position={pos} icon={HAZARD_ICONS[hazard.type]}>
-              <Popup maxHeight={300}>
-                <strong>{HAZARD_TYPE_LABELS[hazard.type]}</strong>
-                {hazard.address && <div>{hazard.address}</div>}
-                {hazard.purpose && (
-                  <div style={{ fontSize: '0.85em', color: '#555' }}>{hazard.purpose}</div>
-                )}
-                {(hazard.startDate || hazard.endDate) && (
-                  <div style={{ fontSize: '0.8em', marginTop: 4 }}>
-                    {hazard.startDate ?? '?'} – {hazard.endDate ?? '?'}
-                  </div>
-                )}
-              </Popup>
-            </Marker>
-          )
-        })}
+        {(hazards ?? []).length > 0 && (
+          <HazardClusterLayer
+            hazards={hazards ?? []}
+            isMobile={isMobile}
+            onHazardClick={handleHazardClick}
+          />
+        )}
         {onSetOrigin && onSetDestination && (
           <MapContextMenu onSetOrigin={onSetOrigin} onSetDestination={onSetDestination} />
         )}
