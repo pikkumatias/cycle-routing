@@ -60,6 +60,7 @@ function App() {
     to: LatLng
   } | null>(null)
   const [hazardsData, setHazardsData] = useState<{ loading: boolean; items: Hazard[] }>({ loading: false, items: [] })
+  const [debugHazards, setDebugHazards] = useState<Hazard[]>([])
 
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [activeField, setActiveField] = useState<'origin' | 'destination'>('origin')
@@ -103,6 +104,21 @@ function App() {
       cancelled = true
     }
   }, [routesState.selectedRoute, routesState.routes, lastCoords])
+
+  // Debug: always fetch all active construction work for greater Helsinki, no route filter
+  useEffect(() => {
+    const HELSINKI_BOUNDS = { minLat: 60.05, minLon: 24.70, maxLat: 60.35, maxLon: 25.20 }
+    let cancelled = false
+    void (async () => {
+      try {
+        const hazards = await fetchHazards(HELSINKI_BOUNDS)
+        if (!cancelled) setDebugHazards(hazards)
+      } catch (err) {
+        console.warn('[App] debug hazard fetch failed:', err)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [])
 
   const resolveCoords = (option: AddressOption | null, input: string) => {
     if (option) return { lat: option.lat, lon: option.lon }
@@ -217,7 +233,7 @@ function App() {
           onSelectRoute={(key) =>
             setRoutesState((prev) => ({ ...prev, selectedRoute: key }))
           }
-          hazards={hazardsData.items}
+          hazards={debugHazards}
           hazardsLoading={hazardsData.loading}
           onSetOrigin={handleSetOriginFromMap}
           onSetDestination={handleSetDestinationFromMap}
