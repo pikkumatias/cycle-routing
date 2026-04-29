@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   MapContainer,
   Polyline,
@@ -6,6 +6,13 @@ import {
   Popup,
   useMap,
 } from 'react-leaflet'
+import { useMediaQuery } from '@mui/material'
+import Dialog from '@mui/material/Dialog'
+import DialogTitle from '@mui/material/DialogTitle'
+import DialogContent from '@mui/material/DialogContent'
+import IconButton from '@mui/material/IconButton'
+import Typography from '@mui/material/Typography'
+import CloseIcon from '@mui/icons-material/Close'
 import { MapContextMenu } from './MapContextMenu'
 import type { AddressOption } from './SearchDrawer'
 import L from 'leaflet'
@@ -224,6 +231,8 @@ export function RouteMap({
   onSetOrigin,
   onSetDestination,
 }: RouteMapProps) {
+  const [selectedHazard, setSelectedHazard] = useState<Hazard | null>(null)
+  const isMobile = useMediaQuery('(max-width:600px)')
   const legs = useMemo(
     () => getRouteLegsFromPlanResponse(routeResponse),
     [routeResponse],
@@ -323,9 +332,19 @@ export function RouteMap({
         {(hazards ?? []).map((hazard) => {
           const pos = hazardToLatLng(hazard)
           if (!pos) return null
+          if (isMobile) {
+            return (
+              <Marker
+                key={hazard.id}
+                position={pos}
+                icon={HAZARD_ICONS[hazard.type]}
+                eventHandlers={{ click: () => setSelectedHazard(hazard) }}
+              />
+            )
+          }
           return (
             <Marker key={hazard.id} position={pos} icon={HAZARD_ICONS[hazard.type]}>
-              <Popup>
+              <Popup maxHeight={300}>
                 <strong>{HAZARD_TYPE_LABELS[hazard.type]}</strong>
                 {hazard.address && <div>{hazard.address}</div>}
                 {hazard.purpose && (
@@ -344,6 +363,39 @@ export function RouteMap({
           <MapContextMenu onSetOrigin={onSetOrigin} onSetDestination={onSetDestination} />
         )}
       </MapContainer>
+      <Dialog
+        open={selectedHazard !== null}
+        onClose={() => setSelectedHazard(null)}
+        fullWidth
+        maxWidth="xs"
+        PaperProps={{ sx: { maxHeight: '85dvh', mx: 2, borderRadius: 2 } }}
+      >
+        <DialogTitle
+          sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1 }}
+        >
+          <Typography variant="subtitle1" fontWeight="bold">
+            {selectedHazard && HAZARD_TYPE_LABELS[selectedHazard.type]}
+          </Typography>
+          <IconButton size="small" onClick={() => setSelectedHazard(null)} edge="end" aria-label="close">
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ overflowY: 'auto', pt: 0 }}>
+          {selectedHazard?.address && (
+            <Typography variant="body2">{selectedHazard.address}</Typography>
+          )}
+          {selectedHazard?.purpose && (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+              {selectedHazard.purpose}
+            </Typography>
+          )}
+          {(selectedHazard?.startDate || selectedHazard?.endDate) && (
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+              {selectedHazard.startDate ?? '?'} – {selectedHazard.endDate ?? '?'}
+            </Typography>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
