@@ -3,11 +3,10 @@
  * No API key required. See https://wiki.openstreetmap.org/wiki/Overpass_API
  */
 
-const OVERPASS_ENDPOINT = 'https://overpass-api.de/api/interpreter'
-const OVERPASS_FALLBACK_ENDPOINT = 'https://overpass.kumi.systems/api/interpreter'
+const OVERPASS_PROXY = '/api/overpass'
 const DEFAULT_TIMEOUT_SEC = 8
-const MAX_RETRIES = 3       // retry the full endpoint sequence up to 3 more times (4 rounds total)
-const RETRY_DELAY_MS = 0    // retry immediately after 504 — no reason to pause
+const MAX_RETRIES = 3
+const RETRY_DELAY_MS = 0
 
 // Cap bbox to prevent oversized queries (~39km lat × ~24km lon at 60°N)
 const MAX_BBOX_SPAN = 0.35
@@ -171,7 +170,6 @@ async function fetchQuery(
   timeoutSec: number,
   callerSignal?: AbortSignal,
 ): Promise<OsmPoi[]> {
-  const endpoints = [OVERPASS_ENDPOINT, OVERPASS_FALLBACK_ENDPOINT]
   let lastError: unknown
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
@@ -180,33 +178,29 @@ async function fetchQuery(
       await new Promise<void>((r) => setTimeout(r, RETRY_DELAY_MS))
     }
 
-    for (let i = 0; i < endpoints.length; i++) {
-      if (callerSignal?.aborted) throw new DOMException('Aborted', 'AbortError')
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), (timeoutSec + 3) * 1000)
+    const onCallerAbort = () => controller.abort()
+    callerSignal?.addEventListener('abort', onCallerAbort, { once: true })
 
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), (timeoutSec + 3) * 1000)
-      const onCallerAbort = () => controller.abort()
-      callerSignal?.addEventListener('abort', onCallerAbort, { once: true })
-
-      try {
-        const res = await fetch(endpoints[i], {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: `data=${encodeURIComponent(query)}`,
-          signal: controller.signal,
-        })
-        if (!res.ok) {
-          const text = await res.text()
-          throw new Error(`Overpass API error: ${res.status} ${res.statusText}\n${text.slice(0, 500)}`)
-        }
-        return parseOverpassResponse(await res.json())
-      } catch (err) {
-        lastError = err
-        if (callerSignal?.aborted) throw err
-      } finally {
-        clearTimeout(timeoutId)
-        callerSignal?.removeEventListener('abort', onCallerAbort)
+    try {
+      const res = await fetch(OVERPASS_PROXY, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query }),
+        signal: controller.signal,
+      })
+      if (!res.ok) {
+        const text = await res.text()
+        throw new Error(`Overpass proxy error: ${res.status}\n${text.slice(0, 500)}`)
       }
+      return parseOverpassResponse(await res.json())
+    } catch (err) {
+      lastError = err
+      if (callerSignal?.aborted) throw err
+    } finally {
+      clearTimeout(timeoutId)
+      callerSignal?.removeEventListener('abort', onCallerAbort)
     }
   }
 
