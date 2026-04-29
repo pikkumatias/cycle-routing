@@ -31,7 +31,7 @@ export default async function handler(req: VercelReq, res: VercelRes) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
-          'User-Agent': 'cycle-routing/1.0 (https://github.com/matiasmerenmies/cycle-routing)',
+          'User-Agent': 'cycle-routing/1.0 (https://github.com/pikkumatias/cycle-routing)',
         },
         body: `data=${encodeURIComponent(body.query)}`,
         signal: AbortSignal.timeout(30000),
