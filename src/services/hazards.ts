@@ -5,6 +5,7 @@ export type HazardType = 'excavation' | 'traffic_arrangement' | 'area_rental'
 
 type HazardGeometry =
   | { type: 'Point'; coordinates: [number, number] }
+  | { type: 'MultiPoint'; coordinates: [number, number][] }
   | { type: 'Polygon'; coordinates: [number, number][][] }
   | { type: 'MultiPolygon'; coordinates: [number, number][][][] }
 
@@ -55,7 +56,7 @@ function buildWfsUrl(layer: LayerConfig, bounds: HazardBounds): string {
     typeNames: layer.name,
     outputFormat: 'application/json',
     srsName: 'EPSG:4326',
-    CQL_FILTER: `status='Käynnissä' AND BBOX(singlegeom,${minLat},${minLon},${maxLat},${maxLon},'EPSG:4326')`,
+    CQL_FILTER: `status='Käynnissä' AND BBOX(singlegeom,${minLon},${minLat},${maxLon},${maxLat},'EPSG:4326')`,
   })
   return `${WFS_ENDPOINT}?${params.toString()}`
 }
@@ -89,7 +90,7 @@ export async function fetchHazards(bounds: HazardBounds): Promise<Hazard[]> {
   const results = await Promise.allSettled(
     HAZARD_LAYERS.map(async (layer, li) => {
       const res = await fetch(buildWfsUrl(layer, bounds), {
-        signal: AbortSignal.timeout(20000),
+        signal: AbortSignal.timeout(60000),
       })
       if (!res.ok) throw new Error(`WFS ${layer.name}: HTTP ${res.status}`)
       const data = (await res.json()) as { features?: unknown[] }
@@ -115,6 +116,11 @@ export function hazardToLatLng(hazard: Hazard): [number, number] | null {
   const geo = hazard.geometry
   if (geo.type === 'Point') {
     return [geo.coordinates[1], geo.coordinates[0]]
+  }
+  if (geo.type === 'MultiPoint') {
+    if (geo.coordinates.length === 0) return null
+    const avg = geo.coordinates.reduce((s, c) => [s[0] + c[0], s[1] + c[1]], [0, 0])
+    return [avg[1] / geo.coordinates.length, avg[0] / geo.coordinates.length]
   }
   const ring =
     geo.type === 'Polygon' ? geo.coordinates[0] : geo.coordinates[0][0]
