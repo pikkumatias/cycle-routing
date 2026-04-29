@@ -1,4 +1,4 @@
-import { minDistanceToPolyline, samplePolyline } from '../utils/scenicScore'
+import { minDistanceToPolyline } from '../utils/scenicScore'
 import type { LatLng } from '../utils/routeGeometry'
 
 export type HazardType = 'excavation' | 'traffic_arrangement' | 'area_rental'
@@ -45,7 +45,7 @@ const HAZARD_LAYERS: LayerConfig[] = [
   { name: 'avoindata:Aluevuokraus_piste',                  type: 'area_rental',         startField: 'tyo_alkaa',                endField: 'tyo_paattyy' },
 ]
 
-const HAZARD_THRESHOLD_M = 100
+const HAZARD_THRESHOLD_M = 50
 
 function buildWfsUrl(layer: LayerConfig, bounds: HazardBounds): string {
   const { minLat, minLon, maxLat, maxLon } = bounds
@@ -130,13 +130,53 @@ export function hazardToLatLng(hazard: Hazard): [number, number] | null {
   return [lat, lon]
 }
 
+// Returns all GeoJSON [lon, lat] coordinate pairs from a hazard geometry.
+function getHazardVertices(hazard: Hazard): [number, number][] {
+  const geo = hazard.geometry
+  if (geo.type === 'Point') return [geo.coordinates]
+  if (geo.type === 'MultiPoint') return geo.coordinates
+  if (geo.type === 'Polygon') return geo.coordinates.flat()
+  return geo.coordinates.flat(2)
+}
+
+// Ray-casting point-in-polygon test. Ring and point use the same [x, y] convention.
+function pointInRing(point: [number, number], ring: [number, number][]): boolean {
+  const [px, py] = point
+  let inside = false
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i]
+    const [xj, yj] = ring[j]
+    if ((yi > py) !== (yj > py) && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi) {
+      inside = !inside
+    }
+  }
+  return inside
+}
+
+// True if any route vertex falls inside a polygon hazard — handles large area hazards
+// that completely span the route so no boundary vertex would be near a route vertex.
+function routePassesThroughPolygon(polyline: LatLng[], hazard: Hazard): boolean {
+  const geo = hazard.geometry
+  if (geo.type !== 'Polygon' && geo.type !== 'MultiPolygon') return false
+  const outerRings: [number, number][][] =
+    geo.type === 'Polygon' ? [geo.coordinates[0]] : geo.coordinates.map((p) => p[0])
+  for (const vertex of polyline) {
+    const pt: [number, number] = [vertex[1], vertex[0]] // convert [lat,lon] → [lon,lat]
+    for (const ring of outerRings) {
+      if (pointInRing(pt, ring)) return true
+    }
+  }
+  return false
+}
+
 export function filterHazardsNearRoute(
   hazards: Hazard[],
   polyline: LatLng[],
 ): Hazard[] {
-  const sampled = samplePolyline(polyline, 3)
   return hazards.filter((h) => {
-    const pos = hazardToLatLng(h)
-    return pos ? minDistanceToPolyline(pos, sampled) <= HAZARD_THRESHOLD_M : false
+    for (const [lon, lat] of getHazardVertices(h)) {
+      if (minDistanceToPolyline([lat, lon], polyline) <= HAZARD_THRESHOLD_M) return true
+    }
+    return routePassesThroughPolygon(polyline, h)
   })
 }
