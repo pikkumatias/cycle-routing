@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   MapContainer,
   Polyline,
@@ -70,10 +71,10 @@ const HAZARD_ICONS = {
   area_rental: makeHazardIcon('🏗️', '#F9A825'),
 }
 
-const HAZARD_TYPE_LABELS: Record<Hazard['type'], string> = {
-  excavation: 'Excavation',
-  traffic_arrangement: 'Traffic works',
-  area_rental: 'Area rental',
+const HAZARD_TYPE_KEYS: Record<Hazard['type'], string> = {
+  excavation: 'hazardTypes.excavation',
+  traffic_arrangement: 'hazardTypes.traffic_arrangement',
+  area_rental: 'hazardTypes.area_rental',
 }
 
 class HslCachingTileLayer extends L.TileLayer {
@@ -215,6 +216,7 @@ type HazardClusterLayerProps = {
 
 function HazardClusterLayer({ hazards, isMobile, onHazardClick }: HazardClusterLayerProps) {
   const map = useMap()
+  const { t } = useTranslation()
   // Keep callback ref so the effect doesn't re-run on every render
   const onClickRef = useRef(onHazardClick)
   useEffect(() => { onClickRef.current = onHazardClick })
@@ -242,7 +244,7 @@ function HazardClusterLayer({ hazards, isMobile, onHazardClick }: HazardClusterL
       if (isMobile) {
         marker.on('click', () => onClickRef.current(hazard))
       } else {
-        let html = `<strong>${esc(HAZARD_TYPE_LABELS[hazard.type])}</strong>`
+        let html = `<strong>${esc(t(HAZARD_TYPE_KEYS[hazard.type]))}</strong>`
         if (hazard.address) html += `<div>${esc(hazard.address)}</div>`
         if (hazard.purpose) html += `<div style="font-size:0.85em;color:#555">${esc(hazard.purpose)}</div>`
         if (hazard.startDate || hazard.endDate) {
@@ -256,7 +258,7 @@ function HazardClusterLayer({ hazards, isMobile, onHazardClick }: HazardClusterL
 
     map.addLayer(group)
     return () => { map.removeLayer(group) }
-  }, [map, hazards, isMobile])
+  }, [map, hazards, isMobile, t])
 
   return null
 }
@@ -290,6 +292,7 @@ export function RouteMap({
   onSetOrigin,
   onSetDestination,
 }: RouteMapProps) {
+  const { t } = useTranslation()
   const [selectedHazard, setSelectedHazard] = useState<Hazard | null>(null)
   const isMobile = useMediaQuery('(max-width:600px)')
   const handleHazardClick = useCallback((hazard: Hazard) => setSelectedHazard(hazard), [])
@@ -381,12 +384,12 @@ export function RouteMap({
         ))}
         {from && (
           <Marker position={from} icon={originIcon}>
-            <Popup>Start</Popup>
+            <Popup>{t('map.start')}</Popup>
           </Marker>
         )}
         {to && (
           <Marker position={to} icon={destinationIcon}>
-            <Popup>End</Popup>
+            <Popup>{t('map.end')}</Popup>
           </Marker>
         )}
         {(hazards ?? []).length > 0 && (
@@ -411,9 +414,9 @@ export function RouteMap({
           sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1 }}
         >
           <Typography variant="subtitle1" fontWeight="bold">
-            {selectedHazard && HAZARD_TYPE_LABELS[selectedHazard.type]}
+            {selectedHazard && t(HAZARD_TYPE_KEYS[selectedHazard.type])}
           </Typography>
-          <IconButton size="small" onClick={() => setSelectedHazard(null)} edge="end" aria-label="close">
+          <IconButton size="small" onClick={() => setSelectedHazard(null)} edge="end" aria-label={t('map.close')}>
             <CloseIcon fontSize="small" />
           </IconButton>
         </DialogTitle>

@@ -1,0 +1,40 @@
+{
+  "search": {
+    "origin": "Lähtöpiste",
+    "destination": "Määränpää",
+    "whereTo": "Minne?",
+    "placeholder": "Osoite, paikka tai yrityksen nimi",
+    "back": "Takaisin",
+    "clear": "Tyhjennä",
+    "noResults": "Ei hakutuloksia"
+  },
+  "routes": {
+    "findRoutes": "Hae reittejä",
+    "findingRoutes": "Haetaan reittejä…",
+    "fastest": "Nopein",
+    "scenic": "Maisemallinen",
+    "calm": "Rauhallinen",
+    "showHazards": "Näytä vaaranpaikat",
+    "checkingHazards": "Tarkistetaan vaaroja…",
+    "hazard_one": "⚠️ {{count}} vaara",
+    "hazard_other": "⚠️ {{count}} vaaraa",
+    "calmScore": "Rauhallisuus {{score}}",
+    "paths_one": "{{count}} reitti",
+    "paths_other": "{{count}} reittiä",
+    "scoringUnavailable": "Pisteytyksessä ongelma — Overpass API aikakatkaisu."
+  },
+  "map": {
+    "start": "Lähtö",
+    "end": "Määränpää",
+    "close": "sulje"
+  },
+  "hazardTypes": {
+    "excavation": "Kaivutyö",
+    "traffic_arrangement": "Liikennejärjestely",
+    "area_rental": "Aluevuokraus"
+  },
+  "contextMenu": {
+    "origin": "Lähtöpiste",
+    "destination": "Määränpää"
+  }
+}

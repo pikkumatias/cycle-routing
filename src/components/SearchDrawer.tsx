@@ -18,6 +18,7 @@ import ClearIcon from '@mui/icons-material/Clear'
 import AccessTimeIcon from '@mui/icons-material/AccessTime'
 import LocationOnIcon from '@mui/icons-material/LocationOn'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
+import { useTranslation } from 'react-i18next'
 import { fetchGeocodingAutocomplete } from '../api/digitransit'
 import type { RecentSearch } from '../utils/recentSearches'
 
@@ -48,6 +49,7 @@ export function SearchDrawer({
   initialInputValue,
   recentSearches,
 }: SearchDrawerProps) {
+  const { t } = useTranslation()
   const [inputValue, setInputValue] = useState('')
   const [suggestions, setSuggestions] = useState<AddressOption[]>([])
   const [loading, setLoading] = useState(false)
@@ -130,7 +132,7 @@ export function SearchDrawer({
   const items: AddressOption[] =
     suggestions.length > 0 ? [...suggestions, ...recentOptions] : recentOptions
 
-  const label = fieldType === 'origin' ? 'Origin' : 'Destination'
+  const label = fieldType === 'origin' ? t('search.origin') : t('search.destination')
 
   return (
     <Drawer
@@ -162,7 +164,7 @@ export function SearchDrawer({
         <IconButton
           onClick={onClose}
           sx={{ color: 'primary.main', mt: 0.5 }}
-          aria-label="Back"
+          aria-label={t('search.back')}
         >
           <ArrowBackIcon />
         </IconButton>
@@ -175,7 +177,7 @@ export function SearchDrawer({
           </Typography>
           <TextField
             inputRef={inputRef}
-            placeholder="Address, place or business name"
+            placeholder={t('search.placeholder')}
             value={inputValue}
             onChange={(e) => handleInputChange(e.target.value)}
             fullWidth
@@ -191,7 +193,7 @@ export function SearchDrawer({
                     <IconButton
                       size="small"
                       onClick={() => handleInputChange('')}
-                      aria-label="Clear"
+                      aria-label={t('search.clear')}
                     >
                       <ClearIcon fontSize="small" />
                     </IconButton>
@@ -253,7 +255,7 @@ export function SearchDrawer({
         {items.length === 0 && inputValue.trim() && !loading && (
           <Box sx={{ px: 2, py: 3, textAlign: 'center' }}>
             <Typography variant="body2" color="text.secondary">
-              No results found
+              {t('search.noResults')}
             </Typography>
           </Box>
         )}

@@ -1,0 +1,40 @@
+{
+  "search": {
+    "origin": "Origin",
+    "destination": "Destination",
+    "whereTo": "Where to?",
+    "placeholder": "Address, place or business name",
+    "back": "Back",
+    "clear": "Clear",
+    "noResults": "No results found"
+  },
+  "routes": {
+    "findRoutes": "Find routes",
+    "findingRoutes": "Finding routes…",
+    "fastest": "Fastest",
+    "scenic": "Scenic",
+    "calm": "Calm",
+    "showHazards": "Show hazards",
+    "checkingHazards": "Checking hazards…",
+    "hazard_one": "⚠️ {{count}} hazard",
+    "hazard_other": "⚠️ {{count}} hazards",
+    "calmScore": "Calm {{score}}",
+    "paths_one": "{{count}} path",
+    "paths_other": "{{count}} paths",
+    "scoringUnavailable": "Scoring unavailable — Overpass API timed out."
+  },
+  "map": {
+    "start": "Start",
+    "end": "End",
+    "close": "close"
+  },
+  "hazardTypes": {
+    "excavation": "Excavation",
+    "traffic_arrangement": "Traffic works",
+    "area_rental": "Area rental"
+  },
+  "contextMenu": {
+    "origin": "Origin",
+    "destination": "Destination"
+  }
+}

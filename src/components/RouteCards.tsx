@@ -7,6 +7,7 @@ import {
   Typography,
 } from '@mui/material'
 import StarIcon from '@mui/icons-material/Star'
+import { useTranslation } from 'react-i18next'
 import type { RouteCategory } from '../api/digitransit'
 
 export type ScoredRoute = {
@@ -28,10 +29,10 @@ type RouteCardsProps = {
   hazardsLoading?: boolean
 }
 
-const ROUTE_LABELS: Record<RouteCategory, string> = {
-  fastest: 'Fastest',
-  scenic: 'Scenic',
-  calm: 'Calm',
+const ROUTE_LABEL_KEYS: Record<RouteCategory, string> = {
+  fastest: 'routes.fastest',
+  scenic: 'routes.scenic',
+  calm: 'routes.calm',
 }
 
 function formatDuration(seconds: number): string {
@@ -59,6 +60,7 @@ export function RouteCardsSkeleton() {
 }
 
 export function RouteCards({ routes, selectedRoute, onSelect, hazardCount, hazardsLoading }: RouteCardsProps) {
+  const { t } = useTranslation()
   const maxCalm = Math.max(...Object.values(routes).map((r) => r.calmScore))
 
   return (
@@ -84,7 +86,7 @@ export function RouteCards({ routes, selectedRoute, onSelect, hazardCount, hazar
             >
               <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
                 <Typography variant="body2" fontWeight={700} noWrap sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  {ROUTE_LABELS[key]}
+                  {t(ROUTE_LABEL_KEYS[key])}
                   {isCalmest && (
                     <StarIcon sx={{ fontSize: 16, color: isSelected ? 'white' : '#FFB300' }} />
                   )}
@@ -99,7 +101,7 @@ export function RouteCards({ routes, selectedRoute, onSelect, hazardCount, hazar
                 <Stack direction="row" spacing={0.5} sx={{ mt: 0.5, flexWrap: 'wrap', gap: 0.5 }}>
                   {route.calmScore > 0 && (
                     <Chip
-                      label={`Calm ${route.calmScore}`}
+                      label={t('routes.calmScore', { score: route.calmScore })}
                       size="small"
                       sx={{
                         height: 20,
@@ -113,7 +115,7 @@ export function RouteCards({ routes, selectedRoute, onSelect, hazardCount, hazar
                   )}
                   {route.infraSegmentCount > 0 && (
                     <Chip
-                      label={`${route.infraSegmentCount} paths`}
+                      label={t('routes.paths', { count: route.infraSegmentCount })}
                       size="small"
                       sx={{
                         height: 20,
@@ -127,7 +129,7 @@ export function RouteCards({ routes, selectedRoute, onSelect, hazardCount, hazar
                   )}
                   {isSelected && hazardsLoading && (
                     <Chip
-                      label="Checking hazards…"
+                      label={t('routes.checkingHazards')}
                       size="small"
                       sx={{
                         height: 20,
@@ -140,7 +142,7 @@ export function RouteCards({ routes, selectedRoute, onSelect, hazardCount, hazar
                   )}
                   {isSelected && !hazardsLoading && (hazardCount ?? 0) > 0 && (
                     <Chip
-                      label={`⚠️ ${hazardCount} hazard${hazardCount !== 1 ? 's' : ''}`}
+                      label={t('routes.hazard', { count: hazardCount ?? 0 })}
                       size="small"
                       sx={{
                         height: 20,

@@ -4,10 +4,13 @@ import {
   Alert,
   Box,
   Button,
+  ButtonBase,
   FormControlLabel,
   Stack,
   Switch,
 } from '@mui/material'
+import { useTranslation } from 'react-i18next'
+import i18n from './i18n'
 import './App.css'
 import {
   parseLatLon,
@@ -46,6 +49,7 @@ type RoutesState = {
 }
 
 function App() {
+  const { t } = useTranslation()
   const [fromOption, setFromOption] = useState<AddressOption | null>(null)
   const [toOption, setToOption] = useState<AddressOption | null>(null)
   const [fromInput, setFromInput] = useState('')
@@ -202,7 +206,7 @@ const resolveCoords = (option: AddressOption | null, input: string) => {
 
       setRoutesState({
         loading: false,
-        error: poisFailed ? 'Scoring unavailable \u2014 Overpass API timed out.' : null,
+        error: poisFailed ? t('routes.scoringUnavailable') : null,
         routes: scored,
         selectedRoute: 'calm',
       })
@@ -248,18 +252,26 @@ const resolveCoords = (option: AddressOption | null, input: string) => {
       <div className="bottom-panel" ref={sheetRef} style={sheetStyle}>
         <div className="bottom-panel-handle" ref={handleRef} />
         <div className="bottom-panel-content" ref={contentRef} style={contentStyle}>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 0.5 }}>
+            <ButtonBase
+              onClick={() => i18n.changeLanguage(i18n.language.startsWith('fi') ? 'en' : 'fi')}
+              sx={{ fontSize: '0.75rem', fontWeight: 600, color: 'text.secondary', px: 1, py: 0.5, borderRadius: 1 }}
+            >
+              {i18n.language.startsWith('fi') ? 'EN' : 'FI'}
+            </ButtonBase>
+          </Box>
           <form onSubmit={handleSubmit}>
             <div className="address-fields">
               <Stack spacing={1.5}>
                 <AddressTrigger
                   icon="origin"
-                  placeholder="Origin"
+                  placeholder={t('search.origin')}
                   value={fromOption?.label ?? ''}
                   onClick={() => openDrawer('origin')}
                 />
                 <AddressTrigger
                   icon="destination"
-                  placeholder="Where to?"
+                  placeholder={t('search.whereTo')}
                   value={toOption?.label ?? ''}
                   onClick={() => openDrawer('destination')}
                 />
@@ -272,9 +284,7 @@ const resolveCoords = (option: AddressOption | null, input: string) => {
               disabled={routesState.loading}
               sx={{ mt: 2 }}
             >
-              {routesState.loading
-                ? 'Finding routes\u2026'
-                : 'Find routes'}
+              {routesState.loading ? t('routes.findingRoutes') : t('routes.findRoutes')}
             </Button>
           </form>
 
@@ -300,7 +310,7 @@ const resolveCoords = (option: AddressOption | null, input: string) => {
                     size="small"
                   />
                 }
-                label="Show hazards"
+                label={t('routes.showHazards')}
                 sx={{ alignSelf: 'flex-end', m: 0 }}
               />
               <RouteCards

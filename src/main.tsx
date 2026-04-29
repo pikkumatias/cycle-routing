@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { CssBaseline, ThemeProvider, createTheme } from '@mui/material'
 import './index.css'
+import './i18n'
 import App from './App.tsx'
 
 const theme = createTheme({

@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react'
 import { Popup, useMap, useMapEvents } from 'react-leaflet'
+import { useTranslation } from 'react-i18next'
 import type L from 'leaflet'
 import {
   Box,
@@ -24,6 +25,7 @@ type Props = {
 }
 
 export function MapContextMenu({ onSetOrigin, onSetDestination }: Props) {
+  const { t } = useTranslation()
   const map = useMap()
   const [menuState, setMenuState] = useState<MenuState>({ status: 'closed' })
   const abortRef = useRef<AbortController | null>(null)
@@ -133,7 +135,7 @@ export function MapContextMenu({ onSetOrigin, onSetDestination }: Props) {
             onClick={handleSelectOrigin}
             disabled={isLoading}
           >
-            Origin
+            {t('contextMenu.origin')}
           </ButtonBase>
           <Divider orientation="vertical" flexItem />
           <ButtonBase
@@ -148,7 +150,7 @@ export function MapContextMenu({ onSetOrigin, onSetDestination }: Props) {
             onClick={handleSelectDestination}
             disabled={isLoading}
           >
-            Destination
+            {t('contextMenu.destination')}
           </ButtonBase>
         </Box>
       </Box>
