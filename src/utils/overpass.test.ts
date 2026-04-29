@@ -81,15 +81,15 @@ describe('fetchParksAndWater', () => {
     // Only one HTTP request for the combined query
     expect(mockFetch).toHaveBeenCalledTimes(1)
     expect(mockFetch).toHaveBeenCalledWith(
-      'https://overpass-api.de/api/interpreter',
+      '/api/overpass',
       expect.objectContaining({
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        headers: { 'Content-Type': 'application/json' },
       }),
     )
 
     // Combined query body contains both scenic and infra tags
-    const body = decodeURIComponent(mockFetch.mock.calls[0][1].body as string)
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body as string).query as string
     expect(body).toContain('[out:json]')
     expect(body).toContain('leisure')
     expect(body).toContain('cycleway')
@@ -132,12 +132,12 @@ describe('fetchParksAndWater', () => {
 
     await expect(
       fetchParksAndWater(bbox),
-    ).rejects.toThrow(/Overpass API error: 429/)
+    ).rejects.toThrow(/Overpass proxy error: 429/)
 
-    // 8 calls total: 2 endpoints × 4 rounds (initial + 3 retries)
-    expect(mockFetch).toHaveBeenCalledTimes(8)
+    // 4 calls total: 1 endpoint × 4 rounds (initial + 3 retries)
+    expect(mockFetch).toHaveBeenCalledTimes(4)
     expect(mockFetch).toHaveBeenCalledWith(
-      'https://overpass.kumi.systems/api/interpreter',
+      '/api/overpass',
       expect.objectContaining({ method: 'POST' }),
     )
   }, 15000)
