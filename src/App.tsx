@@ -60,7 +60,24 @@ function App() {
     to: LatLng
   } | null>(null)
   const [hazardsData, setHazardsData] = useState<{ loading: boolean; items: Hazard[] }>({ loading: false, items: [] })
+
+  // Debug flag: set to true to show all active construction work across Helsinki regardless of route
+  const DEBUG_SHOW_ALL_HAZARDS = false
   const [debugHazards, setDebugHazards] = useState<Hazard[]>([])
+  useEffect(() => {
+    if (!DEBUG_SHOW_ALL_HAZARDS) return
+    const HELSINKI_BOUNDS = { minLat: 60.05, minLon: 24.70, maxLat: 60.35, maxLon: 25.20 }
+    let cancelled = false
+    void (async () => {
+      try {
+        const hazards = await fetchHazards(HELSINKI_BOUNDS)
+        if (!cancelled) setDebugHazards(hazards)
+      } catch (err) {
+        console.warn('[App] debug hazard fetch failed:', err)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [DEBUG_SHOW_ALL_HAZARDS])
 
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [activeField, setActiveField] = useState<'origin' | 'destination'>('origin')
@@ -105,22 +122,7 @@ function App() {
     }
   }, [routesState.selectedRoute, routesState.routes, lastCoords])
 
-  // Debug: always fetch all active construction work for greater Helsinki, no route filter
-  useEffect(() => {
-    const HELSINKI_BOUNDS = { minLat: 60.05, minLon: 24.70, maxLat: 60.35, maxLon: 25.20 }
-    let cancelled = false
-    void (async () => {
-      try {
-        const hazards = await fetchHazards(HELSINKI_BOUNDS)
-        if (!cancelled) setDebugHazards(hazards)
-      } catch (err) {
-        console.warn('[App] debug hazard fetch failed:', err)
-      }
-    })()
-    return () => { cancelled = true }
-  }, [])
-
-  const resolveCoords = (option: AddressOption | null, input: string) => {
+const resolveCoords = (option: AddressOption | null, input: string) => {
     if (option) return { lat: option.lat, lon: option.lon }
     return parseLatLon(input)
   }
@@ -233,7 +235,7 @@ function App() {
           onSelectRoute={(key) =>
             setRoutesState((prev) => ({ ...prev, selectedRoute: key }))
           }
-          hazards={debugHazards}
+          hazards={DEBUG_SHOW_ALL_HAZARDS ? debugHazards : hazardsData.items}
           hazardsLoading={hazardsData.loading}
           onSetOrigin={handleSetOriginFromMap}
           onSetDestination={handleSetDestinationFromMap}
