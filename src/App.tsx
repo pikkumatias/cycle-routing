@@ -4,7 +4,9 @@ import {
   Alert,
   Box,
   Button,
+  FormControlLabel,
   Stack,
+  Switch,
 } from '@mui/material'
 import './App.css'
 import {
@@ -60,6 +62,7 @@ function App() {
     to: LatLng
   } | null>(null)
   const [hazardsData, setHazardsData] = useState<{ loading: boolean; items: Hazard[] }>({ loading: false, items: [] })
+  const [showHazards, setShowHazards] = useState(true)
 
   // Debug flag: set to true to show all active construction work across Helsinki regardless of route
   const DEBUG_SHOW_ALL_HAZARDS = false
@@ -235,7 +238,7 @@ const resolveCoords = (option: AddressOption | null, input: string) => {
           onSelectRoute={(key) =>
             setRoutesState((prev) => ({ ...prev, selectedRoute: key }))
           }
-          hazards={DEBUG_SHOW_ALL_HAZARDS ? debugHazards : hazardsData.items}
+          hazards={showHazards ? (DEBUG_SHOW_ALL_HAZARDS ? debugHazards : hazardsData.items) : []}
           hazardsLoading={hazardsData.loading}
           onSetOrigin={handleSetOriginFromMap}
           onSetDestination={handleSetDestinationFromMap}
@@ -289,6 +292,17 @@ const resolveCoords = (option: AddressOption | null, input: string) => {
 
           {routesState.routes && selectedRouteData && (
             <Stack spacing={2} sx={{ mt: 2 }}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={showHazards}
+                    onChange={(e) => setShowHazards(e.target.checked)}
+                    size="small"
+                  />
+                }
+                label="Show hazards"
+                sx={{ alignSelf: 'flex-end', m: 0 }}
+              />
               <RouteCards
                 routes={routesState.routes}
                 selectedRoute={routesState.selectedRoute}
