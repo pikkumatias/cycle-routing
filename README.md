@@ -2,7 +2,9 @@
 
 A bicycle route planner that emphasises rider experience for the Helsinki region. Enter an origin and destination, and the app generates three optimized route variants on an interactive map: **Fastest**, **Scenic**, and **Calm**.
 
-Routes come from the Digitransit/HSL routing API (OpenTripPlanner). Each route is then scored against OpenStreetMap data fetched from the Overpass API: nearby parks, nature reserves, waterways, and dedicated cycling infrastructure all influence which variant lands in which category.
+Routes come from the Digitransit/HSL routing API (OpenTripPlanner). Each route is then scored against OpenStreetMap data fetched from the Overpass API: nearby parks, nature reserves, waterways, and dedicated cycling infrastructure all influence which variant lands in which category. Active road works and traffic disruptions along each route are surfaced as hazard markers, pulled from the City of Helsinki's open data WFS service.
+
+This project has also served as a practical deep-dive into agentic AI development — the majority of the codebase was written collaboratively with Claude Code, exploring what autonomous, tool-driven coding agents can do in a real product context.
 
 ---
 
@@ -48,6 +50,10 @@ Opens at `http://localhost:5173`. Enter two addresses (or `lat,lon` coordinates)
 | **Fastest** | Lowest total duration |
 | **Scenic** | Highest score for nearby parks, nature, and water (OSM via Overpass) |
 | **Calm** | Highest score for dedicated cycling infrastructure (cycleways, bike lanes) |
+
+### Hazard overlay
+
+When a route is displayed, the app fetches active construction works and traffic arrangements from the City of Helsinki's open geodata WFS service and overlays them on the map as clustered markers. Hazards are filtered to those within 25 m of the selected route's polyline, so only disruptions that actually affect your ride are shown. Polygon hazards (e.g. closed areas) are also drawn directly on the map. Results are cached per route variant, so switching between Fastest, Scenic, and Calm does not trigger a re-fetch.
 
 ---
 
