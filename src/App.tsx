@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type { FormEvent } from 'react'
 import {
   Alert,
@@ -68,6 +68,7 @@ function App() {
     to: LatLng
   } | null>(null)
   const [hazardsData, setHazardsData] = useState<{ loading: boolean; items: Hazard[] }>({ loading: false, items: [] })
+  const hazardCacheRef = useRef<Partial<Record<RouteCategory, Hazard[]>>>({})
   const [showHazards, setShowHazards] = useState(true)
 
   // Debug flag: set to true to show all active construction work across Helsinki regardless of route
@@ -93,16 +94,29 @@ function App() {
 
   const { sheetRef, handleRef, contentRef, sheetStyle, contentStyle } = useBottomSheet()
 
+  // Clear per-route hazard cache whenever a new set of routes is loaded
+  useEffect(() => {
+    hazardCacheRef.current = {}
+    setHazardsData({ loading: false, items: [] })
+  }, [routesState.routes])
+
   useEffect(() => {
     if (!routesState.routes || !lastCoords) return
     const selectedRouteData = routesState.routes[routesState.selectedRoute]
     if (!selectedRouteData) return
 
+    // Serve from cache if this route has already been queried
+    const cached = hazardCacheRef.current[routesState.selectedRoute]
+    if (cached) {
+      setHazardsData({ loading: false, items: cached })
+      return
+    }
+
     const legs = getRouteLegsFromPlanResponse(selectedRouteData.response)
     const bounds = getBoundsFromLegsAndPoints(legs, lastCoords.from, lastCoords.to)
     if (bounds.length < 2) return
 
-    const BUFFER = 0.002 // ~200m in degrees
+    const BUFFER = 0.0003 // ~30m in degrees
     const hazardBounds = {
       minLat: bounds[0][0] - BUFFER,
       minLon: bounds[0][1] - BUFFER,
@@ -126,7 +140,10 @@ function App() {
             await new Promise<void>((resolve) => setTimeout(resolve, 0))
           }
         }
-        if (!cancelled) setHazardsData({ loading: false, items: filtered })
+        if (!cancelled) {
+          hazardCacheRef.current[routesState.selectedRoute] = filtered
+          setHazardsData({ loading: false, items: filtered })
+        }
       } catch (err) {
         if (!cancelled) {
           console.warn('[App] hazard fetch failed:', err)

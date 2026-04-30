@@ -52,7 +52,7 @@ const HAZARD_LAYERS: LayerConfig[] = [
   { name: 'avoindata:Aluevuokraus_piste',                  type: 'area_rental',         startField: 'tyo_alkaa',                endField: 'tyo_paattyy' },
 ]
 
-const HAZARD_THRESHOLD_M = 50
+const HAZARD_THRESHOLD_M = 25
 
 function buildWfsUrl(layer: LayerConfig, bounds: HazardBounds): string {
   const { minLat, minLon, maxLat, maxLon } = bounds
