@@ -24,11 +24,15 @@ export function haversineDistance(a: LatLng, b: LatLng): number {
 export function minDistanceToPolyline(
   point: LatLng,
   polyline: LatLng[],
+  threshold?: number,
 ): number {
   let min = Infinity
   for (const vertex of polyline) {
     const d = haversineDistance(point, vertex)
-    if (d < min) min = d
+    if (d < min) {
+      min = d
+      if (threshold !== undefined && min <= threshold) return min
+    }
   }
   return min
 }

@@ -187,7 +187,7 @@ export function filterHazardsNearRoute(
 ): Hazard[] {
   return hazards.filter((h) => {
     for (const [lon, lat] of getHazardVertices(h)) {
-      if (minDistanceToPolyline([lat, lon], polyline) <= HAZARD_THRESHOLD_M) return true
+      if (minDistanceToPolyline([lat, lon], polyline, HAZARD_THRESHOLD_M) <= HAZARD_THRESHOLD_M) return true
     }
     return routePassesThroughPolygon(polyline, h)
   })

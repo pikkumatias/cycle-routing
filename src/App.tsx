@@ -113,12 +113,15 @@ function App() {
 
     let cancelled = false
     void (async () => {
-      setHazardsData({ loading: true, items: [] })
+      setHazardsData((prev) => ({ ...prev, loading: true }))
       try {
         const raw = await fetchHazards(hazardBounds)
-        if (!cancelled) {
-          setHazardsData({ loading: false, items: filterHazardsNearRoute(raw, polyline) })
-        }
+        if (cancelled) return
+        // Yield to the browser so the route-card selection paints before
+        // the synchronous filter loop runs.
+        await new Promise<void>((resolve) => setTimeout(resolve, 0))
+        if (cancelled) return
+        setHazardsData({ loading: false, items: filterHazardsNearRoute(raw, polyline) })
       } catch (err) {
         if (!cancelled) {
           console.warn('[App] hazard fetch failed:', err)

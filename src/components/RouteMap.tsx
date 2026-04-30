@@ -276,44 +276,49 @@ function HazardPolygonLayer({ hazards, isMobile, onHazardClick }: HazardClusterL
   useEffect(() => { onClickRef.current = onHazardClick })
 
   useEffect(() => {
-    const layers: L.Polygon[] = []
+    const polygonHazards = hazards.filter(
+      (h) => h.geometry.type === 'Polygon' || h.geometry.type === 'MultiPolygon',
+    )
+    if (polygonHazards.length === 0) return
 
-    for (const hazard of hazards) {
-      const geo = hazard.geometry
-      if (geo.type !== 'Polygon' && geo.type !== 'MultiPolygon') continue
+    const hazardById = new Map(polygonHazards.map((h) => [h.id, h]))
 
-      const parts: [number, number][][][] =
-        geo.type === 'Polygon' ? [geo.coordinates] : geo.coordinates
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const layer = L.geoJSON(
+      {
+        type: 'FeatureCollection',
+        features: polygonHazards.map((h) => ({
+          type: 'Feature',
+          id: h.id,
+          geometry: h.geometry as unknown,
+          properties: { hazardId: h.id },
+        })),
+      } as Parameters<typeof L.geoJSON>[0],
+      {
+        style: (feature) => {
+          const h = hazardById.get(feature?.properties?.hazardId as string)
+          const color = HAZARD_FILL[h?.type ?? 'excavation']
+          return { color, weight: 2, fillColor: color, fillOpacity: 0.2, opacity: 0.85 }
+        },
+        onEachFeature: (feature, featureLayer) => {
+          const h = hazardById.get((feature.properties as { hazardId: string }).hazardId)
+          if (!h) return
+          if (isMobile) {
+            featureLayer.on('click', () => onClickRef.current(h))
+          } else {
+            let html = `<strong>${esc(t(HAZARD_TYPE_KEYS[h.type]))}</strong>`
+            if (h.address) html += `<div>${esc(h.address)}</div>`
+            if (h.purpose) html += `<div style="font-size:0.85em;color:#555">${esc(h.purpose)}</div>`
+            if (h.startDate || h.endDate)
+              html += `<div style="font-size:0.8em;margin-top:4px">${esc(h.startDate ?? '?')} – ${esc(h.endDate ?? '?')}</div>`
+            featureLayer.bindPopup(L.popup({ maxHeight: 300 }).setContent(html))
+          }
+        },
+      },
+    )
 
-      const color = HAZARD_FILL[hazard.type]
-
-      for (const part of parts) {
-        const latlngs = part.map((ring) => ring.map(([lon, lat]) => [lat, lon] as [number, number]))
-        const poly = L.polygon(latlngs, {
-          color,
-          weight: 2,
-          fillColor: color,
-          fillOpacity: 0.2,
-          opacity: 0.85,
-        })
-
-        if (isMobile) {
-          poly.on('click', () => onClickRef.current(hazard))
-        } else {
-          let html = `<strong>${esc(t(HAZARD_TYPE_KEYS[hazard.type]))}</strong>`
-          if (hazard.address) html += `<div>${esc(hazard.address)}</div>`
-          if (hazard.purpose) html += `<div style="font-size:0.85em;color:#555">${esc(hazard.purpose)}</div>`
-          if (hazard.startDate || hazard.endDate)
-            html += `<div style="font-size:0.8em;margin-top:4px">${esc(hazard.startDate ?? '?')} – ${esc(hazard.endDate ?? '?')}</div>`
-          poly.bindPopup(L.popup({ maxHeight: 300 }).setContent(html))
-        }
-
-        poly.addTo(map)
-        layers.push(poly)
-      }
-    }
-
-    return () => { layers.forEach((l) => l.remove()) }
+    layer.addTo(map)
+    return () => { layer.remove() }
   }, [map, hazards, isMobile, t])
 
   return null
