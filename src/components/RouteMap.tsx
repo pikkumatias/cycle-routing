@@ -283,7 +283,6 @@ function HazardPolygonLayer({ hazards, isMobile, onHazardClick }: HazardClusterL
 
     const hazardById = new Map(polygonHazards.map((h) => [h.id, h]))
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const layer = L.geoJSON(
       {
         type: 'FeatureCollection',

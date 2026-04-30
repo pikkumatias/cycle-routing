@@ -69,6 +69,7 @@ function App() {
   } | null>(null)
   const [hazardsData, setHazardsData] = useState<{ loading: boolean; items: Hazard[] }>({ loading: false, items: [] })
   const hazardCacheRef = useRef<Partial<Record<RouteCategory, Hazard[]>>>({})
+  const prevRoutesRef = useRef(routesState.routes)
   const [showHazards, setShowHazards] = useState(true)
 
   // Debug flag: set to true to show all active construction work across Helsinki regardless of route
@@ -94,13 +95,13 @@ function App() {
 
   const { sheetRef, handleRef, contentRef, sheetStyle, contentStyle } = useBottomSheet()
 
-  // Clear per-route hazard cache whenever a new set of routes is loaded
   useEffect(() => {
-    hazardCacheRef.current = {}
-    setHazardsData({ loading: false, items: [] })
-  }, [routesState.routes])
+    // Clear per-route hazard cache whenever a new set of routes is loaded
+    if (routesState.routes !== prevRoutesRef.current) {
+      hazardCacheRef.current = {}
+      prevRoutesRef.current = routesState.routes
+    }
 
-  useEffect(() => {
     if (!routesState.routes || !lastCoords) return
     const selectedRouteData = routesState.routes[routesState.selectedRoute]
     if (!selectedRouteData) return
@@ -269,7 +270,7 @@ const resolveCoords = (option: AddressOption | null, input: string) => {
           onSelectRoute={(key) =>
             setRoutesState((prev) => ({ ...prev, selectedRoute: key }))
           }
-          hazards={showHazards ? (DEBUG_SHOW_ALL_HAZARDS ? debugHazards : hazardsData.items) : []}
+          hazards={showHazards && routesState.routes ? (DEBUG_SHOW_ALL_HAZARDS ? debugHazards : hazardsData.items) : []}
           hazardsLoading={hazardsData.loading}
           onSetOrigin={handleSetOriginFromMap}
           onSetDestination={handleSetDestinationFromMap}
