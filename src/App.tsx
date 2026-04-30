@@ -116,12 +116,17 @@ function App() {
       setHazardsData((prev) => ({ ...prev, loading: true }))
       try {
         const raw = await fetchHazards(hazardBounds)
-        if (cancelled) return
-        // Yield to the browser so the route-card selection paints before
-        // the synchronous filter loop runs.
-        await new Promise<void>((resolve) => setTimeout(resolve, 0))
-        if (cancelled) return
-        setHazardsData({ loading: false, items: filterHazardsNearRoute(raw, polyline) })
+        // Filter in chunks of 10, yielding between each so the map stays
+        // interactive and the route card paints before heavy work begins.
+        const filtered: Hazard[] = []
+        for (let i = 0; i < raw.length; i += 10) {
+          if (cancelled) return
+          filtered.push(...filterHazardsNearRoute(raw.slice(i, i + 10), polyline))
+          if (i + 10 < raw.length) {
+            await new Promise<void>((resolve) => setTimeout(resolve, 0))
+          }
+        }
+        if (!cancelled) setHazardsData({ loading: false, items: filtered })
       } catch (err) {
         if (!cancelled) {
           console.warn('[App] hazard fetch failed:', err)
