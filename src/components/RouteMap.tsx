@@ -263,6 +263,62 @@ function HazardClusterLayer({ hazards, isMobile, onHazardClick }: HazardClusterL
   return null
 }
 
+const HAZARD_FILL: Record<Hazard['type'], string> = {
+  excavation: '#FF8C00',
+  traffic_arrangement: '#D32F2F',
+  area_rental: '#F9A825',
+}
+
+function HazardPolygonLayer({ hazards, isMobile, onHazardClick }: HazardClusterLayerProps) {
+  const map = useMap()
+  const { t } = useTranslation()
+  const onClickRef = useRef(onHazardClick)
+  useEffect(() => { onClickRef.current = onHazardClick })
+
+  useEffect(() => {
+    const layers: L.Polygon[] = []
+
+    for (const hazard of hazards) {
+      const geo = hazard.geometry
+      if (geo.type !== 'Polygon' && geo.type !== 'MultiPolygon') continue
+
+      const parts: [number, number][][][] =
+        geo.type === 'Polygon' ? [geo.coordinates] : geo.coordinates
+
+      const color = HAZARD_FILL[hazard.type]
+
+      for (const part of parts) {
+        const latlngs = part.map((ring) => ring.map(([lon, lat]) => [lat, lon] as [number, number]))
+        const poly = L.polygon(latlngs, {
+          color,
+          weight: 2,
+          fillColor: color,
+          fillOpacity: 0.2,
+          opacity: 0.85,
+        })
+
+        if (isMobile) {
+          poly.on('click', () => onClickRef.current(hazard))
+        } else {
+          let html = `<strong>${esc(t(HAZARD_TYPE_KEYS[hazard.type]))}</strong>`
+          if (hazard.address) html += `<div>${esc(hazard.address)}</div>`
+          if (hazard.purpose) html += `<div style="font-size:0.85em;color:#555">${esc(hazard.purpose)}</div>`
+          if (hazard.startDate || hazard.endDate)
+            html += `<div style="font-size:0.8em;margin-top:4px">${esc(hazard.startDate ?? '?')} – ${esc(hazard.endDate ?? '?')}</div>`
+          poly.bindPopup(L.popup({ maxHeight: 300 }).setContent(html))
+        }
+
+        poly.addTo(map)
+        layers.push(poly)
+      }
+    }
+
+    return () => { layers.forEach((l) => l.remove()) }
+  }, [map, hazards, isMobile, t])
+
+  return null
+}
+
 export type AlternativeRoute = {
   category: RouteCategory
   response: unknown
@@ -391,6 +447,13 @@ export function RouteMap({
           <Marker position={to} icon={destinationIcon}>
             <Popup>{t('map.end')}</Popup>
           </Marker>
+        )}
+        {(hazards ?? []).length > 0 && (
+          <HazardPolygonLayer
+            hazards={hazards ?? []}
+            isMobile={isMobile}
+            onHazardClick={handleHazardClick}
+          />
         )}
         {(hazards ?? []).length > 0 && (
           <HazardClusterLayer

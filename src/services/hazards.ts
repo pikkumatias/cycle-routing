@@ -36,6 +36,13 @@ type LayerConfig = {
 
 const WFS_ENDPOINT = 'https://kartta.hel.fi/ws/geoserver/avoindata/wfs'
 
+const hazardCache = new Map<string, Hazard[]>()
+
+function hazardCacheKey(bounds: HazardBounds): string {
+  const q = (n: number) => Math.round(n / 0.01) * 0.01
+  return `${q(bounds.minLat)},${q(bounds.minLon)},${q(bounds.maxLat)},${q(bounds.maxLon)}`
+}
+
 const HAZARD_LAYERS: LayerConfig[] = [
   { name: 'avoindata:Kaivuilmoitus_alue',                  type: 'excavation',          startField: 'tyo_alkaa',                endField: 'tyo_paattyy' },
   { name: 'avoindata:Kaivuilmoitus_piste',                 type: 'excavation',          startField: 'tyo_alkaa',                endField: 'tyo_paattyy' },
@@ -87,6 +94,10 @@ function parseFeature(
 }
 
 export async function fetchHazards(bounds: HazardBounds): Promise<Hazard[]> {
+  const cacheKey = hazardCacheKey(bounds)
+  const cached = hazardCache.get(cacheKey)
+  if (cached) return cached
+
   const results = await Promise.allSettled(
     HAZARD_LAYERS.map(async (layer, li) => {
       const res = await fetch(buildWfsUrl(layer, bounds), {
@@ -108,6 +119,7 @@ export async function fetchHazards(bounds: HazardBounds): Promise<Hazard[]> {
       console.warn('[hazards] layer failed:', r.reason)
     }
   }
+  hazardCache.set(cacheKey, hazards)
   return hazards
 }
 
