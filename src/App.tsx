@@ -5,9 +5,11 @@ import {
   Box,
   Button,
   ButtonBase,
+  CircularProgress,
   FormControlLabel,
   Stack,
   Switch,
+  Typography,
 } from '@mui/material'
 import { useTranslation } from 'react-i18next'
 import i18n from './i18n'
@@ -249,7 +251,33 @@ const resolveCoords = (option: AddressOption | null, input: string) => {
         />
       </div>
 
-      <div className="bottom-panel" ref={sheetRef} style={sheetStyle}>
+      <div className="bottom-panel-wrapper" ref={sheetRef} style={sheetStyle}>
+        {showHazards && hazardsData.loading && (
+          <Box
+            sx={{
+              position: 'absolute',
+              bottom: '100%',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              mb: 1,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              bgcolor: 'rgba(0,0,0,0.65)',
+              borderRadius: '20px',
+              px: 1.5,
+              py: 0.75,
+              whiteSpace: 'nowrap',
+              backdropFilter: 'blur(4px)',
+            }}
+          >
+            <CircularProgress size={14} thickness={5} sx={{ color: 'white' }} />
+            <Typography variant="caption" sx={{ color: 'white', fontWeight: 500 }}>
+              {t('routes.checkingHazards')}
+            </Typography>
+          </Box>
+        )}
+        <div className="bottom-panel">
         <div className="bottom-panel-handle" ref={handleRef} />
         <div className="bottom-panel-content" ref={contentRef} style={contentStyle}>
           <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 0.5 }}>
@@ -313,6 +341,14 @@ const resolveCoords = (option: AddressOption | null, input: string) => {
                 label={t('routes.showHazards')}
                 sx={{ alignSelf: 'flex-end', m: 0 }}
               />
+              {showHazards && hazardsData.loading && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <CircularProgress size={14} thickness={5} />
+                  <Typography variant="caption" color="text.secondary">
+                    {t('routes.checkingHazards')}
+                  </Typography>
+                </Box>
+              )}
               <RouteCards
                 routes={routesState.routes}
                 selectedRoute={routesState.selectedRoute}
@@ -324,6 +360,7 @@ const resolveCoords = (option: AddressOption | null, input: string) => {
               />
             </Stack>
           )}
+        </div>
         </div>
       </div>
 
