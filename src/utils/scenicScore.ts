@@ -77,7 +77,7 @@ const INFRA_WEIGHTS: Partial<Record<PoiCategory, number>> = {
 }
 
 /** Tighter threshold for traffic signals — they sit exactly at intersections. */
-export const LIGHT_THRESHOLD_M = 50
+export const LIGHT_THRESHOLD_M = 20
 
 const LIGHT_WEIGHTS: Partial<Record<PoiCategory, number>> = {
   traffic_signal: 1,
@@ -110,18 +110,27 @@ export type RouteScores = {
  * calmScore is set to 0 here — use `normalizeScores()` to compute it
  * across all route variants.
  */
-function deduplicateByProximity(pois: OsmPoi[], radiusM: number): OsmPoi[] {
-  const kept: OsmPoi[] = []
+/** Groups POIs into proximity clusters and returns one centroid POI per cluster. */
+function clusterToCentroids(pois: OsmPoi[], radiusM: number): OsmPoi[] {
+  const clusters: OsmPoi[][] = []
   for (const poi of pois) {
-    const tooClose = kept.some(
-      (k) => haversineDistance([poi.lat, poi.lon], [k.lat, k.lon]) <= radiusM,
+    const match = clusters.find((c) =>
+      c.some((k) => haversineDistance([poi.lat, poi.lon], [k.lat, k.lon]) <= radiusM),
     )
-    if (!tooClose) kept.push(poi)
+    if (match) {
+      match.push(poi)
+    } else {
+      clusters.push([poi])
+    }
   }
-  return kept
+  return clusters.map((c) => ({
+    ...c[0],
+    lat: c.reduce((sum, p) => sum + p.lat, 0) / c.length,
+    lon: c.reduce((sum, p) => sum + p.lon, 0) / c.length,
+  }))
 }
 
-const SIGNAL_DEDUP_RADIUS_M = 25
+const SIGNAL_DEDUP_RADIUS_M = 10
 
 export function scoreRouteDetailed(
   pois: OsmPoi[],
@@ -130,7 +139,7 @@ export function scoreRouteDetailed(
   sampleStep: number = 3,
   lightThresholdMeters: number = LIGHT_THRESHOLD_M,
 ): RouteScores {
-  const signals = deduplicateByProximity(
+  const signals = clusterToCentroids(
     pois.filter((p) => p.category === 'traffic_signal'),
     SIGNAL_DEDUP_RADIUS_M,
   )
