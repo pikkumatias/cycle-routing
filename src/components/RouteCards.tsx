@@ -19,6 +19,8 @@ export type ScoredRoute = {
   calmScore: number
   scenicPoiCount: number
   infraSegmentCount: number
+  lightScore: number
+  lightCount: number
 }
 
 type RouteCardsProps = {
@@ -33,6 +35,7 @@ const ROUTE_LABEL_KEYS: Record<RouteCategory, string> = {
   fastest: 'routes.fastest',
   scenic: 'routes.scenic',
   calm: 'routes.calm',
+  fewestLights: 'routes.fewestLights',
 }
 
 function formatDuration(seconds: number): string {
@@ -43,7 +46,7 @@ function formatDuration(seconds: number): string {
 export function RouteCardsSkeleton() {
   return (
     <div className="route-chips-scroll">
-      {[0, 1, 2].map((i) => (
+      {[0, 1, 2, 3].map((i) => (
         <Card key={i} sx={{ width: '100%', border: '1px solid', borderColor: 'grey.300' }}>
           <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
             <Skeleton animation="wave" variant="text" width={60} sx={{ fontSize: '0.875rem' }} />
@@ -124,6 +127,18 @@ export function RouteCards({ routes, selectedRoute, onSelect, hazardCount, hazar
                           ? 'rgba(255,255,255,0.2)'
                           : 'rgba(25,118,210,0.08)',
                         color: isSelected ? 'white' : 'primary.main',
+                      }}
+                    />
+                  )}
+                  {key === 'fewestLights' && (
+                    <Chip
+                      label={t('routes.lights', { count: route.lightCount })}
+                      size="small"
+                      sx={{
+                        height: 20,
+                        fontSize: '0.7rem',
+                        bgcolor: isSelected ? 'rgba(255,255,255,0.2)' : 'rgba(255,152,0,0.12)',
+                        color: isSelected ? 'white' : 'warning.main',
                       }}
                     />
                   )}

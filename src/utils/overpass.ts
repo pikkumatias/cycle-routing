@@ -33,6 +33,7 @@ export type PoiCategory =
   | 'cycleway_separated'
   | 'cycleway_designated'
   | 'cycleway_lane'
+  | 'traffic_signal'
 
 export type OsmPoi = {
   lat: number
@@ -48,6 +49,9 @@ export type OsmPoi = {
  */
 export function classifyPoi(tags: Record<string, string> | undefined): PoiCategory | undefined {
   if (!tags) return undefined
+
+  // Traffic signals
+  if (tags.highway === 'traffic_signals') return 'traffic_signal'
 
   // Cycling infrastructure
   if (tags.highway === 'cycleway') return 'cycleway_separated'
@@ -108,6 +112,7 @@ function buildCombinedQuery(bbox: Bbox, timeoutSec: number): string {
   way["landuse"="meadow"]${b};
   way["natural"="water"]${b};
   node["amenity"="fountain"]${b};
+  node["highway"="traffic_signals"]${b};
   way["waterway"="river"]${b};
   way["waterway"="stream"]${b};
   way["highway"="cycleway"]${b};

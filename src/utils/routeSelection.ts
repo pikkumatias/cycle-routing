@@ -69,6 +69,8 @@ type ScoredCandidate = CandidateRoute & {
   calmScore: number
   scenicPoiCount: number
   infraSegmentCount: number
+  lightScore: number
+  lightCount: number
 }
 
 /**
@@ -103,6 +105,8 @@ export function selectRoutes(
       calmScore: ns.calmScore,
       scenicPoiCount: ns.scenicPoiCount,
       infraSegmentCount: ns.infraSegmentCount,
+      lightScore: ns.lightScore,
+      lightCount: ns.lightCount,
     }
   })
 
@@ -129,6 +133,18 @@ export function selectRoutes(
     c.infraScore > best.infraScore ? c : best,
   )
 
+  // Pick fewestLights: minimum light score, excluding already-picked if possible
+  const lightsPool = scored.length > 3
+    ? scored.filter((c) => c !== fastest && c !== scenic && c !== calm)
+    : scored.length > 2
+      ? scored.filter((c) => c !== fastest && c !== scenic)
+      : scored.length > 1
+        ? scored.filter((c) => c !== fastest)
+        : scored
+  const fewestLights = lightsPool.reduce((best, c) =>
+    c.lightScore < best.lightScore ? c : best,
+  )
+
   const toScoredRoute = (c: ScoredCandidate): ScoredRoute => ({
     response: c.response,
     durationSec: c.durationSec,
@@ -138,11 +154,14 @@ export function selectRoutes(
     calmScore: c.calmScore,
     scenicPoiCount: c.scenicPoiCount,
     infraSegmentCount: c.infraSegmentCount,
+    lightScore: c.lightScore,
+    lightCount: c.lightCount,
   })
 
   return {
     fastest: toScoredRoute(fastest),
     scenic: toScoredRoute(scenic),
     calm: toScoredRoute(calm),
+    fewestLights: toScoredRoute(fewestLights),
   }
 }

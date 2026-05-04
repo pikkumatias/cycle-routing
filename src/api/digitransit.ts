@@ -9,7 +9,7 @@ export type TriangleFactors = {
   slope: number
 }
 
-export type RouteCategory = 'fastest' | 'scenic' | 'calm'
+export type RouteCategory = 'fastest' | 'scenic' | 'calm' | 'fewestLights'
 
 type OtpLeg = {
   distance?: number
@@ -32,6 +32,7 @@ const CANDIDATE_PRESETS: TriangleFactors[] = [
   { time: 0.0,  safety: 0.0,  slope: 1.0  },  // flattest route
   { time: 0.33, safety: 0.34, slope: 0.33 },  // balanced
   { time: 0.1,  safety: 0.6,  slope: 0.3  },  // safe + flat hybrid
+  { time: 0.5,  safety: 0.5,  slope: 0.0  },  // time + safety balanced
 ]
 
 export function parseLatLon(input: string): LatLonPair {

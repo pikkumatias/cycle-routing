@@ -76,6 +76,13 @@ const INFRA_WEIGHTS: Partial<Record<PoiCategory, number>> = {
   cycleway_lane: 1,
 }
 
+/** Tighter threshold for traffic signals — they sit exactly at intersections. */
+export const LIGHT_THRESHOLD_M = 50
+
+const LIGHT_WEIGHTS: Partial<Record<PoiCategory, number>> = {
+  traffic_signal: 1,
+}
+
 export type RouteScores = {
   /** Weighted scenic score (sum of category weights for nearby scenic POIs) */
   scenicScore: number
@@ -87,6 +94,10 @@ export type RouteScores = {
   scenicPoiCount: number
   /** Raw count of infrastructure segments near route */
   infraSegmentCount: number
+  /** Raw count of traffic signals within LIGHT_THRESHOLD_M of route */
+  lightCount: number
+  /** Weighted light score (count × weight) */
+  lightScore: number
   nearbyPois: OsmPoi[]
 }
 
@@ -104,6 +115,7 @@ export function scoreRouteDetailed(
   routePolyline: LatLng[],
   thresholdMeters: number = 150,
   sampleStep: number = 3,
+  lightThresholdMeters: number = LIGHT_THRESHOLD_M,
 ): RouteScores {
   const sampled = samplePolyline(routePolyline, sampleStep)
   const nearbyPois: OsmPoi[] = []
@@ -111,6 +123,8 @@ export function scoreRouteDetailed(
   let infraScore = 0
   let scenicPoiCount = 0
   let infraSegmentCount = 0
+  let lightScore = 0
+  let lightCount = 0
 
   for (const poi of pois) {
     const d = minDistanceToPolyline([poi.lat, poi.lon], sampled)
@@ -126,6 +140,10 @@ export function scoreRouteDetailed(
         infraSegmentCount++
       }
     }
+    if (poi.category === 'traffic_signal' && d <= lightThresholdMeters) {
+      lightScore += LIGHT_WEIGHTS.traffic_signal!
+      lightCount++
+    }
   }
 
   return {
@@ -134,6 +152,8 @@ export function scoreRouteDetailed(
     calmScore: 0,
     scenicPoiCount,
     infraSegmentCount,
+    lightScore,
+    lightCount,
     nearbyPois,
   }
 }
