@@ -24,6 +24,7 @@ function makeRoute(overrides?: Partial<ScoredRoute>): ScoredRoute {
     infraSegmentCount: 0,
     lightScore: 0,
     lightCount: 0,
+    nearbyPois: [],
     ...overrides,
   }
 }

@@ -28,6 +28,7 @@ import {
 import type { RouteCategory } from '../api/digitransit'
 import type { Hazard } from '../services/hazards'
 import { hazardToLatLng } from '../services/hazards'
+import type { OsmPoi } from '../utils/overpass'
 
 const originIcon = L.divIcon({
   className: '',
@@ -70,6 +71,8 @@ const HAZARD_ICONS = {
   traffic_arrangement: makeHazardIcon('🚧', '#D32F2F'),
   area_rental: makeHazardIcon('🏗️', '#F9A825'),
 }
+
+const trafficLightIcon = makeHazardIcon('🚦', '#1A237E')
 
 const HAZARD_TYPE_KEYS: Record<Hazard['type'], string> = {
   excavation: 'hazardTypes.excavation',
@@ -323,6 +326,34 @@ function HazardPolygonLayer({ hazards, isMobile, onHazardClick }: HazardClusterL
   return null
 }
 
+function TrafficLightClusterLayer({ lights }: { lights: OsmPoi[] }) {
+  const map = useMap()
+
+  useEffect(() => {
+    const group = L.markerClusterGroup({
+      maxClusterRadius: 40,
+      showCoverageOnHover: false,
+      spiderfyDistanceMultiplier: 1.4,
+      iconCreateFunction: (cluster) =>
+        L.divIcon({
+          className: '',
+          html: `<div style="width:34px;height:34px;border-radius:50%;background:#1A237E;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:13px;font-family:sans-serif">${cluster.getChildCount()}</div>`,
+          iconSize: [34, 34],
+          iconAnchor: [17, 17],
+        }),
+    })
+
+    for (const light of lights) {
+      group.addLayer(L.marker([light.lat, light.lon], { icon: trafficLightIcon }))
+    }
+
+    map.addLayer(group)
+    return () => { map.removeLayer(group) }
+  }, [map, lights])
+
+  return null
+}
+
 export type AlternativeRoute = {
   category: RouteCategory
   response: unknown
@@ -337,6 +368,7 @@ export type RouteMapProps = {
   onSelectRoute?: (category: RouteCategory) => void
   hazards?: Hazard[]
   hazardsLoading?: boolean
+  trafficLights?: OsmPoi[]
   onSetOrigin?: (option: AddressOption) => void
   onSetDestination?: (option: AddressOption) => void
 }
@@ -349,6 +381,7 @@ export function RouteMap({
   alternativeRoutes,
   onSelectRoute,
   hazards,
+  trafficLights,
   onSetOrigin,
   onSetDestination,
 }: RouteMapProps) {
@@ -465,6 +498,9 @@ export function RouteMap({
             isMobile={isMobile}
             onHazardClick={handleHazardClick}
           />
+        )}
+        {(trafficLights ?? []).length > 0 && (
+          <TrafficLightClusterLayer lights={trafficLights ?? []} />
         )}
         {onSetOrigin && onSetDestination && (
           <MapContextMenu onSetOrigin={onSetOrigin} onSetDestination={onSetDestination} />

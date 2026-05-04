@@ -110,6 +110,19 @@ export type RouteScores = {
  * calmScore is set to 0 here — use `normalizeScores()` to compute it
  * across all route variants.
  */
+function deduplicateByProximity(pois: OsmPoi[], radiusM: number): OsmPoi[] {
+  const kept: OsmPoi[] = []
+  for (const poi of pois) {
+    const tooClose = kept.some(
+      (k) => haversineDistance([poi.lat, poi.lon], [k.lat, k.lon]) <= radiusM,
+    )
+    if (!tooClose) kept.push(poi)
+  }
+  return kept
+}
+
+const SIGNAL_DEDUP_RADIUS_M = 25
+
 export function scoreRouteDetailed(
   pois: OsmPoi[],
   routePolyline: LatLng[],
@@ -117,6 +130,12 @@ export function scoreRouteDetailed(
   sampleStep: number = 3,
   lightThresholdMeters: number = LIGHT_THRESHOLD_M,
 ): RouteScores {
+  const signals = deduplicateByProximity(
+    pois.filter((p) => p.category === 'traffic_signal'),
+    SIGNAL_DEDUP_RADIUS_M,
+  )
+  const workingPois = [...pois.filter((p) => p.category !== 'traffic_signal'), ...signals]
+
   const sampled = samplePolyline(routePolyline, sampleStep)
   const nearbyPois: OsmPoi[] = []
   let scenicScore = 0
@@ -126,7 +145,7 @@ export function scoreRouteDetailed(
   let lightScore = 0
   let lightCount = 0
 
-  for (const poi of pois) {
+  for (const poi of workingPois) {
     const d = minDistanceToPolyline([poi.lat, poi.lon], sampled)
     if (d <= thresholdMeters) {
       nearbyPois.push(poi)

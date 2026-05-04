@@ -9,6 +9,7 @@ import {
 import StarIcon from '@mui/icons-material/Star'
 import { useTranslation } from 'react-i18next'
 import type { RouteCategory } from '../api/digitransit'
+import type { OsmPoi } from '../utils/overpass'
 
 export type ScoredRoute = {
   response: unknown
@@ -21,6 +22,7 @@ export type ScoredRoute = {
   infraSegmentCount: number
   lightScore: number
   lightCount: number
+  nearbyPois: OsmPoi[]
 }
 
 type RouteCardsProps = {

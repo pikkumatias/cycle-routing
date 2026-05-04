@@ -71,6 +71,7 @@ type ScoredCandidate = CandidateRoute & {
   infraSegmentCount: number
   lightScore: number
   lightCount: number
+  nearbyPois: OsmPoi[]
 }
 
 /**
@@ -107,6 +108,7 @@ export function selectRoutes(
       infraSegmentCount: ns.infraSegmentCount,
       lightScore: ns.lightScore,
       lightCount: ns.lightCount,
+      nearbyPois: ns.nearbyPois,
     }
   })
 
@@ -156,6 +158,7 @@ export function selectRoutes(
     infraSegmentCount: c.infraSegmentCount,
     lightScore: c.lightScore,
     lightCount: c.lightCount,
+    nearbyPois: c.nearbyPois,
   })
 
   return {

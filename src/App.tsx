@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import type { FormEvent } from 'react'
 import {
   Alert,
@@ -252,6 +252,10 @@ const resolveCoords = (option: AddressOption | null, input: string) => {
   }
 
   const selectedRouteData = routesState.routes?.[routesState.selectedRoute]
+  const trafficLights = useMemo(
+    () => (selectedRouteData?.nearbyPois ?? []).filter((p) => p.category === 'traffic_signal'),
+    [selectedRouteData],
+  )
   const alternativeRoutes = routesState.routes
     ? (Object.entries(routesState.routes) as [RouteCategory, ScoredRoute][])
         .filter(([key]) => key !== routesState.selectedRoute)
@@ -272,6 +276,7 @@ const resolveCoords = (option: AddressOption | null, input: string) => {
           }
           hazards={showHazards && routesState.routes ? (DEBUG_SHOW_ALL_HAZARDS ? debugHazards : hazardsData.items) : []}
           hazardsLoading={hazardsData.loading}
+          trafficLights={trafficLights}
           onSetOrigin={handleSetOriginFromMap}
           onSetDestination={handleSetDestinationFromMap}
         />
