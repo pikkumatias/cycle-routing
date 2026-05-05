@@ -1,8 +1,8 @@
 # Cycle Routing
 
-A bicycle route planner that emphasises rider experience for the Helsinki region. Enter an origin and destination, and the app generates three optimized route variants on an interactive map: **Fastest**, **Scenic**, and **Calm**.
+A bicycle route planner that emphasises rider experience for the Helsinki region. Enter an origin and destination, and the app generates four optimized route variants on an interactive map: **Fastest**, **Scenic**, **Calm**, and **Fewest Lights**.
 
-Routes come from the Digitransit/HSL routing API (OpenTripPlanner). Each route is then scored against OpenStreetMap data fetched from the Overpass API: nearby parks, nature reserves, waterways, and dedicated cycling infrastructure all influence which variant lands in which category. Active road works and traffic disruptions along each route are surfaced as hazard markers, pulled from the City of Helsinki's open data WFS service.
+Routes come from the Digitransit/HSL routing API (OpenTripPlanner). Each route is then scored against OpenStreetMap data fetched from the Overpass API: nearby parks, nature reserves, waterways, dedicated cycling infrastructure, and traffic signal density all influence which variant lands in which category. Active road works and traffic disruptions along each route are surfaced as hazard markers, pulled from the City of Helsinki's open data WFS service.
 
 This project has also served as a practical deep-dive into agentic AI development — the majority of the codebase was written collaboratively with Claude Code, exploring what autonomous, tool-driven coding agents can do in a real product context.
 
@@ -50,10 +50,15 @@ Opens at `http://localhost:5173`. Enter two addresses (or `lat,lon` coordinates)
 | **Fastest** | Lowest total duration |
 | **Scenic** | Highest score for nearby parks, nature, and water (OSM via Overpass) |
 | **Calm** | Highest score for dedicated cycling infrastructure (cycleways, bike lanes) |
+| **Fewest Lights** | Lowest count of traffic signals along the route (OSM `highway=traffic_signals`) |
+
+### Traffic light overlay
+
+When a route is displayed, 🚦 markers appear on the map at each signalized intersection along the selected route. Multiple OSM signal nodes at the same intersection are collapsed into a single centroid marker. Signal proximity is measured as perpendicular distance to the route's line segments (not just to vertices), so only signals within 15 m of the actual path are shown — this keeps markers from parallel streets off the map. Markers cluster at lower zoom levels.
 
 ### Hazard overlay
 
-When a route is displayed, the app fetches active construction works and traffic arrangements from the City of Helsinki's open geodata WFS service and overlays them on the map as clustered markers. Hazards are filtered to those within 25 m of the selected route's polyline, so only disruptions that actually affect your ride are shown. Polygon hazards (e.g. closed areas) are also drawn directly on the map. Results are cached per route variant, so switching between Fastest, Scenic, and Calm does not trigger a re-fetch.
+When a route is displayed, the app fetches active construction works and traffic arrangements from the City of Helsinki's open geodata WFS service and overlays them on the map as clustered markers. Hazards are filtered to those within 25 m of the selected route's polyline, so only disruptions that actually affect your ride are shown. Polygon hazards (e.g. closed areas) are also drawn directly on the map. Results are cached per route variant, so switching between route categories does not trigger a re-fetch.
 
 ---
 
