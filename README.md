@@ -54,7 +54,7 @@ Opens at `http://localhost:5173`. Enter two addresses (or `lat,lon` coordinates)
 
 ### Traffic light overlay
 
-When a route is displayed, 🚦 markers appear on the map at each signalized intersection along the selected route. Multiple OSM signal nodes at the same intersection are collapsed into a single centroid marker. Signal proximity is measured as perpendicular distance to the route's line segments (not just to vertices), so only signals within 15 m of the actual path are shown — this keeps markers from parallel streets off the map. Markers cluster at lower zoom levels.
+When a route is displayed, 🚦 markers appear on the map at each signalized intersection along the selected route. Multiple OSM signal nodes at the same intersection are collapsed into a single centroid marker. Signal proximity is measured as perpendicular distance to the route's line segments (not just to vertices), so only signals within 10 m of the actual path are shown — this keeps markers from parallel streets off the map. Markers cluster at lower zoom levels.
 
 ### Hazard overlay
 

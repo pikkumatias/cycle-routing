@@ -76,8 +76,8 @@ const INFRA_WEIGHTS: Partial<Record<PoiCategory, number>> = {
   cycleway_lane: 1,
 }
 
-/** Tighter threshold for traffic signals — segment-based distance, so 15m cleanly excludes parallel streets. */
-export const LIGHT_THRESHOLD_M = 15
+/** Tighter threshold for traffic signals — segment-based distance, so 10m cleanly excludes parallel streets. */
+export const LIGHT_THRESHOLD_M = 10
 
 const LIGHT_WEIGHTS: Partial<Record<PoiCategory, number>> = {
   traffic_signal: 1,
