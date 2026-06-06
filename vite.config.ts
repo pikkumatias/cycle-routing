@@ -96,5 +96,24 @@ export default defineConfig({
   plugins: [react(), vercelApiDevPlugin()],
   build: {
     chunkSizeWarningLimit: 700,
+    rollupOptions: {
+      output: {
+        // Split large, rarely-changing vendors into their own chunks so app-code
+        // edits don't invalidate them in the browser cache on repeat visits.
+        // react + react-dom + scheduler must stay in one chunk to avoid load-order
+        // bugs where react-dom initializes before React's runtime.
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return
+          if (
+            id.includes('/react-dom/') ||
+            id.includes('/react/') ||
+            id.includes('/scheduler/')
+          ) return 'react'
+          if (id.includes('/@mui/') || id.includes('/@emotion/')) return 'mui'
+          if (id.includes('leaflet')) return 'leaflet'
+          if (id.includes('i18next')) return 'i18n'
+        },
+      },
+    },
   },
 })

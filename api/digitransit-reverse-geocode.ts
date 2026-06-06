@@ -54,6 +54,8 @@ export default async function handler(req: VercelReq, res: VercelRes) {
     }
 
     const data = await upstream.json()
+    // A coordinate's nearest address rarely changes; cache aggressively at the edge.
+    res.setHeader('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=604800')
     return res.status(200).json(data)
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error'

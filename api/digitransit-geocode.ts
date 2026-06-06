@@ -55,6 +55,9 @@ export default async function handler(req: VercelReq, res: VercelRes) {
     }
 
     const data = await upstream.json()
+    // Autocomplete results are stable for a given query; let the edge/browser
+    // serve repeats and revalidate in the background.
+    res.setHeader('Cache-Control', 'public, s-maxage=600, stale-while-revalidate=86400')
     return res.status(200).json(data)
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error'

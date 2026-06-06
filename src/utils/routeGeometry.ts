@@ -19,7 +19,7 @@ export type RouteLeg = {
   mode?: string
 }
 
-function smoothPolyline(points: LatLng[], iterations = 3): LatLng[] {
+function smoothPolyline(points: LatLng[], iterations = 2): LatLng[] {
   if (points.length < 3) return points
   let pts = points
   for (let iter = 0; iter < iterations; iter++) {
@@ -93,15 +93,30 @@ export function getBoundsFromLegsAndPoints(
   from?: LatLng,
   to?: LatLng,
 ): LatLng[] {
-  const all: LatLng[] = []
-  legs.forEach((leg) => leg.positions.forEach((p) => all.push(p)))
-  if (from) all.push(from)
-  if (to) all.push(to)
-  if (all.length === 0) return []
-  const lats = all.map((p) => p[0])
-  const lngs = all.map((p) => p[1])
+  let minLat = Infinity
+  let minLng = Infinity
+  let maxLat = -Infinity
+  let maxLng = -Infinity
+  let count = 0
+
+  const visit = (p: LatLng) => {
+    if (p[0] < minLat) minLat = p[0]
+    if (p[0] > maxLat) maxLat = p[0]
+    if (p[1] < minLng) minLng = p[1]
+    if (p[1] > maxLng) maxLng = p[1]
+    count++
+  }
+
+  // Loop instead of Math.min(...spread): smoothed routes can have tens of
+  // thousands of vertices, which overflows the call stack when spread as args.
+  for (const leg of legs) {
+    for (const p of leg.positions) visit(p)
+  }
+  if (from) visit(from)
+  if (to) visit(to)
+  if (count === 0) return []
   return [
-    [Math.min(...lats), Math.min(...lngs)],
-    [Math.max(...lats), Math.max(...lngs)],
+    [minLat, minLng],
+    [maxLat, maxLng],
   ]
 }
