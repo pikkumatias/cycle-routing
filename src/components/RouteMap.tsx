@@ -28,6 +28,7 @@ import {
 import type { RouteCategory } from '../api/digitransit'
 import type { Hazard } from '../services/hazards'
 import { hazardToLatLng } from '../services/hazards'
+import type { CityBikeStation } from '../services/citybikes'
 import type { OsmPoi } from '../utils/overpass'
 
 const originIcon = L.divIcon({
@@ -66,13 +67,27 @@ const makeHazardIcon = (emoji: string, bg: string) =>
     iconAnchor: [14, 14],
   })
 
+const excavationIcon = makeHazardIcon('⚠️', '#FF8C00')
+
 const HAZARD_ICONS = {
-  excavation: makeHazardIcon('⚠️', '#FF8C00'),
+  excavation: excavationIcon,
   traffic_arrangement: makeHazardIcon('🚧', '#D32F2F'),
-  area_rental: makeHazardIcon('🏗️', '#F9A825'),
+  // Area rental reuses the excavation icon — its amber circle was too close to
+  // the city bike marker colour to tell apart.
+  area_rental: excavationIcon,
 }
 
 const trafficLightIcon = makeHazardIcon('🚦', '#1A237E')
+
+const CITYBIKE_COLOR = '#FCBB00'
+
+const makeCityBikeIcon = (count: number) =>
+  L.divIcon({
+    className: '',
+    html: `<div style="min-width:30px;height:30px;padding:0 5px;border-radius:15px;background:${CITYBIKE_COLOR};border:2px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;color:#333;font-weight:700;font-size:13px;font-family:sans-serif;box-sizing:border-box">${count}</div>`,
+    iconSize: [30, 30],
+    iconAnchor: [15, 15],
+  })
 
 const HAZARD_TYPE_KEYS: Record<Hazard['type'], string> = {
   excavation: 'hazardTypes.excavation',
@@ -269,7 +284,7 @@ function HazardClusterLayer({ hazards, isMobile, onHazardClick }: HazardClusterL
 const HAZARD_FILL: Record<Hazard['type'], string> = {
   excavation: '#FF8C00',
   traffic_arrangement: '#D32F2F',
-  area_rental: '#F9A825',
+  area_rental: '#FF8C00',
 }
 
 function HazardPolygonLayer({ hazards, isMobile, onHazardClick }: HazardClusterLayerProps) {
@@ -354,6 +369,46 @@ function TrafficLightClusterLayer({ lights }: { lights: OsmPoi[] }) {
   return null
 }
 
+function CityBikeStationLayer({ stations }: { stations: CityBikeStation[] }) {
+  const map = useMap()
+  const { t } = useTranslation()
+
+  useEffect(() => {
+    const group = L.markerClusterGroup({
+      maxClusterRadius: 40,
+      showCoverageOnHover: false,
+      spiderfyDistanceMultiplier: 1.4,
+      iconCreateFunction: (cluster) => {
+        const totalBikes = (
+          cluster.getAllChildMarkers() as Array<L.Marker & { bikesAvailable?: number }>
+        ).reduce((sum, m) => sum + (m.bikesAvailable ?? 0), 0)
+        return L.divIcon({
+          className: '',
+          html: `<div style="width:34px;height:34px;border-radius:50%;background:${CITYBIKE_COLOR};border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;color:#333;font-weight:700;font-size:13px;font-family:sans-serif">${totalBikes}</div>`,
+          iconSize: [34, 34],
+          iconAnchor: [17, 17],
+        })
+      },
+    })
+
+    for (const station of stations) {
+      const marker = L.marker([station.lat, station.lon], {
+        icon: makeCityBikeIcon(station.bikesAvailable),
+      }) as L.Marker & { bikesAvailable: number }
+      marker.bikesAvailable = station.bikesAvailable
+      let html = `<strong>${esc(station.name)}</strong>`
+      html += `<div style="margin-top:2px">${esc(t('cityBikes.bikesAvailable', { count: station.bikesAvailable }))}</div>`
+      marker.bindPopup(L.popup({ maxHeight: 200 }).setContent(html))
+      group.addLayer(marker)
+    }
+
+    map.addLayer(group)
+    return () => { map.removeLayer(group) }
+  }, [map, stations, t])
+
+  return null
+}
+
 export type AlternativeRoute = {
   category: RouteCategory
   response: unknown
@@ -369,6 +424,7 @@ export type RouteMapProps = {
   hazards?: Hazard[]
   hazardsLoading?: boolean
   trafficLights?: OsmPoi[]
+  cityBikes?: CityBikeStation[]
   onSetOrigin?: (option: AddressOption) => void
   onSetDestination?: (option: AddressOption) => void
 }
@@ -382,6 +438,7 @@ export function RouteMap({
   onSelectRoute,
   hazards,
   trafficLights,
+  cityBikes,
   onSetOrigin,
   onSetDestination,
 }: RouteMapProps) {
@@ -501,6 +558,9 @@ export function RouteMap({
         )}
         {(trafficLights ?? []).length > 0 && (
           <TrafficLightClusterLayer lights={trafficLights ?? []} />
+        )}
+        {(cityBikes ?? []).length > 0 && (
+          <CityBikeStationLayer stations={cityBikes ?? []} />
         )}
         {onSetOrigin && onSetDestination && (
           <MapContextMenu onSetOrigin={onSetOrigin} onSetDestination={onSetDestination} />

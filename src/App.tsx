@@ -34,6 +34,11 @@ import {
   filterHazardsNearRoute,
   type Hazard,
 } from './services/hazards'
+import {
+  fetchCityBikeStations,
+  filterStationsNearEndpoints,
+  type CityBikeStation,
+} from './services/citybikes'
 import { fetchPoisAndInfrastructure, boundsToBbox } from './utils/overpass'
 import type { OsmPoi } from './utils/overpass'
 import { deduplicateRoutes, selectRoutes } from './utils/routeSelection'
@@ -69,8 +74,13 @@ function App() {
   } | null>(null)
   const [hazardsData, setHazardsData] = useState<{ loading: boolean; items: Hazard[] }>({ loading: false, items: [] })
   const hazardCacheRef = useRef<Partial<Record<RouteCategory, Hazard[]>>>({})
+  // Raw hazards fetched once for the union bbox of all route variants; filtered
+  // client-side per selected route so switching tabs needs no network round-trip.
+  const rawHazardsRef = useRef<Hazard[] | null>(null)
   const prevRoutesRef = useRef(routesState.routes)
   const [showHazards, setShowHazards] = useState(true)
+  const [showCityBikes, setShowCityBikes] = useState(false)
+  const [cityBikesData, setCityBikesData] = useState<{ loading: boolean; items: CityBikeStation[] }>({ loading: false, items: [] })
 
   // Debug flag: set to true to show all active construction work across Helsinki regardless of route
   const DEBUG_SHOW_ALL_HAZARDS = false
@@ -96,17 +106,20 @@ function App() {
   const { sheetRef, handleRef, contentRef, sheetStyle, contentStyle } = useBottomSheet()
 
   useEffect(() => {
-    // Clear per-route hazard cache whenever a new set of routes is loaded
+    // Clear caches whenever a new set of routes is loaded
     if (routesState.routes !== prevRoutesRef.current) {
       hazardCacheRef.current = {}
+      rawHazardsRef.current = null
       prevRoutesRef.current = routesState.routes
     }
 
     if (!routesState.routes || !lastCoords) return
-    const selectedRouteData = routesState.routes[routesState.selectedRoute]
+    const routes = routesState.routes
+    const coords = lastCoords
+    const selectedRouteData = routes[routesState.selectedRoute]
     if (!selectedRouteData) return
 
-    // Serve from cache if this route has already been queried
+    // Serve from per-route cache if this route was already filtered
     const cached = hazardCacheRef.current[routesState.selectedRoute]
     if (cached) {
       setHazardsData({ loading: false, items: cached })
@@ -114,23 +127,33 @@ function App() {
     }
 
     const legs = getRouteLegsFromPlanResponse(selectedRouteData.response)
-    const bounds = getBoundsFromLegsAndPoints(legs, lastCoords.from, lastCoords.to)
-    if (bounds.length < 2) return
-
-    const BUFFER = 0.0003 // ~30m in degrees
-    const hazardBounds = {
-      minLat: bounds[0][0] - BUFFER,
-      minLon: bounds[0][1] - BUFFER,
-      maxLat: bounds[1][0] + BUFFER,
-      maxLon: bounds[1][1] + BUFFER,
-    }
     const polyline = legs.flatMap((leg) => leg.positions)
+    if (polyline.length === 0) return
 
     let cancelled = false
     void (async () => {
       setHazardsData((prev) => ({ ...prev, loading: true }))
       try {
-        const raw = await fetchHazards(hazardBounds)
+        // Fetch the raw hazard set once, covering the union bbox of every route
+        // variant. Subsequent tab switches reuse it and only re-filter locally.
+        let raw = rawHazardsRef.current
+        if (!raw) {
+          const allLegs = Object.values(routes).flatMap((r) =>
+            getRouteLegsFromPlanResponse(r.response),
+          )
+          const bounds = getBoundsFromLegsAndPoints(allLegs, coords.from, coords.to)
+          if (bounds.length < 2) return
+          const BUFFER = 0.0003 // ~30m in degrees
+          const fetched = await fetchHazards({
+            minLat: bounds[0][0] - BUFFER,
+            minLon: bounds[0][1] - BUFFER,
+            maxLat: bounds[1][0] + BUFFER,
+            maxLon: bounds[1][1] + BUFFER,
+          })
+          if (cancelled) return
+          raw = fetched
+          rawHazardsRef.current = fetched
+        }
         // Filter in chunks of 10, yielding between each so the map stays
         // interactive and the route card paints before heavy work begins.
         const filtered: Hazard[] = []
@@ -156,6 +179,34 @@ function App() {
       cancelled = true
     }
   }, [routesState.selectedRoute, routesState.routes, lastCoords])
+
+  useEffect(() => {
+    // Stations are filtered to a radius around the origin/destination, so the
+    // result is independent of which route variant is selected. The map already
+    // hides stations when the toggle is off (cityBikes={[]}), so we just skip
+    // fetching here rather than clearing state synchronously.
+    if (!showCityBikes || !lastCoords) return
+    const coords = lastCoords
+
+    let cancelled = false
+    void (async () => {
+      setCityBikesData((prev) => ({ ...prev, loading: true }))
+      try {
+        const raw = await fetchCityBikeStations()
+        if (cancelled) return
+        const filtered = filterStationsNearEndpoints(raw, coords.from, coords.to)
+        if (!cancelled) setCityBikesData({ loading: false, items: filtered })
+      } catch (err) {
+        if (!cancelled) {
+          console.warn('[App] city bike fetch failed:', err)
+          setCityBikesData((prev) => ({ ...prev, loading: false }))
+        }
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [showCityBikes, lastCoords])
 
 const resolveCoords = (option: AddressOption | null, input: string) => {
     if (option) return { lat: option.lat, lon: option.lon }
@@ -256,11 +307,15 @@ const resolveCoords = (option: AddressOption | null, input: string) => {
     () => (selectedRouteData?.nearbyPois ?? []).filter((p) => p.category === 'traffic_signal'),
     [selectedRouteData],
   )
-  const alternativeRoutes = routesState.routes
-    ? (Object.entries(routesState.routes) as [RouteCategory, ScoredRoute][])
-        .filter(([key]) => key !== routesState.selectedRoute)
-        .map(([key, route]) => ({ category: key, response: route.response }))
-    : []
+  const alternativeRoutes = useMemo(
+    () =>
+      routesState.routes
+        ? (Object.entries(routesState.routes) as [RouteCategory, ScoredRoute][])
+            .filter(([key]) => key !== routesState.selectedRoute)
+            .map(([key, route]) => ({ category: key, response: route.response }))
+        : [],
+    [routesState.routes, routesState.selectedRoute],
+  )
 
   return (
     <div className="app-layout">
@@ -277,6 +332,7 @@ const resolveCoords = (option: AddressOption | null, input: string) => {
           hazards={showHazards && routesState.routes ? (DEBUG_SHOW_ALL_HAZARDS ? debugHazards : hazardsData.items) : []}
           hazardsLoading={hazardsData.loading}
           trafficLights={trafficLights}
+          cityBikes={showCityBikes && routesState.routes ? cityBikesData.items : []}
           onSetOrigin={handleSetOriginFromMap}
           onSetDestination={handleSetDestinationFromMap}
         />
@@ -361,17 +417,30 @@ const resolveCoords = (option: AddressOption | null, input: string) => {
 
           {routesState.routes && selectedRouteData && (
             <Stack spacing={2} sx={{ mt: 2 }}>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={showHazards}
-                    onChange={(e) => setShowHazards(e.target.checked)}
-                    size="small"
-                  />
-                }
-                label={t('routes.showHazards')}
-                sx={{ alignSelf: 'flex-end', m: 0 }}
-              />
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={showCityBikes}
+                      onChange={(e) => setShowCityBikes(e.target.checked)}
+                      size="small"
+                    />
+                  }
+                  label={t('routes.showCityBikes')}
+                  sx={{ m: 0 }}
+                />
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={showHazards}
+                      onChange={(e) => setShowHazards(e.target.checked)}
+                      size="small"
+                    />
+                  }
+                  label={t('routes.showHazards')}
+                  sx={{ m: 0 }}
+                />
+              </Box>
               {showHazards && hazardsData.loading && (
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <CircularProgress size={14} thickness={5} />

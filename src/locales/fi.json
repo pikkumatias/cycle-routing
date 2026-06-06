@@ -19,6 +19,7 @@
     "lights_one": "🚦 {{count}} valo",
     "lights_other": "🚦 {{count}} valoa",
     "showHazards": "Näytä vaaranpaikat",
+    "showCityBikes": "Näytä kaupunkipyörät",
     "checkingHazards": "Tarkistetaan vaaroja…",
     "hazard_one": "⚠️ {{count}} vaara",
     "hazard_other": "⚠️ {{count}} vaaraa",
@@ -36,6 +37,10 @@
     "excavation": "Kaivutyö",
     "traffic_arrangement": "Liikennejärjestely",
     "area_rental": "Aluevuokraus"
+  },
+  "cityBikes": {
+    "bikesAvailable_one": "{{count}} pyörä saatavilla",
+    "bikesAvailable_other": "{{count}} pyörää saatavilla"
   },
   "contextMenu": {
     "origin": "Lähtöpiste",

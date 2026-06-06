@@ -19,6 +19,7 @@
     "lights_one": "🚦 {{count}} light",
     "lights_other": "🚦 {{count}} lights",
     "showHazards": "Show hazards",
+    "showCityBikes": "Show city bikes",
     "checkingHazards": "Checking hazards…",
     "hazard_one": "⚠️ {{count}} hazard",
     "hazard_other": "⚠️ {{count}} hazards",
@@ -36,6 +37,10 @@
     "excavation": "Excavation",
     "traffic_arrangement": "Traffic works",
     "area_rental": "Area rental"
+  },
+  "cityBikes": {
+    "bikesAvailable_one": "{{count}} bike available",
+    "bikesAvailable_other": "{{count}} bikes available"
   },
   "contextMenu": {
     "origin": "Origin",
