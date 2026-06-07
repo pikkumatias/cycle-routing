@@ -11,6 +11,10 @@ interface VercelRes {
   json(data: unknown): VercelRes
 }
 
+function firstValue(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value
+}
+
 export default async function handler(req: VercelReq, res: VercelRes) {
   try {
     if (req.method !== 'GET') {
@@ -25,20 +29,22 @@ export default async function handler(req: VercelReq, res: VercelRes) {
         .json({ error: 'DIGITRANSIT_API_KEY is not configured on the server.' })
     }
 
-    const text = req.query.text as string | undefined
+    const text = firstValue(req.query.text)
     if (!text?.trim()) {
       return res.status(400).json({ error: '"text" query parameter is required.' })
     }
 
     const url = new URL(GEOCODING_ENDPOINT)
     url.searchParams.set('text', text)
-    url.searchParams.set('size', req.query.size ?? '5')
-    url.searchParams.set('lang', req.query.lang ?? 'en')
-    if (req.query['focus.point.lat']) {
-      url.searchParams.set('focus.point.lat', req.query['focus.point.lat'])
+    url.searchParams.set('size', firstValue(req.query.size) ?? '5')
+    url.searchParams.set('lang', firstValue(req.query.lang) ?? 'en')
+    const focusLat = firstValue(req.query['focus.point.lat'])
+    if (focusLat) {
+      url.searchParams.set('focus.point.lat', focusLat)
     }
-    if (req.query['focus.point.lon']) {
-      url.searchParams.set('focus.point.lon', req.query['focus.point.lon'])
+    const focusLon = firstValue(req.query['focus.point.lon'])
+    if (focusLon) {
+      url.searchParams.set('focus.point.lon', focusLon)
     }
 
     const upstream = await fetch(url.toString(), {
