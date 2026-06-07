@@ -104,12 +104,16 @@ export default defineConfig({
         // bugs where react-dom initializes before React's runtime.
         manualChunks(id) {
           if (!id.includes('node_modules')) return
+          // Keep all of MUI + Emotion together first. Emotion ships an
+          // `@emotion/react` package whose path matches the broad `/react/`
+          // test below; if it leaked into the react chunk it would create a
+          // circular mui <-> react chunk and a load-order TDZ crash.
+          if (id.includes('/@mui/') || id.includes('/@emotion/')) return 'mui'
           if (
             id.includes('/react-dom/') ||
             id.includes('/react/') ||
             id.includes('/scheduler/')
           ) return 'react'
-          if (id.includes('/@mui/') || id.includes('/@emotion/')) return 'mui'
           if (id.includes('leaflet')) return 'leaflet'
           if (id.includes('i18next')) return 'i18n'
         },
