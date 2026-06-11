@@ -383,7 +383,14 @@ const resolveCoords = (option: AddressOption | null, input: string) => {
 
   const onSelectRoute = (key: RouteCategory) =>
     setRoutesState((prev) => ({ ...prev, selectedRoute: key }))
-  const mainRoutes = pickRoutes(routesState.routes, ['fewestLights', 'fastest'])
+  const rawMainRoutes = pickRoutes(routesState.routes, ['fewestLights', 'fastest'])
+  // If fewestLights resolved to the same route as fastest (fastest already has the fewest
+  // lights), drop the duplicate card so we don't show the same route twice.
+  const mainRoutes: Partial<Record<RouteCategory, ScoredRoute>> =
+    rawMainRoutes.fewestLights?.response === rawMainRoutes.fastest?.response &&
+    rawMainRoutes.fastest
+      ? { fastest: rawMainRoutes.fastest }
+      : rawMainRoutes
   const extraRoutes = pickRoutes(routesState.routes, ['scenic', 'calm'])
 
   return (

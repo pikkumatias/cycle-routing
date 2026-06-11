@@ -119,7 +119,7 @@ const toScoredRoute = (c: ScoredCandidate): ScoredRoute => ({
 /**
  * Select only the two default categories shown up front:
  * - Fastest: lowest duration
- * - FewestLights: lowest traffic-signal score (excluding fastest when possible)
+ * - FewestLights: lowest measured traffic-signal score across all candidates
  */
 export function selectDefaultRoutes(
   candidates: CandidateRoute[],
@@ -134,10 +134,10 @@ export function selectDefaultRoutes(
   const fastest = scored.reduce((best, c) =>
     c.durationSec < best.durationSec ? c : best,
   )
-  const lightsPool = scored.length > 1
-    ? scored.filter((c) => c !== fastest)
-    : scored
-  const fewestLights = lightsPool.reduce((best, c) =>
+  // Pick fewestLights from the full pool by measured lightScore.
+  // Excluding fastest would force the selection onto a candidate that may actually have
+  // more lights — the OTP safety preset optimises for cycling infra, not signal count.
+  const fewestLights = scored.reduce((best, c) =>
     c.lightScore < best.lightScore ? c : best,
   )
 
@@ -187,15 +187,9 @@ export function selectRoutes(
     c.infraScore > best.infraScore ? c : best,
   )
 
-  // Pick fewestLights: minimum light score, excluding already-picked if possible
-  const lightsPool = scored.length > 3
-    ? scored.filter((c) => c !== fastest && c !== scenic && c !== calm)
-    : scored.length > 2
-      ? scored.filter((c) => c !== fastest && c !== scenic)
-      : scored.length > 1
-        ? scored.filter((c) => c !== fastest)
-        : scored
-  const fewestLights = lightsPool.reduce((best, c) =>
+  // Pick fewestLights by measured lightScore across the full pool — excluding candidates
+  // risks picking a route with more lights than ones already assigned to other categories.
+  const fewestLights = scored.reduce((best, c) =>
     c.lightScore < best.lightScore ? c : best,
   )
 
