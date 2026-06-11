@@ -25,10 +25,18 @@ export type OtpPlanResponse = {
   data?: { plan?: { itineraries?: OtpItinerary[] } }
 }
 
-/** Five spread presets to generate diverse candidate routes (factors must sum to 1.0). */
-const CANDIDATE_PRESETS: TriangleFactors[] = [
-  { time: 1.0,  safety: 0.0,  slope: 0.0  },  // fastest possible
-  { time: 0.0,  safety: 1.0,  slope: 0.0  },  // best cycling infra
+/**
+ * Default presets fetched on every search (factors must sum to 1.0). Two presets keep
+ * the search fast: the fastest route, plus a safety-optimized route that follows
+ * cycleways and skips most signalized intersections — the fewest-lights candidate.
+ */
+export const DEFAULT_PRESETS: TriangleFactors[] = [
+  { time: 1.0, safety: 0.0, slope: 0.0 },  // fastest possible
+  { time: 0.0, safety: 1.0, slope: 0.0 },  // best cycling infra / fewest lights
+]
+
+/** Extra presets fetched lazily when the user expands "more route options" (scenic/calm). */
+export const EXTRA_PRESETS: TriangleFactors[] = [
   { time: 0.0,  safety: 0.0,  slope: 1.0  },  // flattest route
   { time: 0.33, safety: 0.34, slope: 0.33 },  // balanced
   { time: 0.1,  safety: 0.6,  slope: 0.3  },  // safe + flat hybrid
@@ -275,24 +283,27 @@ async function requestBatchRoutesViaBackend(
 const MAX_ROUTE_CACHE = 20
 const routeCache = new Map<string, CandidateRoute[]>()
 
-function routeCacheKey(from: LatLonPair, to: LatLonPair): string {
+function routeCacheKey(from: LatLonPair, to: LatLonPair, tag: string): string {
   const q = (n: number) => Math.round(n / 0.001) * 0.001
-  return `${q(from.lat)},${q(from.lon)}->${q(to.lat)},${q(to.lon)}`
+  return `${tag}:${q(from.lat)},${q(from.lon)}->${q(to.lat)},${q(to.lon)}`
 }
 
 /**
- * Fetch a diverse pool of candidate routes by sending all OTP presets in a
- * single batch request, then caching results keyed by quantized coordinates.
+ * Fetch a pool of candidate routes by sending the given OTP presets in a single
+ * batch request, then caching results keyed by quantized coordinates + cache tag.
+ * The default and extra preset pools are cached independently via `cacheTag`.
  */
 export async function fetchCandidateRoutes(
   from: LatLonPair,
   to: LatLonPair,
+  presets: TriangleFactors[] = DEFAULT_PRESETS,
+  cacheTag: string = 'default',
 ): Promise<CandidateRoute[]> {
-  const cacheKey = routeCacheKey(from, to)
+  const cacheKey = routeCacheKey(from, to, cacheTag)
   const cached = routeCache.get(cacheKey)
   if (cached) return cached
 
-  const responses = await requestBatchRoutesViaBackend(from, to, CANDIDATE_PRESETS, 2)
+  const responses = await requestBatchRoutesViaBackend(from, to, presets, 2)
 
   const candidates: CandidateRoute[] = []
 

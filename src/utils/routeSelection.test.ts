@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { computeOverlap, deduplicateRoutes, selectRoutes } from './routeSelection'
+import { computeOverlap, deduplicateRoutes, selectRoutes, selectDefaultRoutes } from './routeSelection'
 import type { LatLng } from './routeGeometry'
 import type { CandidateRoute } from '../api/digitransit'
 import type { OsmPoi } from './overpass'
@@ -161,5 +161,55 @@ describe('selectRoutes', () => {
     expect(result).toHaveProperty('fastest')
     expect(result).toHaveProperty('scenic')
     expect(result).toHaveProperty('calm')
+  })
+})
+
+describe('selectDefaultRoutes', () => {
+  const signalPoi: OsmPoi = {
+    lat: 60.171,
+    lon: 24.941,
+    category: 'traffic_signal',
+    tags: { highway: 'traffic_signals' },
+  }
+
+  it('returns only fewestLights and fastest', () => {
+    const a = makeCandidate([[60.17, 24.94], [60.175, 24.945]], 500)
+    const b = makeCandidate([[60.18, 24.95], [60.185, 24.955]], 600)
+    const result = selectDefaultRoutes([a, b], [])
+    expect(Object.keys(result).sort()).toEqual(['fastest', 'fewestLights'])
+  })
+
+  it('assigns fastest to the route with lowest duration', () => {
+    const fast = makeCandidate([[60.17, 24.94], [60.175, 24.945]], 300)
+    const slow = makeCandidate([[61.0, 25.5], [61.05, 25.55]], 900)
+    const result = selectDefaultRoutes([fast, slow], [])
+    expect(result.fastest.durationSec).toBe(300)
+  })
+
+  it('picks the signal-free route as fewest lights', () => {
+    // Fast route passes through the signal; the slower route avoids it entirely.
+    const throughSignal = makeCandidate(
+      [[60.17, 24.94], [60.171, 24.941], [60.172, 24.942]],
+      300,
+    )
+    const noSignal = makeCandidate(
+      [[60.20, 25.0], [60.21, 25.01], [60.22, 25.02]],
+      900,
+    )
+    const result = selectDefaultRoutes([throughSignal, noSignal], [signalPoi])
+    expect(result.fastest.durationSec).toBe(300)
+    expect(result.fewestLights.durationSec).toBe(900)
+    expect(result.fewestLights.lightCount).toBe(0)
+  })
+
+  it('handles a single candidate by assigning it to both categories', () => {
+    const only = makeCandidate([[60.17, 24.94]], 600)
+    const result = selectDefaultRoutes([only], [])
+    expect(result.fastest.durationSec).toBe(600)
+    expect(result.fewestLights.durationSec).toBe(600)
+  })
+
+  it('throws on empty candidate array', () => {
+    expect(() => selectDefaultRoutes([], [])).toThrow('No candidate routes available')
   })
 })

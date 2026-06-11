@@ -26,6 +26,7 @@
     "calmScore": "Rauhallisuus {{score}}",
     "paths_one": "{{count}} reitti",
     "paths_other": "{{count}} reittiä",
+    "moreOptions": "Lisää reittivaihtoehtoja",
     "scoringUnavailable": "Pisteytyksessä ongelma — Overpass API aikakatkaisu."
   },
   "map": {

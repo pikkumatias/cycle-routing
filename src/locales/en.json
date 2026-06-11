@@ -26,6 +26,7 @@
     "calmScore": "Calm {{score}}",
     "paths_one": "{{count}} path",
     "paths_other": "{{count}} paths",
+    "moreOptions": "More route options",
     "scoringUnavailable": "Scoring unavailable — Overpass API timed out."
   },
   "map": {

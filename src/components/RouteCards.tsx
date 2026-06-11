@@ -26,7 +26,7 @@ export type ScoredRoute = {
 }
 
 type RouteCardsProps = {
-  routes: Record<RouteCategory, ScoredRoute>
+  routes: Partial<Record<RouteCategory, ScoredRoute>>
   selectedRoute: RouteCategory
   onSelect: (key: RouteCategory) => void
   hazardCount?: number
@@ -48,7 +48,7 @@ function formatDuration(seconds: number): string {
 export function RouteCardsSkeleton() {
   return (
     <div className="route-chips-scroll">
-      {[0, 1, 2, 3].map((i) => (
+      {[0, 1].map((i) => (
         <Card key={i} sx={{ width: '100%', border: '1px solid', borderColor: 'grey.300' }}>
           <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
             <Skeleton animation="wave" variant="text" width={60} sx={{ fontSize: '0.875rem' }} />
@@ -66,11 +66,12 @@ export function RouteCardsSkeleton() {
 
 export function RouteCards({ routes, selectedRoute, onSelect, hazardCount, hazardsLoading }: RouteCardsProps) {
   const { t } = useTranslation()
-  const maxCalm = Math.max(...Object.values(routes).map((r) => r.calmScore))
+  const entries = Object.entries(routes) as [RouteCategory, ScoredRoute][]
+  const maxCalm = Math.max(0, ...entries.map(([, r]) => r.calmScore))
 
   return (
     <div className="route-chips-scroll">
-      {(Object.entries(routes) as [RouteCategory, ScoredRoute][]).map(
+      {entries.map(
         ([key, route]) => {
           const isSelected = key === selectedRoute
           const isCalmest = route.calmScore === maxCalm && maxCalm > 0

@@ -74,6 +74,79 @@ type ScoredCandidate = CandidateRoute & {
   nearbyPois: OsmPoi[]
 }
 
+/** Score every candidate against the POI set and normalize scores across the pool. */
+function scoreCandidates(
+  candidates: CandidateRoute[],
+  pois: OsmPoi[],
+): ScoredCandidate[] {
+  const rawScores: Record<string, ReturnType<typeof scoreRouteDetailed>> = {}
+  for (let i = 0; i < candidates.length; i++) {
+    rawScores[String(i)] = scoreRouteDetailed(pois, candidates[i].polyline)
+  }
+
+  const normalized = normalizeScores(rawScores)
+
+  return candidates.map((c, i) => {
+    const ns = normalized[String(i)]
+    return {
+      ...c,
+      scenicScore: ns.scenicScore,
+      infraScore: ns.infraScore,
+      calmScore: ns.calmScore,
+      scenicPoiCount: ns.scenicPoiCount,
+      infraSegmentCount: ns.infraSegmentCount,
+      lightScore: ns.lightScore,
+      lightCount: ns.lightCount,
+      nearbyPois: ns.nearbyPois,
+    }
+  })
+}
+
+const toScoredRoute = (c: ScoredCandidate): ScoredRoute => ({
+  response: c.response,
+  durationSec: c.durationSec,
+  distanceKm: c.distanceKm,
+  scenicScore: c.scenicScore,
+  infraScore: c.infraScore,
+  calmScore: c.calmScore,
+  scenicPoiCount: c.scenicPoiCount,
+  infraSegmentCount: c.infraSegmentCount,
+  lightScore: c.lightScore,
+  lightCount: c.lightCount,
+  nearbyPois: c.nearbyPois,
+})
+
+/**
+ * Select only the two default categories shown up front:
+ * - Fastest: lowest duration
+ * - FewestLights: lowest traffic-signal score (excluding fastest when possible)
+ */
+export function selectDefaultRoutes(
+  candidates: CandidateRoute[],
+  pois: OsmPoi[],
+): Pick<Record<RouteCategory, ScoredRoute>, 'fewestLights' | 'fastest'> {
+  if (candidates.length === 0) {
+    throw new Error('No candidate routes available')
+  }
+
+  const scored = scoreCandidates(candidates, pois)
+
+  const fastest = scored.reduce((best, c) =>
+    c.durationSec < best.durationSec ? c : best,
+  )
+  const lightsPool = scored.length > 1
+    ? scored.filter((c) => c !== fastest)
+    : scored
+  const fewestLights = lightsPool.reduce((best, c) =>
+    c.lightScore < best.lightScore ? c : best,
+  )
+
+  return {
+    fewestLights: toScoredRoute(fewestLights),
+    fastest: toScoredRoute(fastest),
+  }
+}
+
 /**
  * Score all candidates and select the best route per category.
  *
@@ -89,28 +162,7 @@ export function selectRoutes(
     throw new Error('No candidate routes available')
   }
 
-  // Score all candidates
-  const rawScores: Record<string, ReturnType<typeof scoreRouteDetailed>> = {}
-  for (let i = 0; i < candidates.length; i++) {
-    rawScores[String(i)] = scoreRouteDetailed(pois, candidates[i].polyline)
-  }
-
-  const normalized = normalizeScores(rawScores)
-
-  const scored: ScoredCandidate[] = candidates.map((c, i) => {
-    const ns = normalized[String(i)]
-    return {
-      ...c,
-      scenicScore: ns.scenicScore,
-      infraScore: ns.infraScore,
-      calmScore: ns.calmScore,
-      scenicPoiCount: ns.scenicPoiCount,
-      infraSegmentCount: ns.infraSegmentCount,
-      lightScore: ns.lightScore,
-      lightCount: ns.lightCount,
-      nearbyPois: ns.nearbyPois,
-    }
-  })
+  const scored = scoreCandidates(candidates, pois)
 
   // Pick fastest: minimum duration
   const fastest = scored.reduce((best, c) =>
@@ -146,20 +198,6 @@ export function selectRoutes(
   const fewestLights = lightsPool.reduce((best, c) =>
     c.lightScore < best.lightScore ? c : best,
   )
-
-  const toScoredRoute = (c: ScoredCandidate): ScoredRoute => ({
-    response: c.response,
-    durationSec: c.durationSec,
-    distanceKm: c.distanceKm,
-    scenicScore: c.scenicScore,
-    infraScore: c.infraScore,
-    calmScore: c.calmScore,
-    scenicPoiCount: c.scenicPoiCount,
-    infraSegmentCount: c.infraSegmentCount,
-    lightScore: c.lightScore,
-    lightCount: c.lightCount,
-    nearbyPois: c.nearbyPois,
-  })
 
   return {
     fastest: toScoredRoute(fastest),

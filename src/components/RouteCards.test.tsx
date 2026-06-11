@@ -39,10 +39,10 @@ const mockRoutes: Record<RouteCategory, ScoredRoute> = {
 // ── RouteCardsSkeleton ────────────────────────────────────────────────────────
 
 describe('RouteCardsSkeleton', () => {
-  it('renders exactly 4 placeholder cards', () => {
+  it('renders exactly 2 placeholder cards', () => {
     const { container } = render(<RouteCardsSkeleton />)
     const wrapper = container.querySelector('.route-chips-scroll')
-    expect(wrapper?.children).toHaveLength(4)
+    expect(wrapper?.children).toHaveLength(2)
   })
 })
 
