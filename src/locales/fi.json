@@ -43,6 +43,12 @@
     "bikesAvailable_one": "{{count}} pyörä saatavilla",
     "bikesAvailable_other": "{{count}} pyörää saatavilla"
   },
+  "location": {
+    "currentLocation": "Nykyinen sijaintisi",
+    "useCurrentLocation": "Käytä nykyistä sijaintia",
+    "locating": "Haetaan sijaintiasi…",
+    "denied": "Sijainnin käyttö estetty"
+  },
   "contextMenu": {
     "origin": "Lähtöpiste",
     "destination": "Määränpää"

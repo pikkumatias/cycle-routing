@@ -17,6 +17,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import ClearIcon from '@mui/icons-material/Clear'
 import AccessTimeIcon from '@mui/icons-material/AccessTime'
 import LocationOnIcon from '@mui/icons-material/LocationOn'
+import MyLocationIcon from '@mui/icons-material/MyLocation'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import { useTranslation } from 'react-i18next'
 import { fetchGeocodingAutocomplete } from '../api/digitransit'
@@ -36,6 +37,10 @@ type SearchDrawerProps = {
   fieldType: 'origin' | 'destination'
   initialInputValue: string
   recentSearches: RecentSearch[]
+  locationCoords?: { lat: number; lon: number } | null
+  locationLoading?: boolean
+  locationDenied?: boolean
+  onRequestLocation?: () => void
 }
 
 const DEBOUNCE_MS = 300
@@ -48,6 +53,10 @@ export function SearchDrawer({
   fieldType,
   initialInputValue,
   recentSearches,
+  locationCoords,
+  locationLoading,
+  locationDenied,
+  onRequestLocation,
 }: SearchDrawerProps) {
   const { t } = useTranslation()
   const [inputValue, setInputValue] = useState('')
@@ -133,6 +142,17 @@ export function SearchDrawer({
     suggestions.length > 0 ? [...suggestions, ...recentOptions] : recentOptions
 
   const label = fieldType === 'origin' ? t('search.origin') : t('search.destination')
+
+  // Show location row when origin field and not denied
+  const showLocationRow = fieldType === 'origin' && !locationDenied
+
+  const handleLocationRowClick = () => {
+    if (locationCoords) {
+      onSelect({ label: t('location.currentLocation'), ...locationCoords, group: 'Recent' })
+    } else {
+      onRequestLocation?.()
+    }
+  }
 
   return (
     <Drawer
@@ -220,6 +240,38 @@ export function SearchDrawer({
 
       {/* Results list */}
       <List sx={{ flex: 1, overflowY: 'auto', py: 0 }}>
+        {/* Current location row — always first when shown */}
+        {showLocationRow && (
+          <>
+            <ListItemButton
+              onClick={handleLocationRowClick}
+              disabled={locationLoading}
+              sx={{ px: 2, py: 1.5 }}
+            >
+              <ListItemIcon sx={{ minWidth: 40 }}>
+                {locationLoading ? (
+                  <CircularProgress size={20} />
+                ) : (
+                  <MyLocationIcon sx={{ color: 'primary.main' }} />
+                )}
+              </ListItemIcon>
+              <ListItemText
+                primary={
+                  <Typography variant="body1" noWrap>
+                    {locationLoading
+                      ? t('location.locating')
+                      : locationCoords
+                        ? t('location.currentLocation')
+                        : t('location.useCurrentLocation')}
+                  </Typography>
+                }
+              />
+              {!locationLoading && <ChevronRightIcon sx={{ color: 'text.secondary', ml: 1 }} />}
+            </ListItemButton>
+            <Divider component="li" />
+          </>
+        )}
+
         {items.map((item, index) => (
           <Box key={`${item.label}-${item.lat}-${index}`}>
             <ListItemButton

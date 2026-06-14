@@ -51,6 +51,7 @@ import {
   addRecentSearch,
 } from './utils/recentSearches'
 import { useBottomSheet } from './hooks/useBottomSheet'
+import { useGeolocation } from './hooks/useGeolocation'
 
 type RoutesState = {
   loading: boolean
@@ -108,6 +109,8 @@ function App() {
   const poisRef = useRef<OsmPoi[]>([])
   const defaultCandidatesRef = useRef<CandidateRoute[]>([])
   const extraLoadedRef = useRef(false)
+  const geolocation = useGeolocation()
+  const isCurrentLocationOriginRef = useRef(false)
 
   // Debug flag: set to true to show all active construction work across Helsinki regardless of route
   const DEBUG_SHOW_ALL_HAZARDS = false
@@ -126,6 +129,22 @@ function App() {
     })()
     return () => { cancelled = true }
   }, [DEBUG_SHOW_ALL_HAZARDS])
+
+  // Request location on mount
+  useEffect(() => {
+    geolocation.request()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Auto-apply GPS coords as origin when location first arrives
+  useEffect(() => {
+    if (geolocation.coords && !fromOption && !fromInput) {
+      const label = t('location.currentLocation')
+      setFromOption({ label, lat: geolocation.coords.lat, lon: geolocation.coords.lon, group: 'Recent' })
+      setFromInput(label)
+      isCurrentLocationOriginRef.current = true
+    }
+  }, [geolocation.coords, fromOption, fromInput, t])
 
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [activeField, setActiveField] = useState<'origin' | 'destination'>('origin')
@@ -274,12 +293,16 @@ const resolveCoords = (option: AddressOption | null, input: string) => {
   const openDrawer = (field: 'origin' | 'destination') => {
     setActiveField(field)
     setDrawerOpen(true)
+    if (field === 'origin' && isCurrentLocationOriginRef.current) {
+      geolocation.request()
+    }
   }
 
   const handleDrawerSelect = (option: AddressOption) => {
     if (activeField === 'origin') {
       setFromOption(option)
       setFromInput(option.label)
+      isCurrentLocationOriginRef.current = option.label === t('location.currentLocation')
     } else {
       setToOption(option)
       setToInput(option.label)
@@ -457,7 +480,14 @@ const resolveCoords = (option: AddressOption | null, input: string) => {
                   placeholder={t('search.origin')}
                   value={fromOption?.label ?? ''}
                   onClick={() => openDrawer('origin')}
+                  isCurrentLocation={isCurrentLocationOriginRef.current}
+                  locationLoading={geolocation.loading && !fromOption}
                 />
+                {geolocation.denied && !fromOption && (
+                  <Typography variant="caption" color="text.secondary" sx={{ pl: 1 }}>
+                    {t('location.denied')}
+                  </Typography>
+                )}
                 <AddressTrigger
                   icon="destination"
                   placeholder={t('search.whereTo')}
@@ -574,8 +604,14 @@ const resolveCoords = (option: AddressOption | null, input: string) => {
         onClose={handleDrawerClose}
         onSelect={handleDrawerSelect}
         fieldType={activeField}
-        initialInputValue={activeField === 'origin' ? fromInput : toInput}
+        initialInputValue={
+          activeField === 'origin' && isCurrentLocationOriginRef.current ? '' : activeField === 'origin' ? fromInput : toInput
+        }
         recentSearches={recentSearches}
+        locationCoords={geolocation.coords}
+        locationLoading={geolocation.loading}
+        locationDenied={geolocation.denied}
+        onRequestLocation={geolocation.request}
       />
     </div>
   )

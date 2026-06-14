@@ -43,6 +43,12 @@
     "bikesAvailable_one": "{{count}} bike available",
     "bikesAvailable_other": "{{count}} bikes available"
   },
+  "location": {
+    "currentLocation": "Your current location",
+    "useCurrentLocation": "Use current location",
+    "locating": "Getting your location…",
+    "denied": "Location access denied"
+  },
   "contextMenu": {
     "origin": "Origin",
     "destination": "Destination"
