@@ -2,7 +2,7 @@
  * Builds data/osm-layers.json — the OSM data the routing engine needs at request time —
  * so searches never call Overpass. Run with `npm run data:osm` (refresh quarterly).
  *
- * The region is fetched in ~6.7 km chunks, one Overpass query each, cached under
+ * The region is fetched in ~4.5 km chunks, one Overpass query each, cached under
  * .cache/osm/ so an interrupted run resumes and re-runs are free (`--refresh` refetches).
  */
 import { createHash } from 'node:crypto'
@@ -14,13 +14,12 @@ import type { LatLng } from '../src/routing/types'
 
 /** Helsinki, Espoo, Vantaa and Kauniainen. */
 const REGION = { south: 60.08, west: 24.45, north: 60.42, east: 25.3 }
-const CHUNK_LAT = 0.06
-const CHUNK_LON = 0.12
-const ENDPOINTS = [
-  'https://overpass-api.de/api/interpreter',
-  'https://overpass.kumi.systems/api/interpreter',
-  'https://overpass.private.coffee/api/interpreter',
-]
+const CHUNK_LAT = 0.04
+const CHUNK_LON = 0.08
+// Public mirrors were unreliable for queries this size; the main instance answers 504
+// when busy, which a patient backoff gets through. Override with OVERPASS_URL.
+const ENDPOINT = process.env.OVERPASS_URL ?? 'https://overpass-api.de/api/interpreter'
+const MAX_ATTEMPTS = 12
 const CACHE_DIR = '.cache/osm'
 const OUT_FILE = 'data/osm-layers.json'
 const META_FILE = 'data/meta.json'
@@ -62,10 +61,9 @@ async function fetchChunk(query: string, refresh: boolean): Promise<OverpassResu
     }
   }
   let lastError: unknown
-  for (let attempt = 0; attempt < 8; attempt++) {
-    const endpoint = ENDPOINTS[attempt % ENDPOINTS.length]
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     try {
-      const res = await fetch(endpoint, {
+      const res = await fetch(ENDPOINT, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -74,13 +72,13 @@ async function fetchChunk(query: string, refresh: boolean): Promise<OverpassResu
         body: `data=${encodeURIComponent(query)}`,
         signal: AbortSignal.timeout(200_000),
       })
-      if (!res.ok) throw new Error(`${endpoint} HTTP ${res.status}`)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const json = (await res.json()) as OverpassResult
       await writeFile(file, JSON.stringify(json))
       return json
     } catch (err) {
       lastError = err
-      const wait = 5_000 * (attempt + 1)
+      const wait = 10_000 * (attempt + 1)
       console.warn(`  attempt ${attempt + 1} failed (${(err as Error).message}); retrying in ${wait / 1000}s`)
       await sleep(wait)
     }
