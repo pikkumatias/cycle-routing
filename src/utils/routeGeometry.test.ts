@@ -2,12 +2,11 @@ import { describe, it, expect } from 'vitest'
 import polylineLib from '@mapbox/polyline'
 import {
   decodePolyline,
-  estimateBboxFromEndpoints,
+  toDisplayLegs,
   getBoundsFromLegsAndPoints,
   type LatLng,
   type RouteLeg,
 } from './routeGeometry'
-import { haversineDistance } from './scenicScore'
 
 // ── decodePolyline ────────────────────────────────────────────────────────────
 
@@ -42,65 +41,19 @@ describe('decodePolyline', () => {
   })
 })
 
-// ── estimateBboxFromEndpoints ─────────────────────────────────────────────────
+// ── toDisplayLegs ─────────────────────────────────────────────────────────────
 
-describe('estimateBboxFromEndpoints', () => {
-  const from: LatLng = [60.0, 24.0]
-  const to: LatLng = [60.1, 24.2]
-
-  it('returns a 2-element bounds array', () => {
-    const bounds = estimateBboxFromEndpoints(from, to)
-    expect(bounds).toHaveLength(2)
+describe('toDisplayLegs', () => {
+  it('smooths each leg and keeps its endpoints', () => {
+    const leg: LatLng[] = [[60.17, 24.94], [60.171, 24.941], [60.172, 24.94]]
+    const [display] = toDisplayLegs([leg])
+    expect(display.positions.length).toBeGreaterThan(leg.length)
+    expect(display.positions[0]).toEqual(leg[0])
+    expect(display.positions[display.positions.length - 1]).toEqual(leg[2])
   })
 
-  it('extends south-west beyond the minimum coordinates', () => {
-    const [[south, west]] = estimateBboxFromEndpoints(from, to)
-    expect(south).toBeLessThan(Math.min(from[0], to[0]))
-    expect(west).toBeLessThan(Math.min(from[1], to[1]))
-  })
-
-  it('extends north-east beyond the maximum coordinates', () => {
-    const [, [north, east]] = estimateBboxFromEndpoints(from, to)
-    expect(north).toBeGreaterThan(Math.max(from[0], to[0]))
-    expect(east).toBeGreaterThan(Math.max(from[1], to[1]))
-  })
-
-  it('pads at least 1 km on every side when from and to are the same point', () => {
-    const same: LatLng = [60.17, 24.94]
-    const [[south, west], [north, east]] = estimateBboxFromEndpoints(same, same)
-    expect(haversineDistance([south, same[1]], same)).toBeCloseTo(1000, -1)
-    expect(haversineDistance([same[0], west], same)).toBeCloseTo(1000, -1)
-    expect(haversineDistance([north, same[1]], same)).toBeCloseTo(1000, -1)
-    expect(haversineDistance([same[0], east], same)).toBeCloseTo(1000, -1)
-  })
-
-  it('pads a mostly north–south trip as far sideways as along its length', () => {
-    // Alppila → Kamppi: ~2.5 km, nearly due south
-    const a: LatLng = [60.192059, 24.945831]
-    const b: LatLng = [60.169857, 24.938379]
-    const [[south, west], [north, east]] = estimateBboxFromEndpoints(a, b)
-    const sidewaysPadM = haversineDistance([60.18, west], [60.18, Math.min(a[1], b[1])])
-    const lengthwisePadM = haversineDistance([south, 24.94], [Math.min(a[0], b[0]), 24.94])
-    expect(sidewaysPadM).toBeGreaterThanOrEqual(990)
-    expect(sidewaysPadM).toBeCloseTo(lengthwisePadM, -1)
-    expect(haversineDistance([60.18, east], [60.18, Math.max(a[1], b[1])])).toBeGreaterThanOrEqual(990)
-    expect(north).toBeGreaterThan(a[0])
-  })
-
-  it('scales padding with trip length beyond the minimum', () => {
-    // ~12 km trip → 25 % = ~3 km padding
-    const a: LatLng = [60.17, 24.80]
-    const b: LatLng = [60.17, 25.016]
-    const [[south]] = estimateBboxFromEndpoints(a, b)
-    expect(haversineDistance([south, 24.9], [60.17, 24.9])).toBeGreaterThan(2900)
-  })
-
-  it('respects a custom paddingFraction', () => {
-    const defaultBounds = estimateBboxFromEndpoints(from, to)
-    const largePaddingBounds = estimateBboxFromEndpoints(from, to, 0.5)
-    const defaultSpan = defaultBounds[1][0] - defaultBounds[0][0]
-    const largeSpan = largePaddingBounds[1][0] - largePaddingBounds[0][0]
-    expect(largeSpan).toBeGreaterThan(defaultSpan)
+  it('drops empty legs', () => {
+    expect(toDisplayLegs([[], [[60.17, 24.94]]])).toHaveLength(1)
   })
 })
 
