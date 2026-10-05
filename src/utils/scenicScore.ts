@@ -76,28 +76,34 @@ const INFRA_WEIGHTS: Partial<Record<PoiCategory, number>> = {
   cycleway_lane: 1,
 }
 
-/** Tighter threshold for traffic signals — segment-based distance, so 10m cleanly excludes parallel streets. */
-export const LIGHT_THRESHOLD_M = 10
+/**
+ * A signal node counts as on the route when it lies within this distance of the
+ * full-resolution polyline. Wide enough for crossing nodes on a parallel cycle track,
+ * tight enough to skip parallel streets.
+ */
+export const LIGHT_THRESHOLD_M = 12
 
-const LIGHT_WEIGHTS: Partial<Record<PoiCategory, number>> = {
-  traffic_signal: 1,
-}
-
-/** Radius for collapsing multiple OSM nodes of the same intersection into one centroid. */
-const SIGNAL_DEDUP_RADIUS_M = 10
+/**
+ * One junction has many signal nodes (one per crossing arm). Hits closer than this
+ * along the route, measured from the first hit of a group, count as a single stop.
+ */
+export const LIGHT_WINDOW_M = 40
 
 const DEG_TO_M = 111_320
 
+type PolylineHit = { distanceM: number; alongM: number }
+
 /**
- * Minimum perpendicular distance in meters from a point to any segment of the polyline.
- * Uses flat-earth Cartesian projection — accurate to <0.1% for distances under 200m.
- * More reliable than vertex-only checking for tight thresholds (<30m).
+ * Nearest point on the polyline: perpendicular distance in meters plus the distance
+ * travelled along the route to reach it. Flat-earth projection around the point —
+ * accurate to <0.1% for distances under 200m.
  */
-function minDistanceToPolylineSegments(point: LatLng, poly: LatLng[]): number {
-  if (poly.length === 0) return Infinity
-  if (poly.length === 1) return haversineDistance(point, poly[0])
+function nearestOnPolyline(point: LatLng, poly: LatLng[]): PolylineHit {
+  if (poly.length === 0) return { distanceM: Infinity, alongM: 0 }
+  if (poly.length === 1) return { distanceM: haversineDistance(point, poly[0]), alongM: 0 }
   const cosLat = Math.cos((point[0] * Math.PI) / 180)
-  let minDist = Infinity
+  let best: PolylineHit = { distanceM: Infinity, alongM: 0 }
+  let travelled = 0
   for (let i = 0; i < poly.length - 1; i++) {
     const ax = (poly[i][1] - point[1]) * DEG_TO_M * cosLat
     const ay = (poly[i][0] - point[0]) * DEG_TO_M
@@ -105,36 +111,66 @@ function minDistanceToPolylineSegments(point: LatLng, poly: LatLng[]): number {
     const by = (poly[i + 1][0] - point[0]) * DEG_TO_M
     const abx = bx - ax, aby = by - ay
     const lenSq = abx * abx + aby * aby
-    let dist: number
-    if (lenSq === 0) {
-      dist = Math.sqrt(ax * ax + ay * ay)
-    } else {
-      const t = Math.max(0, Math.min(1, (-ax * abx - ay * aby) / lenSq))
-      const cx = ax + t * abx, cy = ay + t * aby
-      dist = Math.sqrt(cx * cx + cy * cy)
-    }
-    if (dist < minDist) minDist = dist
+    const t = lenSq === 0 ? 0 : Math.max(0, Math.min(1, (-ax * abx - ay * aby) / lenSq))
+    const cx = ax + t * abx, cy = ay + t * aby
+    const dist = Math.sqrt(cx * cx + cy * cy)
+    const segLen = Math.sqrt(lenSq)
+    if (dist < best.distanceM) best = { distanceM: dist, alongM: travelled + t * segLen }
+    travelled += segLen
   }
-  return minDist
+  return best
 }
 
-/** Groups POIs into proximity clusters and returns one centroid POI per cluster. */
-function clusterToCentroids(pois: OsmPoi[], radiusM: number): OsmPoi[] {
-  const clusters: OsmPoi[][] = []
-  for (const poi of pois) {
-    const match = clusters.find((c) =>
-      c.some((k) => haversineDistance([poi.lat, poi.lon], [k.lat, k.lon]) <= radiusM),
-    )
-    if (match) {
-      match.push(poi)
+/**
+ * Signal stops along a route. Every signal node within `thresholdM` of the
+ * full-resolution polyline is a hit; hits are ordered along the route and grouped so
+ * a group spans at most `windowM` from its first hit. Each group is one stop, returned
+ * as the centroid of its nodes (used for the map markers).
+ */
+export function findSignalStops(
+  signals: OsmPoi[],
+  routePolyline: LatLng[],
+  thresholdM: number = LIGHT_THRESHOLD_M,
+  windowM: number = LIGHT_WINDOW_M,
+): OsmPoi[] {
+  if (routePolyline.length === 0) return []
+
+  // Cheap bbox pre-filter before the per-segment distance scan.
+  let minLat = Infinity, maxLat = -Infinity, minLon = Infinity, maxLon = -Infinity
+  for (const [lat, lon] of routePolyline) {
+    if (lat < minLat) minLat = lat
+    if (lat > maxLat) maxLat = lat
+    if (lon < minLon) minLon = lon
+    if (lon > maxLon) maxLon = lon
+  }
+  const padLat = thresholdM / DEG_TO_M
+  const padLon = padLat / Math.cos((((minLat + maxLat) / 2) * Math.PI) / 180)
+
+  const hits: Array<{ poi: OsmPoi; alongM: number }> = []
+  for (const poi of signals) {
+    if (
+      poi.lat < minLat - padLat || poi.lat > maxLat + padLat ||
+      poi.lon < minLon - padLon || poi.lon > maxLon + padLon
+    ) continue
+    const hit = nearestOnPolyline([poi.lat, poi.lon], routePolyline)
+    if (hit.distanceM <= thresholdM) hits.push({ poi, alongM: hit.alongM })
+  }
+  hits.sort((a, b) => a.alongM - b.alongM)
+
+  const groups: OsmPoi[][] = []
+  let groupStart = -Infinity
+  for (const { poi, alongM } of hits) {
+    if (alongM - groupStart > windowM) {
+      groups.push([poi])
+      groupStart = alongM
     } else {
-      clusters.push([poi])
+      groups[groups.length - 1].push(poi)
     }
   }
-  return clusters.map((c) => ({
-    ...c[0],
-    lat: c.reduce((sum, p) => sum + p.lat, 0) / c.length,
-    lon: c.reduce((sum, p) => sum + p.lon, 0) / c.length,
+  return groups.map((g) => ({
+    ...g[0],
+    lat: g.reduce((sum, p) => sum + p.lat, 0) / g.length,
+    lon: g.reduce((sum, p) => sum + p.lon, 0) / g.length,
   }))
 }
 
@@ -149,7 +185,7 @@ export type RouteScores = {
   scenicPoiCount: number
   /** Raw count of infrastructure segments near route */
   infraSegmentCount: number
-  /** Raw count of traffic signals within LIGHT_THRESHOLD_M of route */
+  /** Number of signal stops along the route (see findSignalStops) */
   lightCount: number
   /** Weighted light score (count × weight) */
   lightScore: number
@@ -159,9 +195,8 @@ export type RouteScores = {
 /**
  * Score a route polyline against POIs with weighted categories.
  *
- * Traffic signals are handled separately: proximity is measured to segments
- * (not vertices) for precision, nearby signals are clustered into intersection
- * centroids before counting, and only those centroids appear in nearbyPois.
+ * Traffic signals are handled separately by findSignalStops on the full-resolution
+ * polyline; only the stop centroids appear in nearbyPois.
  *
  * calmScore is set to 0 here — use `normalizeScores()` to compute it
  * across all route variants.
@@ -175,19 +210,15 @@ export function scoreRouteDetailed(
 ): RouteScores {
   const sampled = samplePolyline(routePolyline, sampleStep)
 
-  // Filter signals by segment-based proximity first, then cluster into intersection centroids.
-  // This ensures off-route signals are excluded before clustering, and each intersection
-  // produces exactly one icon at the centroid of its nearby nodes.
-  const nearbyRawSignals = pois.filter(
-    (p) =>
-      p.category === 'traffic_signal' &&
-      minDistanceToPolylineSegments([p.lat, p.lon], sampled) <= lightThresholdMeters,
+  const signalStops = findSignalStops(
+    pois.filter((p) => p.category === 'traffic_signal'),
+    routePolyline,
+    lightThresholdMeters,
   )
-  const clusteredSignals = clusterToCentroids(nearbyRawSignals, SIGNAL_DEDUP_RADIUS_M)
-  const lightCount = clusteredSignals.length
-  const lightScore = lightCount * LIGHT_WEIGHTS.traffic_signal!
+  const lightCount = signalStops.length
+  const lightScore = lightCount
 
-  const nearbyPois: OsmPoi[] = [...clusteredSignals]
+  const nearbyPois: OsmPoi[] = [...signalStops]
   let scenicScore = 0
   let infraScore = 0
   let scenicPoiCount = 0

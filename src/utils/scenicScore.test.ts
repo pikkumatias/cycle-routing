@@ -3,6 +3,8 @@ import {
   haversineDistance,
   minDistanceToPolyline,
   scorePoisNearRoute,
+  findSignalStops,
+  samplePolyline,
 } from './scenicScore'
 import type { LatLng } from './routeGeometry'
 import type { OsmPoi } from './overpass'
@@ -82,5 +84,68 @@ describe('scorePoisNearRoute', () => {
     const result = scorePoisNearRoute(pois, polyline, 1)
     expect(result.count).toBe(1)
     expect(result.nearbyPois[0].lat).toBe(60.175)
+  })
+})
+
+describe('findSignalStops', () => {
+  const LAT0 = 60.17
+  const LON0 = 24.93
+  const M_PER_DEG_LAT = 111_320
+  const M_PER_DEG_LON = 111_320 * Math.cos((LAT0 * Math.PI) / 180)
+  /** Point `east` / `north` metres from the origin. */
+  const at = (east: number, north: number): [number, number] => [
+    LAT0 + north / M_PER_DEG_LAT,
+    LON0 + east / M_PER_DEG_LON,
+  ]
+  const signal = (east: number, north: number): OsmPoi => {
+    const [lat, lon] = at(east, north)
+    return { lat, lon, category: 'traffic_signal' }
+  }
+  // 1 km due east with a vertex every 10 m
+  const straight = Array.from({ length: 101 }, (_, i) => at(i * 10, 0))
+
+  it('counts nothing on a route without signals', () => {
+    expect(findSignalStops([], straight)).toEqual([])
+  })
+
+  it('merges the signal nodes of one junction into a single stop', () => {
+    const junction = [signal(500, 0), signal(510, 8), signal(520, -8), signal(530, 0)]
+    expect(findSignalStops(junction, straight)).toHaveLength(1)
+  })
+
+  it('counts two junctions 100 m apart as two stops', () => {
+    expect(findSignalStops([signal(300, 0), signal(400, 0)], straight)).toHaveLength(2)
+  })
+
+  it('ignores signals on a parallel street 30 m away', () => {
+    expect(findSignalStops([signal(500, 30)], straight)).toHaveLength(0)
+  })
+
+  it('finds a signal at a turn that every-3rd-vertex sampling would cut off', () => {
+    // East 100 m, then north 100 m; the corner vertex is index 10
+    const lShape = [
+      ...Array.from({ length: 11 }, (_, i) => at(i * 10, 0)),
+      ...Array.from({ length: 10 }, (_, i) => at(100, (i + 1) * 10)),
+    ]
+    const cornerSignal = signal(103, -3)
+    expect(findSignalStops([cornerSignal], lShape)).toHaveLength(1)
+    // The old scorer measured against samplePolyline(…, 3), which skips the corner
+    const sampled = samplePolyline(lShape, 3)
+    expect(sampled.some(([lat, lon]) => lat === lShape[10][0] && lon === lShape[10][1])).toBe(false)
+  })
+
+  it('does not depend on the order of the input nodes', () => {
+    const nodes = [signal(530, 0), signal(300, 2), signal(500, 0), signal(700, -4), signal(515, 5)]
+    const forward = findSignalStops(nodes, straight).length
+    const reversed = findSignalStops([...nodes].reverse(), straight).length
+    expect(forward).toBe(3)
+    expect(reversed).toBe(forward)
+  })
+
+  it('places each stop at the centroid of its nodes', () => {
+    const [stop] = findSignalStops([signal(500, 4), signal(520, -4)], straight)
+    const [lat, lon] = at(510, 0)
+    expect(stop.lat).toBeCloseTo(lat, 6)
+    expect(stop.lon).toBeCloseTo(lon, 6)
   })
 })
