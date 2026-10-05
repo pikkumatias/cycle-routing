@@ -61,23 +61,31 @@ export function getRouteLegsFromPlanResponse(response: unknown): RouteLeg[] {
     .filter((leg: RouteLeg) => leg.positions.length > 0)
 }
 
+const M_PER_DEG_LAT = 111_320
+
 /**
- * Estimate a bounding box from just origin and destination with padding.
- * Bicycle routes typically stay within ~20% beyond the endpoint bounding box.
- * Used to start Overpass fetch in parallel with route requests.
+ * Estimate a bounding box from just origin and destination, padded by the same distance
+ * in metres on every side: `max(minPaddingM, paddingFraction × trip length)`.
+ * Detours scale with trip length, not with each axis's span — a mostly north–south trip
+ * still needs room east and west, or candidates that swing sideways leave the OSM data
+ * area and look free of traffic lights. Used to start Overpass in parallel with routing.
  */
 export function estimateBboxFromEndpoints(
   from: LatLng,
   to: LatLng,
-  paddingFraction: number = 0.2,
+  paddingFraction: number = 0.25,
+  minPaddingM: number = 1000,
 ): [LatLng, LatLng] {
   const minLat = Math.min(from[0], to[0])
   const maxLat = Math.max(from[0], to[0])
   const minLon = Math.min(from[1], to[1])
   const maxLon = Math.max(from[1], to[1])
 
-  const latPad = (maxLat - minLat) * paddingFraction || 0.005
-  const lonPad = (maxLon - minLon) * paddingFraction || 0.005
+  const cosLat = Math.cos((((minLat + maxLat) / 2) * Math.PI) / 180)
+  const tripM = Math.hypot((maxLat - minLat) * M_PER_DEG_LAT, (maxLon - minLon) * M_PER_DEG_LAT * cosLat)
+  const padM = Math.max(minPaddingM, tripM * paddingFraction)
+  const latPad = padM / M_PER_DEG_LAT
+  const lonPad = padM / (M_PER_DEG_LAT * cosLat)
 
   return [
     [minLat - latPad, minLon - lonPad],

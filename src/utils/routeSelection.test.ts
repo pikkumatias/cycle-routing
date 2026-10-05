@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { computeOverlap, deduplicateRoutes, selectRoutes, selectDefaultRoutes } from './routeSelection'
+import { computeOverlap, deduplicateRoutes, selectCalmRoute, selectDefaultRoutes } from './routeSelection'
 import type { LatLng } from './routeGeometry'
 import type { CandidateRoute } from '../api/digitransit'
 import type { OsmPoi } from './overpass'
@@ -91,13 +91,7 @@ describe('deduplicateRoutes', () => {
   })
 })
 
-describe('selectRoutes', () => {
-  const parkPoi: OsmPoi = {
-    lat: 60.171,
-    lon: 24.941,
-    category: 'park',
-    tags: { leisure: 'park' },
-  }
+describe('selectCalmRoute', () => {
   const cyclewayPoi: OsmPoi = {
     lat: 60.18,
     lon: 24.96,
@@ -105,108 +99,105 @@ describe('selectRoutes', () => {
     tags: { highway: 'cycleway' },
   }
 
-  it('assigns fastest to the route with lowest duration', () => {
-    const fast = makeCandidate([[60.17, 24.94], [60.175, 24.945]], 300)
-    const slow = makeCandidate([[61.0, 25.5], [61.05, 25.55]], 900)
-    const result = selectRoutes([fast, slow], [])
-    expect(result.fastest.durationSec).toBe(300)
+  it('picks the unshown route nearest cycling infrastructure', () => {
+    const nearCycleway = makeCandidate([[60.18, 24.96], [60.181, 24.961]], 700)
+    const farFromCycleway = makeCandidate([[60.10, 24.80], [60.11, 24.81]], 500)
+    const result = selectCalmRoute([nearCycleway, farFromCycleway], [cyclewayPoi], [])
+    expect(result?.durationSec).toBe(700)
+    expect(result?.infraScore).toBeGreaterThan(0)
   })
 
-  it('assigns scenic to the route nearest scenic POIs', () => {
-    // Route A passes near the park POI
-    const nearPark = makeCandidate(
-      [[60.17, 24.94], [60.171, 24.941], [60.172, 24.942]],
-      600,
+  it('never returns a route that is already shown', () => {
+    const nearCycleway = makeCandidate([[60.18, 24.96], [60.181, 24.961]], 700)
+    const farFromCycleway = makeCandidate([[60.10, 24.80], [60.11, 24.81]], 500)
+    const result = selectCalmRoute(
+      [nearCycleway, farFromCycleway],
+      [cyclewayPoi],
+      [nearCycleway.response],
     )
-    // Route B is far from the park
-    const farFromPark = makeCandidate(
-      [[60.20, 25.0], [60.21, 25.01], [60.22, 25.02]],
-      500,
-    )
-    const result = selectRoutes([nearPark, farFromPark], [parkPoi])
-    expect(result.scenic.scenicScore).toBeGreaterThan(0)
+    expect(result?.response).toBe(farFromCycleway.response)
   })
 
-  it('assigns calm to the route nearest cycling infrastructure', () => {
-    // Route near cycleway
-    const nearCycleway = makeCandidate(
-      [[60.18, 24.96], [60.181, 24.961]],
-      700,
-    )
-    // Route far from cycleway
-    const farFromCycleway = makeCandidate(
-      [[60.10, 24.80], [60.11, 24.81]],
-      500,
-    )
-    const result = selectRoutes([nearCycleway, farFromCycleway], [cyclewayPoi])
-    expect(result.calm.infraScore).toBeGreaterThan(0)
-  })
-
-  it('handles a single candidate by assigning it to all categories', () => {
+  it('returns null when every candidate is already shown', () => {
     const only = makeCandidate([[60.17, 24.94]], 600)
-    const result = selectRoutes([only], [])
-    expect(result.fastest.durationSec).toBe(600)
-    expect(result.scenic.durationSec).toBe(600)
-    expect(result.calm.durationSec).toBe(600)
-  })
-
-  it('throws on empty candidate array', () => {
-    expect(() => selectRoutes([], [])).toThrow('No candidate routes available')
-  })
-
-  it('returns all three categories', () => {
-    const a = makeCandidate([[60.17, 24.94]], 500)
-    const b = makeCandidate([[60.18, 24.95]], 600)
-    const result = selectRoutes([a, b], [])
-    expect(result).toHaveProperty('fastest')
-    expect(result).toHaveProperty('scenic')
-    expect(result).toHaveProperty('calm')
+    expect(selectCalmRoute([only], [], [only.response])).toBeNull()
   })
 })
 
 describe('selectDefaultRoutes', () => {
-  const signalPoi: OsmPoi = {
-    lat: 60.171,
-    lon: 24.941,
-    category: 'traffic_signal',
-    tags: { highway: 'traffic_signals' },
-  }
+  // Routes run due east along separate latitudes; signals sit on a route's line.
+  const eastward = (lat: number): LatLng[] =>
+    Array.from({ length: 21 }, (_, i) => [lat, 24.9 + i * 0.001] as LatLng)
+  const signalsOn = (lat: number, count: number): OsmPoi[] =>
+    Array.from({ length: count }, (_, i) => ({
+      lat,
+      lon: 24.901 + i * 0.004, // ~220 m apart → separate stops
+      category: 'traffic_signal' as const,
+      tags: { highway: 'traffic_signals' },
+    }))
 
   it('returns only fewestLights and fastest', () => {
-    const a = makeCandidate([[60.17, 24.94], [60.175, 24.945]], 500)
-    const b = makeCandidate([[60.18, 24.95], [60.185, 24.955]], 600)
+    const a = makeCandidate(eastward(60.17), 500)
+    const b = makeCandidate(eastward(60.18), 600)
     const result = selectDefaultRoutes([a, b], [])
     expect(Object.keys(result).sort()).toEqual(['fastest', 'fewestLights'])
   })
 
   it('assigns fastest to the route with lowest duration', () => {
-    const fast = makeCandidate([[60.17, 24.94], [60.175, 24.945]], 300)
-    const slow = makeCandidate([[61.0, 25.5], [61.05, 25.55]], 900)
-    const result = selectDefaultRoutes([fast, slow], [])
-    expect(result.fastest.durationSec).toBe(300)
+    const fast = makeCandidate(eastward(60.17), 300)
+    const slow = makeCandidate(eastward(60.18), 900)
+    expect(selectDefaultRoutes([fast, slow], []).fastest.durationSec).toBe(300)
   })
 
-  it('picks the signal-free route as fewest lights', () => {
-    // Fast route passes through the signal; the slower route avoids it entirely.
-    const throughSignal = makeCandidate(
-      [[60.17, 24.94], [60.171, 24.941], [60.172, 24.942]],
-      300,
-    )
-    const noSignal = makeCandidate(
-      [[60.20, 25.0], [60.21, 25.01], [60.22, 25.02]],
-      900,
-    )
-    const result = selectDefaultRoutes([throughSignal, noSignal], [signalPoi])
-    expect(result.fastest.durationSec).toBe(300)
-    expect(result.fewestLights.durationSec).toBe(900)
-    expect(result.fewestLights.lightCount).toBe(0)
+  it('picks a route that avoids at least two lights within the detour cap', () => {
+    const fast = makeCandidate(eastward(60.17), 600)
+    const calmer = makeCandidate(eastward(60.18), 700)
+    const result = selectDefaultRoutes([fast, calmer], [...signalsOn(60.17, 4), ...signalsOn(60.18, 1)])
+    expect(result.fastest.lightCount).toBe(4)
+    expect(result.fewestLights.durationSec).toBe(700)
+    expect(result.fewestLights.lightCount).toBe(1)
+  })
+
+  it('merges into fastest when only one light is saved', () => {
+    const fast = makeCandidate(eastward(60.17), 600)
+    const other = makeCandidate(eastward(60.18), 650)
+    const result = selectDefaultRoutes([fast, other], [...signalsOn(60.17, 3), ...signalsOn(60.18, 2)])
+    expect(result.fewestLights).toBe(result.fastest)
+  })
+
+  it('merges into fastest when fastest already has the fewest lights', () => {
+    const fast = makeCandidate(eastward(60.17), 600)
+    const other = makeCandidate(eastward(60.18), 650)
+    const result = selectDefaultRoutes([fast, other], signalsOn(60.18, 3))
+    expect(result.fewestLights).toBe(result.fastest)
+  })
+
+  it('ignores light-free routes beyond the +30 % detour cap', () => {
+    const fast = makeCandidate(eastward(60.17), 1200) // cap = +360 s
+    const tooSlow = makeCandidate(eastward(60.18), 1600)
+    const result = selectDefaultRoutes([fast, tooSlow], signalsOn(60.17, 5))
+    expect(result.fewestLights).toBe(result.fastest)
+  })
+
+  it('allows at least four extra minutes on short trips', () => {
+    const fast = makeCandidate(eastward(60.17), 300) // 30 % = 90 s, floor = 240 s
+    const detour = makeCandidate(eastward(60.18), 530)
+    const result = selectDefaultRoutes([fast, detour], signalsOn(60.17, 3))
+    expect(result.fewestLights.durationSec).toBe(530)
+  })
+
+  it('breaks ties in light count by duration', () => {
+    const fast = makeCandidate(eastward(60.17), 600)
+    const slower = makeCandidate(eastward(60.18), 700)
+    const quicker = makeCandidate(eastward(60.19), 650)
+    const result = selectDefaultRoutes([fast, slower, quicker], signalsOn(60.17, 4))
+    expect(result.fewestLights.durationSec).toBe(650)
   })
 
   it('handles a single candidate by assigning it to both categories', () => {
     const only = makeCandidate([[60.17, 24.94]], 600)
     const result = selectDefaultRoutes([only], [])
-    expect(result.fastest.durationSec).toBe(600)
-    expect(result.fewestLights.durationSec).toBe(600)
+    expect(result.fewestLights).toBe(result.fastest)
   })
 
   it('throws on empty candidate array', () => {

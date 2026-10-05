@@ -7,6 +7,7 @@ import {
   type LatLng,
   type RouteLeg,
 } from './routeGeometry'
+import { haversineDistance } from './scenicScore'
 
 // ── decodePolyline ────────────────────────────────────────────────────────────
 
@@ -64,12 +65,34 @@ describe('estimateBboxFromEndpoints', () => {
     expect(east).toBeGreaterThan(Math.max(from[1], to[1]))
   })
 
-  it('applies a minimum padding when from and to are the same point', () => {
+  it('pads at least 1 km on every side when from and to are the same point', () => {
     const same: LatLng = [60.17, 24.94]
     const [[south, west], [north, east]] = estimateBboxFromEndpoints(same, same)
-    // Default minimum padding is 0.005 on each side → span is ~0.01 (floating point safe)
-    expect(north - south).toBeCloseTo(0.01, 5)
-    expect(east - west).toBeCloseTo(0.01, 5)
+    expect(haversineDistance([south, same[1]], same)).toBeCloseTo(1000, -1)
+    expect(haversineDistance([same[0], west], same)).toBeCloseTo(1000, -1)
+    expect(haversineDistance([north, same[1]], same)).toBeCloseTo(1000, -1)
+    expect(haversineDistance([same[0], east], same)).toBeCloseTo(1000, -1)
+  })
+
+  it('pads a mostly north–south trip as far sideways as along its length', () => {
+    // Alppila → Kamppi: ~2.5 km, nearly due south
+    const a: LatLng = [60.192059, 24.945831]
+    const b: LatLng = [60.169857, 24.938379]
+    const [[south, west], [north, east]] = estimateBboxFromEndpoints(a, b)
+    const sidewaysPadM = haversineDistance([60.18, west], [60.18, Math.min(a[1], b[1])])
+    const lengthwisePadM = haversineDistance([south, 24.94], [Math.min(a[0], b[0]), 24.94])
+    expect(sidewaysPadM).toBeGreaterThanOrEqual(990)
+    expect(sidewaysPadM).toBeCloseTo(lengthwisePadM, -1)
+    expect(haversineDistance([60.18, east], [60.18, Math.max(a[1], b[1])])).toBeGreaterThanOrEqual(990)
+    expect(north).toBeGreaterThan(a[0])
+  })
+
+  it('scales padding with trip length beyond the minimum', () => {
+    // ~12 km trip → 25 % = ~3 km padding
+    const a: LatLng = [60.17, 24.80]
+    const b: LatLng = [60.17, 25.016]
+    const [[south]] = estimateBboxFromEndpoints(a, b)
+    expect(haversineDistance([south, 24.9], [60.17, 24.9])).toBeGreaterThan(2900)
   })
 
   it('respects a custom paddingFraction', () => {

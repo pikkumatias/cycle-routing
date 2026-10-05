@@ -12,9 +12,9 @@
     "findRoutes": "Find routes",
     "findingRoutes": "Finding routes…",
     "fastest": "Fastest",
-    "scenic": "Scenic",
     "calm": "Calm",
     "fewestLights": "Fewest Lights",
+    "alsoFewestLights": "Also fewest lights",
     "lights_zero": "🚦 No lights",
     "lights_one": "🚦 {{count}} light",
     "lights_other": "🚦 {{count}} lights",
@@ -27,7 +27,8 @@
     "paths_one": "{{count}} path",
     "paths_other": "{{count}} paths",
     "moreOptions": "More route options",
-    "scoringUnavailable": "Scoring unavailable — Overpass API timed out."
+    "scoringUnavailable": "Scoring unavailable — Overpass API timed out.",
+    "noCalmerAlternative": "No calmer alternative found"
   },
   "map": {
     "start": "Start",

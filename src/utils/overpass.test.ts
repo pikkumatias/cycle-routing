@@ -2,6 +2,8 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 import {
   fetchParksAndWater,
   boundsToBbox,
+  classifyPoi,
+  snapBboxOutward,
   osmPoisToLatLngs,
   type OsmPoi,
 } from './overpass'
@@ -141,4 +143,51 @@ describe('fetchParksAndWater', () => {
       expect.objectContaining({ method: 'POST' }),
     )
   }, 15000)
+})
+
+describe('classifyPoi traffic signals', () => {
+  it('classifies intersection signal nodes', () => {
+    expect(classifyPoi({ highway: 'traffic_signals' })).toBe('traffic_signal')
+  })
+
+  it('classifies signalised crossings tagged the Helsinki way', () => {
+    expect(classifyPoi({ highway: 'crossing', crossing: 'traffic_signals' })).toBe('traffic_signal')
+  })
+
+  it.each(['blinker', 'emergency', 'ramp_meter'])('ignores %s signals that never stop cyclists', (kind) => {
+    expect(classifyPoi({ highway: 'traffic_signals', traffic_signals: kind })).toBeUndefined()
+  })
+
+  it('leaves unsignalised crossings unclassified', () => {
+    expect(classifyPoi({ highway: 'crossing', crossing: 'uncontrolled' })).toBeUndefined()
+  })
+})
+
+describe('snapBboxOutward', () => {
+  it('expands every edge outward to the 0.01° grid', () => {
+    expect(snapBboxOutward({ south: 60.1649, west: 24.9301, north: 60.1751, east: 24.9449 })).toEqual({
+      south: 60.16, west: 24.93, north: 60.18, east: 24.95,
+    })
+  })
+
+  it('keeps edges that already sit on the grid', () => {
+    expect(snapBboxOutward({ south: 60.16, west: 24.93, north: 60.18, east: 24.96 })).toEqual({
+      south: 60.16, west: 24.93, north: 60.18, east: 24.96,
+    })
+  })
+
+  it('maps a box and a slightly larger box in the same cells to the same snapped box', () => {
+    const small = snapBboxOutward({ south: 60.161, west: 24.931, north: 60.171, east: 24.941 })
+    const large = snapBboxOutward({ south: 60.1601, west: 24.9301, north: 60.1799, east: 24.9499 })
+    expect(large).toEqual(small)
+  })
+})
+
+describe('combined query', () => {
+  it('requests signalised crossing nodes', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ elements: [] }) } as Response)
+    await fetchParksAndWater({ south: 60.50, west: 24.93, north: 60.52, east: 24.96 })
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body as string).query as string
+    expect(body).toContain('node["crossing"="traffic_signals"]')
+  })
 })
