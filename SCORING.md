@@ -83,8 +83,8 @@ than 25 m from every shown route. A near-duplicate can still get a card when it 
 
 ## Data (`layers.ts`, `scripts/build-osm-layers.ts`)
 
-`data/osm-layers.json` is built offline by `npm run data:osm` from cached Overpass chunks
-covering Helsinki, Espoo, Vantaa and Kauniainen: stopping signals, major roads (class,
+`data/osm-layers.json` is built offline by `npm run data:osm` from BBBike's daily Helsinki
+extract (lat 60.11–60.35, lon 24.59–25.24): stopping signals, major roads (class,
 name, maxspeed, lanes, painted lane, tram, bridge/tunnel, signals on the road), calm-network
 nodes every 150 m, and non-major bridges/tunnels. `data/meta.json` records the OSM
 timestamp. The API rejects trips outside the file's bbox.

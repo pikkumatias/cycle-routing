@@ -66,7 +66,7 @@ export default async function handler(req: VercelReq, res: VercelRes) {
     const [south, west, north, east] = bbox
     const inside = (p: LatLon) => p.lat >= south && p.lat <= north && p.lon >= west && p.lon <= east
     if (!inside(from) || !inside(to)) {
-      return res.status(400).json({ error: 'Routing is only available within Helsinki, Espoo, Vantaa and Kauniainen.' })
+      return res.status(400).json({ error: 'Routing is only available in the Helsinki region map area.' })
     }
     const tripM = haversineDistance([from.lat, from.lon], [to.lat, to.lon])
     if (tripM < MIN_TRIP_M || tripM > MAX_TRIP_M) {

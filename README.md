@@ -65,11 +65,11 @@ When a route is displayed, the app fetches active construction works and traffic
 
 ## OSM layer data
 
-Scoring reads `data/osm-layers.json` (signals, major roads with speed/lane/tram attributes, the car-free path network, bridges and tunnels) instead of calling Overpass per search. Refresh it every few months:
+Scoring reads `data/osm-layers.json` (signals, major roads with speed/lane/tram attributes, the car-free path network, bridges and tunnels) instead of calling Overpass per search. It is built from [BBBike's daily Helsinki extract](https://download.bbbike.org/osm/bbbike/Helsinki/), which covers lat 60.11–60.35, lon 24.59–25.24; trips outside that box are rejected. Refresh it every few months:
 
 ```bash
-npm run data:osm            # resumes from .cache/osm/
-npm run data:osm -- --refresh
+npm run data:osm -- --refresh          # re-download the extract (~15 s)
+npm run data:osm -- --source=overpass  # alternative source; slow when Overpass is busy
 ```
 
 `data/meta.json` records the OSM timestamp and counts.

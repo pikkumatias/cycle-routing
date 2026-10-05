@@ -25,14 +25,14 @@ Goal: trustworthy measurements, at most three genuinely different cards
 - [x] Freeze today's selection as `sandbox/lib/legacy.ts` baseline
 
 ## Phase 2 — server pipeline and new UI (`routing/phase-2-server`)
-- [ ] `api/route-plan.ts` running `planRoutes()` (validation, deadline, partial results)
-- [ ] Pin functions to a Nordic region (`vercel.json`), include the layer data
-- [ ] Client `src/api/routePlan.ts`; App state `{plan, selectedId}`
-- [ ] RouteCards: cards + badges + metric row (min · km · lights · calm band · +N min)
-- [ ] RouteMap: routes by id; light markers = counted signal stops
-- [ ] Locales: drop scenic/paths/moreOptions/scoringUnavailable; add badges and bands
-- [ ] Delete legacy scoring, Overpass client/proxy, batch/single route endpoints, benchmark duplicates
-- [ ] Rewrite SCORING.md; update CLAUDE.md and README
+- [x] `api/route-plan.ts` running `planRoutes()` (validation, deadline, partial results)
+- [x] Pin functions to a Nordic region (`vercel.json`), include the layer data
+- [x] Client `src/api/routePlan.ts`; App state `{plan, selectedId}`
+- [x] RouteCards: cards + badges + metric row (min · km · lights · calm band · +N min)
+- [x] RouteMap: routes by id; light markers = counted signal stops
+- [x] Locales: drop scenic/paths/moreOptions/scoringUnavailable; add badges and bands
+- [x] Delete legacy scoring, Overpass client/proxy, batch/single route endpoints, benchmark duplicates
+- [x] Rewrite SCORING.md; update CLAUDE.md and README
 
 ## Phase 3 — sandbox and calibration (`routing/phase-3-sandbox`)
 - [ ] `sandbox/cli.ts` steps: generate, reference, baseline, select, dossiers, fit, yield, report, fixtures
