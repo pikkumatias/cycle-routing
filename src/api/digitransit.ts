@@ -9,7 +9,7 @@ export type TriangleFactors = {
   slope: number
 }
 
-export type RouteCategory = 'fastest' | 'scenic' | 'calm' | 'fewestLights'
+export type RouteCategory = 'fastest' | 'calm' | 'fewestLights'
 
 type OtpLeg = {
   distance?: number
@@ -27,15 +27,15 @@ export type OtpPlanResponse = {
 
 /**
  * Default presets fetched on every search (factors must sum to 1.0). Two presets keep
- * the search fast: the fastest route, plus a safety-optimized route that follows
- * cycleways and skips most signalized intersections — the fewest-lights candidate.
+ * the search fast: the fastest route plus a safety-optimized one. Fewest lights is
+ * picked from both by measured signal stops — neither preset optimizes for lights.
  */
 export const DEFAULT_PRESETS: TriangleFactors[] = [
   { time: 1.0, safety: 0.0, slope: 0.0 },  // fastest possible
-  { time: 0.0, safety: 1.0, slope: 0.0 },  // best cycling infra / fewest lights
+  { time: 0.0, safety: 1.0, slope: 0.0 },  // best cycling infra
 ]
 
-/** Extra presets fetched lazily when the user expands "more route options" (scenic/calm). */
+/** Extra presets fetched lazily when the user expands "more route options" (calm). */
 export const EXTRA_PRESETS: TriangleFactors[] = [
   { time: 0.0,  safety: 0.0,  slope: 1.0  },  // flattest route
   { time: 0.33, safety: 0.34, slope: 0.33 },  // balanced

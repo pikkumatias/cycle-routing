@@ -12,9 +12,9 @@
     "findRoutes": "Hae reittejä",
     "findingRoutes": "Haetaan reittejä…",
     "fastest": "Nopein",
-    "scenic": "Maisemallinen",
     "calm": "Rauhallinen",
     "fewestLights": "Vähiten valoja",
+    "alsoFewestLights": "Myös vähiten valoja",
     "lights_zero": "🚦 Ei liikennevaloja",
     "lights_one": "🚦 {{count}} valo",
     "lights_other": "🚦 {{count}} valoa",
@@ -27,7 +27,8 @@
     "paths_one": "{{count}} reitti",
     "paths_other": "{{count}} reittiä",
     "moreOptions": "Lisää reittivaihtoehtoja",
-    "scoringUnavailable": "Pisteytyksessä ongelma — Overpass API aikakatkaisu."
+    "scoringUnavailable": "Pisteytyksessä ongelma — Overpass API aikakatkaisu.",
+    "noCalmerAlternative": "Rauhallisempaa vaihtoehtoa ei löytynyt"
   },
   "map": {
     "start": "Lähtö",

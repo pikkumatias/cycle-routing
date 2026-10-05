@@ -30,9 +30,8 @@ function makeRoute(overrides?: Partial<ScoredRoute>): ScoredRoute {
 }
 
 const mockRoutes: Record<RouteCategory, ScoredRoute> = {
-  fastest:      makeRoute({ durationSec: 600, calmScore: 50 }),
-  scenic:       makeRoute({ durationSec: 900, calmScore: 70 }),
-  calm:         makeRoute({ durationSec: 750, calmScore: 100 }),
+  fastest:      makeRoute({ durationSec: 600, calmScore: 50, lightCount: 5 }),
+  calm:         makeRoute({ durationSec: 750, calmScore: 100, lightCount: 4 }),
   fewestLights: makeRoute({ durationSec: 840, lightCount: 2 }),
 }
 
@@ -49,20 +48,38 @@ describe('RouteCardsSkeleton', () => {
 // ── RouteCards ────────────────────────────────────────────────────────────────
 
 describe('RouteCards', () => {
-  it('renders all four route category labels', () => {
+  it('renders all three route category labels', () => {
     render(<RouteCards routes={mockRoutes} selectedRoute="calm" onSelect={() => {}} />)
     expect(screen.getByText('Fastest')).toBeInTheDocument()
-    expect(screen.getByText('Scenic')).toBeInTheDocument()
     expect(screen.getByText('Calm')).toBeInTheDocument()
     expect(screen.getByText('Fewest Lights')).toBeInTheDocument()
   })
 
-  it('renders 4 cards total', () => {
+  it('renders 3 cards total', () => {
     const { container } = render(
       <RouteCards routes={mockRoutes} selectedRoute="calm" onSelect={() => {}} />,
     )
     const wrapper = container.querySelector('.route-chips-scroll')
-    expect(wrapper?.children).toHaveLength(4)
+    expect(wrapper?.children).toHaveLength(3)
+  })
+
+  it('shows the light count on every card', () => {
+    render(<RouteCards routes={mockRoutes} selectedRoute="calm" onSelect={() => {}} />)
+    expect(screen.getByText(/5 lights/)).toBeInTheDocument()
+    expect(screen.getByText(/4 lights/)).toBeInTheDocument()
+    expect(screen.getByText(/2 lights/)).toBeInTheDocument()
+  })
+
+  it('renders badges for merged categories', () => {
+    render(
+      <RouteCards
+        routes={{ fastest: mockRoutes.fastest }}
+        badges={{ fastest: ['routes.alsoFewestLights'] }}
+        selectedRoute="fastest"
+        onSelect={() => {}}
+      />,
+    )
+    expect(screen.getByText('Also fewest lights')).toBeInTheDocument()
   })
 
   it('calls onSelect with "fastest" when the Fastest card is clicked', () => {
@@ -71,13 +88,6 @@ describe('RouteCards', () => {
     fireEvent.click(screen.getByText('Fastest'))
     expect(onSelect).toHaveBeenCalledTimes(1)
     expect(onSelect).toHaveBeenCalledWith('fastest')
-  })
-
-  it('calls onSelect with "scenic" when the Scenic card is clicked', () => {
-    const onSelect = vi.fn()
-    render(<RouteCards routes={mockRoutes} selectedRoute="fastest" onSelect={onSelect} />)
-    fireEvent.click(screen.getByText('Scenic'))
-    expect(onSelect).toHaveBeenCalledWith('scenic')
   })
 
   it('calls onSelect with "calm" when the Calm card is clicked', () => {
@@ -96,7 +106,6 @@ describe('RouteCards', () => {
   it('shows no star icon when all calm scores are 0', () => {
     const allZero: Record<RouteCategory, ScoredRoute> = {
       fastest:      makeRoute({ calmScore: 0 }),
-      scenic:       makeRoute({ calmScore: 0 }),
       calm:         makeRoute({ calmScore: 0 }),
       fewestLights: makeRoute({ calmScore: 0 }),
     }
@@ -108,8 +117,8 @@ describe('RouteCards', () => {
     render(<RouteCards routes={mockRoutes} selectedRoute="calm" onSelect={() => {}} />)
     // 600s = 10 min
     expect(screen.getByText(/10 min/)).toBeInTheDocument()
-    // 900s = 15 min
-    expect(screen.getByText(/15 min/)).toBeInTheDocument()
+    // 840s = 14 min
+    expect(screen.getByText(/14 min/)).toBeInTheDocument()
     // 750s = 13 min (Math.round(750/60) = 13)
     expect(screen.getByText(/13 min/)).toBeInTheDocument()
   })

@@ -45,7 +45,7 @@ import {
 } from './services/citybikes'
 import { fetchPoisAndInfrastructure, boundsToBbox } from './utils/overpass'
 import type { OsmPoi } from './utils/overpass'
-import { deduplicateRoutes, selectRoutes, selectDefaultRoutes } from './utils/routeSelection'
+import { deduplicateRoutes, selectCalmRoute, selectDefaultRoutes } from './utils/routeSelection'
 import {
   getRecentSearches,
   addRecentSearch,
@@ -58,6 +58,10 @@ type RoutesState = {
   error: string | null
   routes: Partial<Record<RouteCategory, ScoredRoute>> | null
   selectedRoute: RouteCategory
+  /** Fewest lights resolved to the Fastest route; shown as a badge on that card. */
+  fewestLightsMerged: boolean
+  /** Set once "more options" ran and found no route that isn't already shown. */
+  noCalmerAlternative: boolean
 }
 
 /** Build a subset of the routes map in the given order, skipping categories not yet loaded. */
@@ -86,6 +90,8 @@ function App() {
     error: null,
     routes: null,
     selectedRoute: 'fewestLights',
+    fewestLightsMerged: false,
+    noCalmerAlternative: false,
   })
   const [lastCoords, setLastCoords] = useState<{
     from: LatLng
@@ -101,14 +107,16 @@ function App() {
   const [showCityBikes, setShowCityBikes] = useState(true)
   const [cityBikesData, setCityBikesData] = useState<{ loading: boolean; items: CityBikeStation[] }>({ loading: false, items: [] })
 
-  // Lazy "more route options" (scenic/calm): fetched only when the user expands the
-  // section. The default candidate pool + POIs from the last search are kept in refs
-  // so expanding reuses them and only fetches the EXTRA_PRESETS routes.
+  // Lazy "more route options" (calm): fetched only when the user expands the section.
+  // The default candidate pool + POIs from the last search are kept in refs so expanding
+  // reuses them and only fetches the EXTRA_PRESETS routes.
   const [showMoreRoutes, setShowMoreRoutes] = useState(false)
   const [moreRoutesLoading, setMoreRoutesLoading] = useState(false)
   const poisRef = useRef<OsmPoi[]>([])
   const defaultCandidatesRef = useRef<CandidateRoute[]>([])
   const extraLoadedRef = useRef(false)
+  // Responses of the main cards, so Calm never repeats one of them.
+  const shownResponsesRef = useRef<unknown[]>([])
   const geolocation = useGeolocation()
   const isCurrentLocationOriginRef = useRef(false)
 
@@ -255,9 +263,9 @@ function App() {
   }, [showCityBikes, lastCoords])
 
   useEffect(() => {
-    // Lazily fetch the scenic/calm routes when the user first expands "more options".
-    // Reuses the default candidate pool + POIs from the last search and only requests
-    // the EXTRA_PRESETS, then re-selects all four categories from the combined pool.
+    // Lazily fetch the calm route when the user first expands "more options". Reuses the
+    // default candidate pool + POIs from the last search and only requests the
+    // EXTRA_PRESETS. The main cards are never replaced, and Calm skips routes they show.
     if (!showMoreRoutes || extraLoadedRef.current || !lastCoords) return
     const coords = lastCoords
 
@@ -270,10 +278,15 @@ function App() {
         const extra = await fetchCandidateRoutes(from, to, EXTRA_PRESETS, 'extra')
         if (cancelled) return
         const combined = deduplicateRoutes([...defaultCandidatesRef.current, ...extra])
-        const scored = selectRoutes(combined, poisRef.current)
+        const calm = selectCalmRoute(combined, poisRef.current, shownResponsesRef.current)
         if (cancelled) return
         extraLoadedRef.current = true
-        setRoutesState((prev) => (prev.routes ? { ...prev, routes: scored } : prev))
+        setRoutesState((prev) => {
+          if (!prev.routes) return prev
+          return calm
+            ? { ...prev, routes: { ...prev.routes, calm } }
+            : { ...prev, noCalmerAlternative: true }
+        })
       } catch (err) {
         if (!cancelled) console.warn('[App] extra route fetch failed:', err)
       } finally {
@@ -333,7 +346,14 @@ const resolveCoords = (option: AddressOption | null, input: string) => {
       const fromLatLng: LatLng = [from.lat, from.lon]
       const toLatLng: LatLng = [to.lat, to.lon]
 
-      setRoutesState({ loading: true, error: null, routes: null, selectedRoute: 'fewestLights' })
+      setRoutesState({
+        loading: true,
+        error: null,
+        routes: null,
+        selectedRoute: 'fewestLights',
+        fewestLightsMerged: false,
+        noCalmerAlternative: false,
+      })
       // Reset the lazy "more options" state for the new search.
       setShowMoreRoutes(false)
       extraLoadedRef.current = false
@@ -360,7 +380,9 @@ const resolveCoords = (option: AddressOption | null, input: string) => {
       const unique = deduplicateRoutes(candidates)
       defaultCandidatesRef.current = unique
       poisRef.current = pois
-      const scored = selectDefaultRoutes(unique, pois)
+      const { fastest, fewestLights } = selectDefaultRoutes(unique, pois)
+      const merged = fewestLights === fastest
+      shownResponsesRef.current = merged ? [fastest.response] : [fastest.response, fewestLights.response]
 
       if (fromOption) {
         addRecentSearch({ label: fromOption.label, lat: fromOption.lat, lon: fromOption.lon })
@@ -373,8 +395,10 @@ const resolveCoords = (option: AddressOption | null, input: string) => {
       setRoutesState({
         loading: false,
         error: poisFailed ? t('routes.scoringUnavailable') : null,
-        routes: scored,
-        selectedRoute: 'fewestLights',
+        routes: merged ? { fastest } : { fastest, fewestLights },
+        selectedRoute: merged ? 'fastest' : 'fewestLights',
+        fewestLightsMerged: merged,
+        noCalmerAlternative: false,
       })
       setLastCoords({ from: fromLatLng, to: toLatLng })
     } catch (error) {
@@ -385,6 +409,8 @@ const resolveCoords = (option: AddressOption | null, input: string) => {
         error: message,
         routes: null,
         selectedRoute: 'fewestLights',
+        fewestLightsMerged: false,
+        noCalmerAlternative: false,
       })
     }
   }
@@ -406,15 +432,13 @@ const resolveCoords = (option: AddressOption | null, input: string) => {
 
   const onSelectRoute = (key: RouteCategory) =>
     setRoutesState((prev) => ({ ...prev, selectedRoute: key }))
-  const rawMainRoutes = pickRoutes(routesState.routes, ['fewestLights', 'fastest'])
-  // If fewestLights resolved to the same route as fastest (fastest already has the fewest
-  // lights), drop the duplicate card so we don't show the same route twice.
-  const mainRoutes: Partial<Record<RouteCategory, ScoredRoute>> =
-    rawMainRoutes.fewestLights?.response === rawMainRoutes.fastest?.response &&
-    rawMainRoutes.fastest
-      ? { fastest: rawMainRoutes.fastest }
-      : rawMainRoutes
-  const extraRoutes = pickRoutes(routesState.routes, ['scenic', 'calm'])
+  // When Fewest lights resolved to the Fastest route, only the Fastest card exists and
+  // carries an "also fewest lights" badge.
+  const mainRoutes = pickRoutes(routesState.routes, ['fewestLights', 'fastest'])
+  const mainBadges = routesState.fewestLightsMerged
+    ? { fastest: ['routes.alsoFewestLights'] }
+    : undefined
+  const extraRoutes = pickRoutes(routesState.routes, ['calm'])
 
   return (
     <div className="app-layout">
@@ -555,6 +579,7 @@ const resolveCoords = (option: AddressOption | null, input: string) => {
               )}
               <RouteCards
                 routes={mainRoutes}
+                badges={mainBadges}
                 selectedRoute={routesState.selectedRoute}
                 onSelect={onSelectRoute}
                 hazardCount={hazardsData.items.length}
@@ -581,6 +606,10 @@ const resolveCoords = (option: AddressOption | null, input: string) => {
                   <Box sx={{ mt: 1 }}>
                     {moreRoutesLoading && Object.keys(extraRoutes).length === 0 ? (
                       <RouteCardsSkeleton />
+                    ) : routesState.noCalmerAlternative ? (
+                      <Typography variant="caption" color="text.secondary" sx={{ px: 1 }}>
+                        {t('routes.noCalmerAlternative')}
+                      </Typography>
                     ) : (
                       <RouteCards
                         routes={extraRoutes}

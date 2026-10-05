@@ -31,11 +31,12 @@ type RouteCardsProps = {
   onSelect: (key: RouteCategory) => void
   hazardCount?: number
   hazardsLoading?: boolean
+  /** Extra role labels (i18n keys) per card, e.g. Fastest that is also Fewest lights. */
+  badges?: Partial<Record<RouteCategory, string[]>>
 }
 
 const ROUTE_LABEL_KEYS: Record<RouteCategory, string> = {
   fastest: 'routes.fastest',
-  scenic: 'routes.scenic',
   calm: 'routes.calm',
   fewestLights: 'routes.fewestLights',
 }
@@ -64,7 +65,7 @@ export function RouteCardsSkeleton() {
   )
 }
 
-export function RouteCards({ routes, selectedRoute, onSelect, hazardCount, hazardsLoading }: RouteCardsProps) {
+export function RouteCards({ routes, selectedRoute, onSelect, hazardCount, hazardsLoading, badges }: RouteCardsProps) {
   const { t } = useTranslation()
   const entries = Object.entries(routes) as [RouteCategory, ScoredRoute][]
   const maxCalm = Math.max(0, ...entries.map(([, r]) => r.calmScore))
@@ -105,6 +106,30 @@ export function RouteCards({ routes, selectedRoute, onSelect, hazardCount, hazar
                   {route.distanceKm.toFixed(1)} km
                 </Typography>
                 <Stack direction="row" spacing={0.5} sx={{ mt: 0.5, flexWrap: 'wrap', gap: 0.5 }}>
+                  {badges?.[key]?.map((badgeKey) => (
+                    <Chip
+                      key={badgeKey}
+                      label={t(badgeKey)}
+                      size="small"
+                      sx={{
+                        height: 20,
+                        fontSize: '0.7rem',
+                        fontWeight: 600,
+                        bgcolor: isSelected ? 'rgba(255,255,255,0.2)' : 'rgba(255,152,0,0.12)',
+                        color: isSelected ? 'white' : 'warning.main',
+                      }}
+                    />
+                  ))}
+                  <Chip
+                    label={t('routes.lights', { count: route.lightCount })}
+                    size="small"
+                    sx={{
+                      height: 20,
+                      fontSize: '0.7rem',
+                      bgcolor: isSelected ? 'rgba(255,255,255,0.2)' : 'rgba(255,152,0,0.12)',
+                      color: isSelected ? 'white' : 'warning.main',
+                    }}
+                  />
                   {route.calmScore > 0 && (
                     <Chip
                       label={t('routes.calmScore', { score: route.calmScore })}
@@ -130,18 +155,6 @@ export function RouteCards({ routes, selectedRoute, onSelect, hazardCount, hazar
                           ? 'rgba(255,255,255,0.2)'
                           : 'rgba(25,118,210,0.08)',
                         color: isSelected ? 'white' : 'primary.main',
-                      }}
-                    />
-                  )}
-                  {key === 'fewestLights' && (
-                    <Chip
-                      label={t('routes.lights', { count: route.lightCount })}
-                      size="small"
-                      sx={{
-                        height: 20,
-                        fontSize: '0.7rem',
-                        bgcolor: isSelected ? 'rgba(255,255,255,0.2)' : 'rgba(255,152,0,0.12)',
-                        color: isSelected ? 'white' : 'warning.main',
                       }}
                     />
                   )}
