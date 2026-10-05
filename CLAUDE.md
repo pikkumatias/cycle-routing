@@ -10,7 +10,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm test` — Run all tests with Vitest (jsdom environment, globals enabled)
 - `npx vitest run src/routing/profile.test.ts` — Run a single test file
 - `npm run route` — CLI script to query Digitransit routing API interactively
-- `npm run data:osm` — Rebuild `data/osm-layers.json` from Overpass (cached in `.cache/osm/`; `-- --refresh` to refetch)
+- `npm run data:osm` — Rebuild `data/osm-layers.json` from BBBike's Helsinki extract (cached in `.cache/osm/`; `-- --refresh` to re-download, `-- --source=overpass` for Overpass)
+- `npm run sandbox -- <generate|evaluate|dossiers|yield|fit>` — Calibration sandbox (see `sandbox/README.md`); review page at `/sandbox/review/` under `npm run dev`
 
 ## Environment Variables
 

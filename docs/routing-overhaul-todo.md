@@ -35,12 +35,16 @@ Goal: trustworthy measurements, at most three genuinely different cards
 - [x] Rewrite SCORING.md; update CLAUDE.md and README
 
 ## Phase 3 — sandbox and calibration (`routing/phase-3-sandbox`)
-- [ ] `sandbox/cli.ts` steps: generate, reference, baseline, select, dossiers, fit, yield, report, fixtures
-- [ ] OD corpus (~40 public pairs; private pairs gitignored)
-- [ ] Rubric v0 + prior weights → **user approval**
-- [ ] Claude pre-grading (dossiers never show the model's calmIndex)
-- [ ] Review page `/sandbox/review/` + dev-only label middleware → **user review session**
-- [ ] Fit weights/thresholds; generator yield curve → **user picks API budget**
+- [x] `sandbox/cli.ts` steps: generate, evaluate (legacy vs new vs full pool, report), dossiers, yield, fit
+- [x] OD corpus: 45 public trips; private trips go in gitignored `sandbox/od-pairs.private.json`
+- [x] Generate pools (1,781 OTP calls, cached) and first evaluation — see `docs/sandbox-results.md`
+- [x] Review page `/sandbox/review/` + dev-only label endpoints
+- [x] Generator-yield curve — see `docs/sandbox-results.md`
+- [x] Claude pre-grading of all 45 trips from dossiers (3 graders + consistency check)
+- [ ] **User: approve or edit `sandbox/rubric.md`**
+- [ ] **User: review session** (≥ 30 trips + trade-off questions; see `sandbox/README.md`)
+- [ ] `npm run sandbox -- fit` on the user's labels
+- [ ] **User: pick the live OTP budget** from the yield curve
 
 ## Phase 4 — lock in
 - [ ] Fitted config + `configVersion` bump; round-2 generators at chosen budget
