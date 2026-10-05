@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react'
 import { config as dotenvConfig } from 'dotenv'
 import type { Plugin } from 'vite'
 import type { ServerResponse } from 'node:http'
+import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
 
 // Load server-side env vars (DIGITRANSIT_API_KEY etc.) for the API dev middleware.
 // Vite only exposes VITE_* vars to the client bundle; dotenv populates process.env here.
@@ -91,9 +92,70 @@ function vercelApiDevPlugin(): Plugin {
   }
 }
 
+/**
+ * Dev-only endpoints for the calibration sandbox's review page (sandbox/review/), under
+ * /__sandbox/. Reads sandbox/out/review/*.json and sandbox/labels/claude/*.json, and saves
+ * the user's labels to sandbox/labels/user/<od>.json. Never part of a build.
+ */
+function sandboxReviewDevPlugin(): Plugin {
+  const SAFE_ID = /^[a-z0-9_-]+$/
+  const readJson = async (file: string) => JSON.parse(await readFile(file, 'utf8')) as unknown
+  return {
+    name: 'sandbox-review',
+    apply: 'serve',
+    configureServer(server) {
+      server.middlewares.use(async (req, res: ServerResponse, next) => {
+        const url = (req.url ?? '').split('?')[0]
+        if (!url.startsWith('/__sandbox/')) return next()
+        const send = (status: number, data: unknown) => {
+          res.writeHead(status, { 'Content-Type': 'application/json' })
+          res.end(JSON.stringify(data))
+        }
+        const [kind, id] = url.slice('/__sandbox/'.length).split('/')
+        if (id !== undefined && !SAFE_ID.test(id)) return send(400, { error: 'bad id' })
+        try {
+          if (kind === 'index' && req.method === 'GET') {
+            const files = (await readdir('sandbox/out/review')).filter((f) => f.endsWith('.json'))
+            const labelled = new Set(await readdir('sandbox/labels/user').catch(() => [] as string[]))
+            const trips = await Promise.all(
+              files.map(async (f) => {
+                const data = (await readJson(`sandbox/out/review/${f}`)) as { od: { id: string; name: string; bucket: string } }
+                return { ...data.od, labelled: labelled.has(f) }
+              }),
+            )
+            return send(200, trips)
+          }
+          if (kind === 'review' && id && req.method === 'GET') return send(200, await readJson(`sandbox/out/review/${id}.json`))
+          if (kind === 'claude' && id && req.method === 'GET') {
+            return send(200, await readJson(`sandbox/labels/claude/${id}.json`).catch(() => null))
+          }
+          if (kind === 'labels' && id && req.method === 'GET') {
+            return send(200, await readJson(`sandbox/labels/user/${id}.json`).catch(() => null))
+          }
+          if (kind === 'labels' && id && req.method === 'POST') {
+            const body = await new Promise<string>((resolve, reject) => {
+              let raw = ''
+              req.on('data', (chunk: { toString(): string }) => (raw += chunk.toString()))
+              req.on('end', () => resolve(raw))
+              req.on('error', reject)
+            })
+            const label = { ...(JSON.parse(body) as object), savedAt: new Date().toISOString() }
+            await mkdir('sandbox/labels/user', { recursive: true })
+            await writeFile(`sandbox/labels/user/${id}.json`, JSON.stringify(label, null, 1) + '\n')
+            return send(200, { ok: true })
+          }
+          return send(404, { error: 'not found' })
+        } catch (err) {
+          return send(500, { error: err instanceof Error ? err.message : String(err) })
+        }
+      })
+    },
+  }
+}
+
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), vercelApiDevPlugin()],
+  plugins: [react(), vercelApiDevPlugin(), sandboxReviewDevPlugin()],
   build: {
     chunkSizeWarningLimit: 700,
     rollupOptions: {

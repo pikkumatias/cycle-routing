@@ -9,6 +9,10 @@ lerna-debug.log*
 
 node_modules
 .cache
+sandbox/.cache
+sandbox/out
+sandbox/od-pairs.private.json
+sandbox/labels/private
 dist
 dist-ssr
 *.local

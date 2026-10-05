@@ -23,6 +23,7 @@ export default defineConfig([
   {
     // Node-only tooling: the OSM layer build and the calibration sandbox
     files: ['scripts/**/*.ts', 'sandbox/**/*.ts'],
+    ignores: ['sandbox/review/**'],
     languageOptions: { globals: globals.node },
   },
 ])

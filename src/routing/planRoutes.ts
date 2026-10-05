@@ -91,7 +91,7 @@ export async function planRoutes(from: LatLon, to: LatLon, deps: PlanDeps): Prom
 }
 
 /** Trim a via route's out-and-back stub and scale its duration; null if the stub is too long. */
-function applySpurTrim(candidate: Candidate, cfg: RoutingConfig): Candidate | null {
+export function applySpurTrim(candidate: Candidate, cfg: RoutingConfig): Candidate | null {
   const trimmed = trimSpur(candidate.legs, candidate.legSteps, cfg)
   if (!trimmed) return null
   if (trimmed.trimmedM === 0) return candidate
