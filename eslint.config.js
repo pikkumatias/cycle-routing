@@ -20,4 +20,9 @@ export default defineConfig([
       globals: globals.browser,
     },
   },
+  {
+    // Node-only tooling: the OSM layer build and the calibration sandbox
+    files: ['scripts/**/*.ts', 'sandbox/**/*.ts'],
+    languageOptions: { globals: globals.node },
+  },
 ])

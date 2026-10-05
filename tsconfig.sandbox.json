@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.api.tsbuildinfo",
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.sandbox.tsbuildinfo",
     "target": "ES2023",
     "lib": ["ES2023"],
     "module": "ESNext",
@@ -10,6 +10,7 @@
     /* Bundler mode */
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
     "noEmit": true,
@@ -22,6 +23,5 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["api", "src/routing", "src/mapbox-polyline.d.ts"],
-  "exclude": ["src/routing/**/*.test.ts", "src/routing/testHelpers.ts"]
+  "include": ["scripts/**/*.ts", "sandbox/**/*.ts", "src/mapbox-polyline.d.ts"]
 }

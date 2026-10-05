@@ -1,4 +1,4 @@
-import { haversineDistance } from '../utils/scenicScore'
+import { haversineDistance } from '../routing/geo'
 import type { LatLng } from '../utils/routeGeometry'
 
 export type CityBikeStation = {

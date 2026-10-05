@@ -17,12 +17,12 @@ Goal: trustworthy measurements, at most three genuinely different cards
 - [x] UI: "more options" shows Calm only and never replaces the main cards; Scenic dropped
 
 ## Phase 1 — engine and data (`routing/phase-1-engine`)
-- [ ] `src/routing/` pure engine: types, config, geo, layers, signals, stress, profile, similarity, spur, otpClient, generators, select, planRoutes
-- [ ] Unit tests per module
-- [ ] Repoint `hazards.ts` / `citybikes.ts` to `routing/geo`
-- [ ] Type-check `src/routing` without DOM (tsconfig.api.json) and without Node (tsconfig.app.json)
-- [ ] `scripts/build-osm-layers.ts` → `data/osm-layers.json` + `data/meta.json` (`npm run data:osm`)
-- [ ] Freeze today's selection as `sandbox/lib/legacy.ts` baseline
+- [x] `src/routing/` pure engine: types, config, geo, layers, signals, stress, profile, similarity, spur, otpClient, generators, select, planRoutes
+- [x] Unit tests per module
+- [x] Repoint `hazards.ts` / `citybikes.ts` to `routing/geo`
+- [x] Type-check `src/routing` without DOM (tsconfig.api.json) and without Node (tsconfig.app.json)
+- [x] `scripts/build-osm-layers.ts` → `data/osm-layers.json` + `data/meta.json` (`npm run data:osm`; BBBike extract by default, Overpass optional)
+- [x] Freeze today's selection as `sandbox/lib/legacy.ts` baseline
 
 ## Phase 2 — server pipeline and new UI (`routing/phase-2-server`)
 - [ ] `api/route-plan.ts` running `planRoutes()` (validation, deadline, partial results)
