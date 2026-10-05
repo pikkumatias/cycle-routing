@@ -1,0 +1,19 @@
+{
+  "od": "kapyla--kamppi",
+  "rubricVersion": "v0",
+  "calmRanking": ["H", "E", "D", "C", "B", "G", "A", "F"],
+  "tiers": { "A": "C", "B": "C", "C": "C", "D": "C", "E": "A", "F": "C", "G": "C", "H": "A" },
+  "sameRoute": [["B", "C"]],
+  "picks": { "fewestLights": "E", "calm": "E" },
+  "rationale": {
+    "A": "200 m in traffic on Pohjolankatu (tram) plus Helsinginkatu; then path beside Ratapihantie and Linnunlaulu; 5 lights",
+    "B": "No mixed traffic: quiet Käpylä streets, then paths beside Koskelantie/Ratapihantie; 3 lights",
+    "C": "Same as B, slightly different start; 2 lights",
+    "D": "No traffic; Pasila then Töölönlahti/Oopperankuja and Baana; unsignalised Veturitie and Mäntymäentie; 5 lights",
+    "E": "Long car-free path from Käpylä via Linnunlaulu; only ~1.3 km beside roads; 1 light; +3 min",
+    "F": "Long paths beside Mäkelänkatu (50 km/h), unsignalised Mäkelänkatu/Koskelantie crossings; 13 lights",
+    "G": "No traffic, but paths beside Mäkelänkatu, walking sections and three unsignalised arterial crossings",
+    "H": "Kumpula and Vallila valley park paths, Linnunlaulu; barely any roadside riding; 2 lights; +6 min"
+  },
+  "notes": "E saves 4 lights for about 3 min and removes A's tram-street stretch. H is a little calmer but costs 3 more minutes for a small gain."
+}

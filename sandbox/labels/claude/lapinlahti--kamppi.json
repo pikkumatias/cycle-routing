@@ -1,0 +1,19 @@
+{
+  "od": "lapinlahti--kamppi",
+  "rubricVersion": "v0",
+  "calmRanking": ["C", "B", "A", "F", "G", "E", "D", "H"],
+  "tiers": { "A": "A", "B": "B", "C": "A", "D": "D", "E": "C", "F": "A", "G": "B", "H": "D" },
+  "sameRoute": [],
+  "picks": { "fewestLights": "C", "calm": null },
+  "rationale": {
+    "A": "Lapinlahti park paths then 180 m in traffic on Eteläinen Rautatiekatu (30 km/h); 4 lights",
+    "B": "Quiet Lapinlahdenkatu/Malminkatu residential streets, no major traffic; 3 lights",
+    "C": "Lapinlahti then Baana into Kamppi; no traffic, 2 lights; +2 min",
+    "D": "Ruoholahdenkatu and Malminrinne with tram rails in the carriageway",
+    "E": "Mechelininkatu in traffic briefly plus Eteläinen Rautatiekatu, 7 lights",
+    "F": "Like A with a short Baana segment; same Eteläinen Rautatiekatu stretch",
+    "G": "Ruoholahti paths and Eerikinkatu, 100 m on Malminrinne tram; +3 min",
+    "H": "Longest with Mechelininkatu in traffic and 10 lights"
+  },
+  "notes": "C saves 2 lights for 2 min, so it gets the fewest-lights card. For calm, A's only traffic is 180 m on a 30 km/h street (~12%), not a clear tier gain."
+}

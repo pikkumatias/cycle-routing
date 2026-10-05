@@ -1,0 +1,19 @@
+{
+  "od": "viikki--munkkiniemi",
+  "rubricVersion": "v0",
+  "calmRanking": ["C", "A", "B", "E", "F", "D", "G", "H"],
+  "tiers": { "A": "A", "B": "A", "C": "A", "D": "C", "E": "A", "F": "C", "G": "C", "H": "C" },
+  "sameRoute": [],
+  "picks": { "fewestLights": null, "calm": "C" },
+  "rationale": {
+    "A": "Viikki, Vallila valley and Central Park paths; only 90 m on Pasilansilta with tram rails; 6 lights",
+    "B": "Kumpula variant of A with the same Pasilansilta tram stretch; Kustaa Vaasan tie crossing",
+    "C": "Vallila valley, Pasila via Junailijankuja and Central Park; no mixed traffic at all, 4 lights, +3 min",
+    "D": "Northern route mostly on side paths beside Mäkitorpantie, Metsäläntie and Asesepäntie; 7 lights",
+    "E": "Northern route into Central Park (Keskuspuistontaival); some side paths; +5 min",
+    "F": "Through Kallio/Alppila on side tracks beside Sturenkatu/Aleksis Kiven katu (tram); 12 lights",
+    "G": "Maunula residential streets with Metsäpurontie in traffic, then Central Park; +8 min",
+    "H": "Long side paths beside Pakilantie/Nuijamiestentie and Hirsipadontie in traffic; +9 min"
+  },
+  "notes": "Close call. A is already mostly car-free; C's only gain is dropping the 90 m tram-rail stretch on Pasilansilta for +3 min. Under the 'tier-E stretch disappears' rule it qualifies, but the gain is small. Fewest lights: C saves 2 lights for 3 min, not enough."
+}

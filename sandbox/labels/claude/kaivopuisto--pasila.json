@@ -1,0 +1,19 @@
+{
+  "od": "kaivopuisto--pasila",
+  "rubricVersion": "v0",
+  "calmRanking": ["C", "D", "H", "F", "E", "G", "A", "B"],
+  "tiers": { "A": "D", "B": "D", "C": "A", "D": "A", "E": "C", "F": "C", "G": "C", "H": "B" },
+  "sameRoute": [],
+  "picks": { "fewestLights": null, "calm": "C" },
+  "rationale": {
+    "A": "~930 m in traffic along the harbour (Laivasillankatu and Eteläranta, mostly with tram rails), then Kaisaniemi park and the rail-side path",
+    "B": "~1.6 km in mixed traffic on Vauhtitie, Veturitie, Pasilankatu and Helsinginkatu; 10 lights",
+    "C": "Quiet Ullanlinna/Kaartinkaupunki streets, then Kaisaniemi park and the rail-side path; no mixed traffic; 3 lights; +1 min at most",
+    "D": "Same start as C, then Töölönlahti, Olympic area and Central Park; car-free but 4 unsignalised crossings",
+    "E": "No mixed traffic, but nearly all on tracks beside harbour streets (Pohjoisranta, Laivasillankatu, Eläintarhantie); 8 lights",
+    "F": "Tracks beside Mannerheimintie/Helsinginkatu/Laivasillankatu; 7 lights",
+    "G": "Harbour-side tracks plus 210 m on Fleminginkatu with tram rails; 14 lights",
+    "H": "Quiet Punavuori streets and Annankatu, then Linnunlauluntie and park paths; 7 lights and unsignalised Simonkatu/Kansakoulukatu crossings"
+  },
+  "notes": "C removes A's tier-E harbour stretch at essentially no time cost, so it gets the calm card. C has 3 lights against A's 4, which is too small a saving for a fewest-lights card. D is about as calm as C."
+}

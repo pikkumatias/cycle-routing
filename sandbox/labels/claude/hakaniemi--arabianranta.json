@@ -1,0 +1,19 @@
+{
+  "od": "hakaniemi--arabianranta",
+  "rubricVersion": "v0",
+  "calmRanking": ["H", "B", "C", "E", "F", "G", "D", "A"],
+  "tiers": { "A": "C", "B": "C", "C": "C", "D": "C", "E": "B", "F": "A", "G": "B", "H": "A" },
+  "sameRoute": [["B", "C"]],
+  "picks": { "fewestLights": null, "calm": "H" },
+  "rationale": {
+    "A": "420 m in traffic on busy Hermannin rantatie plus Sörnäisten rantatie side path; two unsignalled Hermannin rantatie crossings",
+    "B": "No mixed traffic; Hämeentie protected tracks then paths, but 11 lights",
+    "C": "Same as B with a short 60 m Hämeentie carriageway bit",
+    "D": "Kalasatama paths but still 270 m in traffic on Hermannin rantatie",
+    "E": "Quiet Kallio streets (Kolmas linja), 70 m on Helsinginkatu tram, Sturenkatu side tracks",
+    "F": "Merihaka/Kalasatama waterfront paths, but 270 m on Hermannin rantatie in traffic",
+    "G": "Kallio side streets with 170 m on tram streets (Porthaninkatu, Helsinginkatu), then Hämeentie tracks",
+    "H": "Kalasatama/Verkkosaari waterfront and Vanha talvitie paths, no mixed traffic, 4 lights; +4 min"
+  },
+  "notes": "Fewest lights: F/H have 4 vs A's 6. That is 2 lights for 3-4 min, not worth a card. Calm: H removes A's Hermannin rantatie traffic stretch and swaps a lot of side path for waterfront for +4 min. Ranking B above F/D follows the worst-stretch rule (B has no mixed traffic), though F/D feel more scenic."
+}

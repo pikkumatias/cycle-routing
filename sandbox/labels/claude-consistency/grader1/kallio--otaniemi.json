@@ -1,0 +1,19 @@
+{
+  "od": "kallio--otaniemi",
+  "rubricVersion": "v0",
+  "calmRanking": ["F", "C", "B", "G", "H", "E", "D", "A"],
+  "tiers": { "A": "C", "B": "C", "C": "C", "D": "C", "E": "C", "F": "C", "G": "C", "H": "C" },
+  "sameRoute": [["A", "D"], ["B", "C", "F", "G"]],
+  "picks": { "fewestLights": "F", "calm": "F" },
+  "rationale": {
+    "A": "Via Mannerheimintie/Tukholmankatu (260 m in traffic, unsignalised Mannerheimintie crossing), Meilahti, then Kuusisaarentie path; 11 lights",
+    "B": "Central Park route (Auroransilta, Ratsastie, Tilkanvierto), no traffic, then Kuusisaarentie path; four unsignalised crossings; 4 lights",
+    "C": "Same as B via Hammarskjöldintie; 4 lights",
+    "D": "Same as A via Meilahdentie; 10 lights",
+    "E": "Through Töölö: 80 m tram traffic and several unsignalised crossings incl. Paciuksenkatu; 9 lights",
+    "F": "Same Central Park route; fewest unsignalised crossings (2); no traffic; 3 lights; +2 min",
+    "G": "Same Central Park route; 5 lights",
+    "H": "Central Park, then Tilkka streets and paths; no traffic; +9 min"
+  },
+  "notes": "F at +2 min saves 8 lights and moves about 2 km from arterial-side riding and Mannerheimintie/Tukholmankatu traffic into Central Park. All routes share the ~2.5 km Kuusisaarentie roadside path, so every tier is C."
+}

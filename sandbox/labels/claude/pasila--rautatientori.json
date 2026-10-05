@@ -1,0 +1,19 @@
+{
+  "od": "pasila--rautatientori",
+  "rubricVersion": "v0",
+  "calmRanking": ["B", "C", "F", "D", "H", "A", "E", "G"],
+  "tiers": { "A": "A", "B": "A", "C": "A", "D": "A", "E": "C", "F": "B", "G": "C", "H": "B" },
+  "sameRoute": [["A", "C"]],
+  "picks": { "fewestLights": null, "calm": "B" },
+  "rationale": {
+    "A": "Eläintarha path and Töölönlahti, but drops onto Helsinginkatu and Pasilansilta in traffic (~180 m); 1 light",
+    "B": "Path along the railway then Kaisaniemi park; no mixed traffic, 0 lights, same time as A",
+    "C": "Same Töölönlahti line as A but over Linnunlaulu bridge, no traffic; +2 min",
+    "D": "Central Park/Hammarskjöldintie then Töölönlahti; no traffic but 4 lights",
+    "E": "Pasilankatu and Pasilansilta (tram) in traffic, Nordenskiöldinkatu side path; 7 lights",
+    "F": "Kotkankatu/Tivolitie quiet streets, Aleksis Kiven katu side path, Töölönlahti; 2 lights",
+    "G": "Porvoonkatu (tram) and Wallininkatu in traffic through Alppila; 5 lights",
+    "H": "Railway path then Siltasaari side tracks, short Porthaninrinne in traffic; 3 lights"
+  },
+  "notes": "B removes A's arterial bit (Helsinginkatu/Pasilansilta) at no time cost. That is a small share, but it is free, so B is picked for calm. Fewest lights: A has only 1."
+}

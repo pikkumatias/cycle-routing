@@ -1,0 +1,19 @@
+{
+  "od": "aviapolis--pasila",
+  "rubricVersion": "v0",
+  "calmRanking": ["H", "F", "D", "E", "G", "C", "A", "B"],
+  "tiers": { "A": "D", "B": "D", "C": "C", "D": "C", "E": "C", "F": "B", "G": "C", "H": "A" },
+  "sameRoute": [["D", "E"]],
+  "picks": { "fewestLights": "D", "calm": "H" },
+  "rationale": {
+    "A": "~2 km in mixed traffic: Oulunkyläntie (830 m) and Pohjolankatu with tram rails (650 m); the rest is on tracks beside arterials",
+    "B": "Even more mixed traffic than A: Siltavoudintie, 1.2 km of Oulunkyläntie and Pohjolankatu with tram rails",
+    "C": "Nearly all on tracks beside arterials (Siltavoudintie, Oulunkyläntie, Koskelantie), 80 m in traffic, many unsignalised crossings",
+    "D": "No mixed traffic; tracks beside arterials, then Käpylä station path along the railway; 3 lights; +1 min",
+    "E": "Same as D, 2 min slower",
+    "F": "Leaves the arterials early for quiet Pakila streets and paths; 2 lights; +3 min",
+    "G": "No mixed traffic but long tracks beside Pukinmäenkaari/Tapaninvainiontie; 6 lights",
+    "H": "Through Haltiala and Central Park (Pitkäkoski, Keskuspuistontaival); almost entirely away from roads; +6 min"
+  },
+  "notes": "H moves most of a 50-min ride from arterial-side tracks onto Central Park paths for +6 min, which I judged worth it. F (+3) is a reasonable alternative calm pick. D saves 2 lights for +1 min."
+}

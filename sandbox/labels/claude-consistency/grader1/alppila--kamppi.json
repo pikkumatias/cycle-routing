@@ -1,0 +1,19 @@
+{
+  "od": "alppila--kamppi",
+  "rubricVersion": "v0",
+  "calmRanking": ["F", "C", "E", "H", "D", "A", "B", "G"],
+  "tiers": { "A": "B", "B": "B", "C": "A", "D": "A", "E": "A", "F": "A", "G": "B", "H": "A" },
+  "sameRoute": [["A", "B"]],
+  "picks": { "fewestLights": "D", "calm": "C" },
+  "rationale": {
+    "A": "Kotkankatu/Tivolitie and Linnunlaulu, but 150 m on Aleksis Kiven katu (tram) and 100 m on Helsinginkatu in traffic; 3 lights",
+    "B": "Same as A, starting via Viipurinkatu (180 m with tram rails)",
+    "C": "No traffic: Tivolitie, then paths towards Töölönlahti and Baana; unsignalised Aleksis Kiven katu crossings; 3 lights; +1 min",
+    "D": "180 m on Viipurinkatu (tram), then Tivolitie, Linnunlaulu and Töölönlahti paths; 1 light; +2 min",
+    "E": "No traffic; via the Olympic Stadium area and Töölönlahti; four unsignalised crossings; 2 lights",
+    "F": "No traffic; Eläintarhanlahti shore and Kaisaniemi park to Baana; least roadside riding; 1 light; +3 min",
+    "G": "Through Kallio streets and Hakaniemi; 230 m on Porvoonkatu (140 m tram); 7 lights",
+    "H": "All bike path, no traffic, but ~700 m beside Aleksis Kiven katu; 2 lights; +5 min"
+  },
+  "notes": "D saves 2 lights for 2 min. For calm, C at +1 removes A's tram-street traffic. F is a bit calmer at +3 min; whether that small extra gain is worth 2 more minutes is a judgement call."
+}

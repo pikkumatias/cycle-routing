@@ -1,0 +1,19 @@
+{
+  "od": "haaga--pasila",
+  "rubricVersion": "v0",
+  "calmRanking": ["A", "B", "C", "H", "E", "D", "G", "F"],
+  "tiers": { "A": "A", "B": "A", "C": "A", "D": "C", "E": "C", "F": "C", "G": "C", "H": "A" },
+  "sameRoute": [["A", "C"], ["D", "E"]],
+  "picks": { "fewestLights": null, "calm": null },
+  "rationale": {
+    "A": "Railway-side path and Central Park path most of the way; only ~250 m in traffic (Tunnelitie, Pasilankatu); 1 light",
+    "B": "Equivalent Central Park route starting via Laajasuontie; ~230 m in traffic; 1 light",
+    "C": "Same corridor as A with a small variation in the park; +2 min",
+    "D": "Through Ilmala on paths beside Veturitie/Ratapihantie, plus 240 m on Postisoudunkatu",
+    "E": "Same Ilmala corridor as D, on the path instead of Postisoudunkatu",
+    "F": "Long paths beside Hakamäentie/Matkamiehentie and an unsignalised Hakamäentie crossing",
+    "G": "No unsignalised crossings, but ~1.7 km beside Hakamäentie (60 km/h) and Veturitie",
+    "H": "Central Park route with a detour via Tenholantie (280 m in traffic); +6 min"
+  },
+  "notes": "The fastest route is already the calm Central Park route with 1 light, so both categories merge into Fastest."
+}

@@ -1,0 +1,19 @@
+{
+  "od": "jatkasaari--kallio",
+  "rubricVersion": "v0",
+  "calmRanking": ["C", "B", "D", "E", "F", "A", "H", "G"],
+  "tiers": { "A": "A", "B": "A", "C": "A", "D": "A", "E": "A", "F": "A", "G": "C", "H": "B" },
+  "sameRoute": [["B", "C"], ["D", "E"]],
+  "picks": { "fewestLights": "B", "calm": null },
+  "rationale": {
+    "A": "Baana and Töölönlahti, but ~420 m in traffic on Jätkäsaari streets and a Mechelininkatu bit",
+    "B": "Baana, Kaisaniemi park, no mixed traffic, 0 lights; +1 min",
+    "C": "Same as B with Jätkäsaari shore paths at the start; no traffic, 0 lights",
+    "D": "Baana and Töölönlahti, short Helsinginkatu side path; 1 light",
+    "E": "Same as D",
+    "F": "Baana then ~1 km beside Helsinginkatu; 3 lights",
+    "G": "City-centre side paths along Bulevardi (tram) and Esplanadi, 8 lights; +6 min",
+    "H": "Side paths along Mechelininkatu and a short carriageway stretch; +7 min"
+  },
+  "notes": "B saves 2 lights for 1 min, so it gets the fewest-lights card. For calm, A's traffic is only ~420 m on 30 km/h streets (<10%), so no clear tier gain and calm merges into Fastest (B is effectively shown anyway)."
+}

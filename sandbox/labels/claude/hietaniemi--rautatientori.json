@@ -1,0 +1,19 @@
+{
+  "od": "hietaniemi--rautatientori",
+  "rubricVersion": "v0",
+  "calmRanking": ["B", "A", "F", "C", "E", "G", "H", "D"],
+  "tiers": { "A": "A", "B": "A", "C": "B", "D": "C", "E": "B", "F": "A", "G": "B", "H": "C" },
+  "sameRoute": [["C", "E"], ["D", "H"]],
+  "picks": { "fewestLights": null, "calm": "B" },
+  "rationale": {
+    "A": "Quiet Hietaniemenkatu then Baana and Kaisantunneli; no traffic, 1 light",
+    "B": "Lapinlahti shore park path (Birger Käcklundin raitti) instead of Hietaniemenkatu, then Baana; +1 min",
+    "C": "Hiekkarannantie and the Hesperia path, Mannerheimintie crossing; no mixed traffic, 3 lights",
+    "D": "Kamppi/station side paths, 100 m in traffic on Eteläinen Rautatiekatu, 6 lights",
+    "E": "Like C via Töölönkatu/Museokatu",
+    "F": "Hietaniemi park bits and Väinämöisenkatu, then Baana; 1 light, +3 min",
+    "G": "Etu-Töölö residential streets (Arkadiankatu, Museokatu); no major traffic",
+    "H": "Kamppi streets (Malminkatu) and station side paths, 5 lights"
+  },
+  "notes": "A is already very calm. B moves about 1 km from a quiet street to a shoreline park path for +1 min, which meets the share rule, but it is a marginal pick. Fewest lights: A has only 1."
+}

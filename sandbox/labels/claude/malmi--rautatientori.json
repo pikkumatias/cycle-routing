@@ -1,0 +1,19 @@
+{
+  "od": "malmi--rautatientori",
+  "rubricVersion": "v0",
+  "calmRanking": ["E", "H", "F", "D", "C", "G", "B", "A"],
+  "tiers": { "A": "D", "B": "D", "C": "C", "D": "C", "E": "C", "F": "C", "G": "C", "H": "C" },
+  "sameRoute": [["D", "F"]],
+  "picks": { "fewestLights": "F", "calm": "E" },
+  "rationale": {
+    "A": "Vantaa river paths, then ~1.9 km in mixed traffic incl. 1.2 km on Sörnäisten rantatie (40–50 km/h); 14 lights",
+    "B": "~1.9 km in traffic on Oulunkyläntie, Pohjolankatu (650 m tram) and Otto Brandtin tie; 4 lights",
+    "C": "Only 340 m on Otto Brandtin tie, rest on paths beside Oulunkyläntie/Koskelantie/Ratapihantie; unsignalised crossings; 4 lights",
+    "D": "No mixed traffic; paths beside Oulunkyläntie, Käpyläntie, Koskelantie, then Eläintarha/Kaisaniemi; 4 lights",
+    "E": "No mixed traffic; Vantaa river and Arabia paths, Kalasatama, Merihaansilta; least roadside riding; 7 lights; +3 min",
+    "F": "Same as D, with quiet Väinölänkatu in place of the Koskelantie path; 2 lights; +3 min",
+    "G": "~3.3 km beside Hämeentie with several unsignalised Hämeentie crossings; 13 lights",
+    "H": "No traffic; Mäkitorpantie path, Käpylä station path, Linnunlaulu; 2 lights; +7 min"
+  },
+  "notes": "F saves 12 lights for 3 min. E is the calmest at +3 min and removes A's long Sörnäisten rantatie traffic stretch. The fastest route is unusually bad here."
+}

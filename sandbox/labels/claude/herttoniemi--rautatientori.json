@@ -1,0 +1,19 @@
+{
+  "od": "herttoniemi--rautatientori",
+  "rubricVersion": "v0",
+  "calmRanking": ["C", "A", "F", "E", "G", "D", "B", "H"],
+  "tiers": { "A": "C", "B": "C", "C": "C", "D": "C", "E": "C", "F": "C", "G": "C", "H": "C" },
+  "sameRoute": [["A", "C"]],
+  "picks": { "fewestLights": null, "calm": null },
+  "rationale": {
+    "A": "Paths beside Itäväylä/Kulosaarensilta, 1.1 km mixed on 30 km/h Kulosaaren puistotie, 380 m on Sompasaarenlaituri; 3 lights",
+    "B": "Like A but 470 m on Capellan puistotie and a Hakaniemi square detour; more unsignalised crossings; 4 lights",
+    "C": "Same corridor as A, using the path beside Sompasaarenlaituri instead of the road; only Kulosaaren puistotie in traffic; 2 lights",
+    "D": "Like B to Merihaka, then Pohjoisranta path and Kruununhaka streets; 4 lights",
+    "E": "Through Sörnäinen on paths beside Sörnäisten rantatie (50 km/h); less mixed traffic than A but 8 lights",
+    "F": "Through Vilhonvuori and Kallio paths; 1.2 km in traffic (mostly Kulosaaren puistotie); 9 lights",
+    "G": "Avoids Kulosaaren puistotie via Kulosaari side streets and Mustikkamaa, but ~830 m in traffic and an unsignalised trunk-road crossing; +8 min",
+    "H": "Via Hermannin rantatie (270 m in traffic) and paths beside Sörnäisten rantatie; 11 lights; +9 min"
+  },
+  "notes": "Every option rides Kulosaaren puistotie or the main road corridors; no candidate gives a clear tier gain over A. C saves only one light."
+}

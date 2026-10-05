@@ -23,6 +23,7 @@ npm run sandbox -- fit [claude]       # calibrate from user (default) or Claude 
 | `od-pairs.private.json` | your own trips (same shape) — never committed or made into fixtures | no |
 | `rubric.md` | grading rubric | yes |
 | `labels/claude/` | Claude's pre-grades (from dossiers only, never the model's scores) | yes |
+| `labels/claude-consistency/` | the 3 calibration trips graded by each of 3 graders | yes |
 | `labels/user/` | your reviewed labels, written by the review page | yes |
 | `lib/legacy/` | frozen pre-overhaul grading (commit `c197bee`) for the baseline | yes |
 | `.cache/`, `out/` | OTP cache, pools, report, dossiers | no |

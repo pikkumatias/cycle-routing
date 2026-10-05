@@ -1,0 +1,19 @@
+{
+  "od": "pasila--kalasatama",
+  "rubricVersion": "v0",
+  "calmRanking": ["D", "F", "H", "C", "B", "G", "E", "A"],
+  "tiers": { "A": "D", "B": "C", "C": "C", "D": "B", "E": "D", "F": "B", "G": "C", "H": "B" },
+  "sameRoute": [["D", "F"]],
+  "picks": { "fewestLights": "D", "calm": "D" },
+  "rationale": {
+    "A": "~730 m in mixed traffic on tram streets (Asemapäällikönkatu, Ratamestarinkatu, Kumpulantie), then a Teollisuuskatu-side track; 7 lights",
+    "B": "Entirely on tracks beside Ratapihantie/Teollisuuskatu (50 km/h); no mixed traffic but all next to traffic; 7 lights",
+    "C": "Tracks beside Aleksis Kiven katu and Teollisuuskatu, no mixed traffic; 7 lights",
+    "D": "Through Vallilanlaakso park and quiet Hermanni streets; only Hermannin rantatie-side track; 5 lights, +2 min",
+    "E": "410 m in traffic on Aleksis Kiven katu, partly with tram rails; 7 lights",
+    "F": "Same park route as D but longer beside Hermannin rantatie; 7 lights",
+    "G": "Quiet Vallila streets but 260 m in traffic on Elimäenkatu, then a Teollisuuskatu-side track",
+    "H": "Vallilanlaakso and quiet Kangasalantie, but a Hämeentie-side track and an unsignalised crossing of Hämeentie"
+  },
+  "notes": "D wins both: it saves 2 lights for +2 min and moves most of the ride from tram streets and arterial-side tracks to park paths. H has 4 lights but costs +4 min."
+}

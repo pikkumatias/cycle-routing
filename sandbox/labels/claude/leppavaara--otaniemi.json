@@ -1,0 +1,16 @@
+{
+  "od": "leppavaara--otaniemi",
+  "rubricVersion": "v0",
+  "calmRanking": ["A", "C", "B", "E", "D"],
+  "tiers": { "A": "A", "B": "A", "C": "A", "D": "A", "E": "A" },
+  "sameRoute": [],
+  "picks": { "fewestLights": null, "calm": null },
+  "rationale": {
+    "A": "Laajalahdenbaana and Koiratorpanpolku forest path, no traffic, 0 lights",
+    "B": "Laajalahdenbaana then along Maarintie and briefly beside Kehä I; 1 light",
+    "C": "Quiet Bergans/Laajalahti residential streets and shore path; 0 lights, +2 min",
+    "D": "Laajalahdenbaana but with stretches beside Kehä I and a trunk road; +3 min",
+    "E": "Säterinmetsä paths and Laajalahdenbaana, 240 m walking; +10 min"
+  },
+  "notes": "Fastest is already car-free with 0 lights, so both cards merge into Fastest."
+}

@@ -1,0 +1,19 @@
+{
+  "od": "kapyla--oulunkyla",
+  "rubricVersion": "v0",
+  "calmRanking": ["E", "H", "B", "C", "D", "F", "G", "A"],
+  "tiers": { "A": "D", "B": "C", "C": "C", "D": "D", "E": "A", "F": "D", "G": "D", "H": "B" },
+  "sameRoute": [],
+  "picks": { "fewestLights": "C", "calm": "E" },
+  "rationale": {
+    "A": "Almost all in traffic: Pohjolankatu with tram rails then 1.2 km on Oulunkyläntie; unsignalled crossings",
+    "B": "Osmontie residential then side path beside Mäkitorpantie; no mixed traffic, 1 light",
+    "C": "Pellervontie then 2 km path beside Oulunkyläntie; no mixed traffic, 0 lights",
+    "D": "670 m on Pohjolankatu incl. tram rails, then Oulunkyläntie side path",
+    "E": "Käpylän asemaraitti and railway-side path, nowhere near major roads; 0 lights, +3 min",
+    "F": "~890 m on Pohjolankatu incl. tram rails, then Oulunkyläntie side path",
+    "G": "Same Pohjolankatu traffic as F plus Kunnalliskodintie; +4 min",
+    "H": "Osmontie and park path past Kivalterintie; short Mäkitorpantie side path; +5 min"
+  },
+  "notes": "Fewest lights: C has 0 vs A's 2 for +2 min, which meets the 1 min/light rule but only just. Calm: E removes all of A's tram-rail and collector traffic for +3 min."
+}

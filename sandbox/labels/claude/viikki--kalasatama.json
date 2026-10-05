@@ -1,0 +1,19 @@
+{
+  "od": "viikki--kalasatama",
+  "rubricVersion": "v0",
+  "calmRanking": ["B", "C", "D", "G", "H", "F", "A", "E"],
+  "tiers": { "A": "C", "B": "C", "C": "C", "D": "C", "E": "D", "F": "C", "G": "C", "H": "C" },
+  "sameRoute": [["A", "B"]],
+  "picks": { "fewestLights": "C", "calm": "C" },
+  "rationale": {
+    "A": "Viikki/Arabia paths, then 450 m in mixed traffic on Hermannin rantatie (40 km/h); 5 lights",
+    "B": "Same as A, but on the path beside Hermannin rantatie; 4 lights",
+    "C": "Same corridor, via service roads past the Hermannin rantatie junctions; no traffic; 2 lights; one unsignalised Hermannin rantatie crossing; +1 min",
+    "D": "Quiet Hermanni streets (Vellamonkatu) instead of the Hermannin rantatie corridor; 120 m on Haukilahdenkatu; +4 min",
+    "E": "Via Herttoniemi and 1.1 km mixed on Kulosaaren puistotie; 1 light; +4 min",
+    "F": "No traffic, but long paths beside Hämeentie with two unsignalised Hämeentie crossings",
+    "G": "Kumpula/Arabia side streets and paths, no traffic, ~3.8 km beside roads",
+    "H": "No traffic, but seven unsignalised crossings (Viikintie, Hernepellontie, Hämeentie); +8 min"
+  },
+  "notes": "C saves 3 lights for +1 min and drops A's Hermannin rantatie traffic stretch. B is calmest but saves only one light; C is nearly as calm. Ambiguous whether C counts as the same route as A/B (it differs by about a block through Kyläsaari)."
+}

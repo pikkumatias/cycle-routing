@@ -1,0 +1,19 @@
+{
+  "od": "alppila--kamppi",
+  "rubricVersion": "v0",
+  "calmRanking": ["F", "C", "E", "H", "D", "B", "G", "A"],
+  "tiers": { "A": "B", "B": "B", "C": "A", "D": "B", "E": "A", "F": "A", "G": "C", "H": "A" },
+  "sameRoute": [["A", "B"]],
+  "picks": { "fewestLights": "D", "calm": "C" },
+  "rationale": {
+    "A": "150 m on Aleksis Kiven katu with tram rails and 100 m on Helsinginkatu in traffic, then Töölönlahti",
+    "B": "Same as A but via Viipurinkatu tram street (180 m) instead",
+    "C": "Tivolitie, paths past Helsinginkatu and Töölönlahti to Baana; no mixed traffic; +1 min",
+    "D": "Viipurinkatu tram stretch, then Linnunlaulu bridge and Töölönlahti; 1 light, +2 min",
+    "E": "Via the Olympic stadium area and Töölönlahti; no traffic, one more unsignalled crossing; +2 min",
+    "F": "Eläintarha path, Kaisaniemi park, Kaisantunneli and Baana; least side path, 1 light, +3 min",
+    "G": "Porvoonkatu tram and Kallio/Siltasaari side tracks; 7 lights",
+    "H": "Path beside Aleksis Kiven katu then Töölönlahti; no traffic but longest; +5 min"
+  },
+  "notes": "Calm: C removes A's tram-rail and Helsinginkatu carriageway stretches for +1 min. F is marginally calmer but not worth 2 more minutes. Fewest lights: D saves 2 lights for 2 min (1 min/light). F does the same for +3."
+}

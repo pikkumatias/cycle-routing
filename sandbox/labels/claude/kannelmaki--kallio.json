@@ -1,0 +1,19 @@
+{
+  "od": "kannelmaki--kallio",
+  "rubricVersion": "v0",
+  "calmRanking": ["C", "E", "H", "B", "G", "D", "F", "A"],
+  "tiers": { "A": "D", "B": "A", "C": "A", "D": "A", "E": "A", "F": "C", "G": "A", "H": "A" },
+  "sameRoute": [],
+  "picks": { "fewestLights": "C", "calm": "C" },
+  "rationale": {
+    "A": "~1.1 km in mixed traffic on Ilkantie and Nuijamiestentie (40 km/h), 4 unsignalised crossings",
+    "B": "Central Park approach without mixed traffic, but ~1 km on the Nuijamiestentie-side track and several unsignalised crossings",
+    "C": "Straight through Central Park (Keskuspuistontaival); only ~1.2 km roadside, 1 unsignalised crossing, 1 light; +1 min",
+    "D": "Via Isonneva and Tilkka; 80 m in traffic, ~2.8 km roadside, 5 unsignalised crossings; +4 min",
+    "E": "Central Park via Pirkkola; nearly as calm as C but +4 min",
+    "F": "Rail-side path (Rantaradan varsiraitti) with long roadside stretches along Näyttelijäntie, Veturitie and Ratapihantie; +6 min",
+    "G": "Central Park then Käpylä and a track beside Ratapihantie; ~3 km roadside; +7 min",
+    "H": "Pitäjänmäki and Tilkka paths; ~1.2 km beside Pitäjänmäentie; +8 min"
+  },
+  "notes": "Clear case: C is calmest, has fewest lights (1 vs 3) and costs only +1 min."
+}

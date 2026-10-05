@@ -1,0 +1,19 @@
+{
+  "od": "ruoholahti--eira",
+  "rubricVersion": "v0",
+  "calmRanking": ["E", "C", "D", "A", "F", "G", "H", "B"],
+  "tiers": { "A": "D", "B": "E", "C": "C", "D": "D", "E": "C", "F": "D", "G": "D", "H": "D" },
+  "sameRoute": [["A", "B"]],
+  "picks": { "fewestLights": null, "calm": "C" },
+  "rationale": {
+    "A": "Itämerenkatu/Hietalahdenranta-side path, then ~520 m in traffic on Hietalahdenranta and Telakkakatu, about 300 m of it on tram rails",
+    "B": "Same corridor as A but rides in the carriageway on Itämerenkatu and Hietalahdenranta too: ~970 m in traffic, much of it on tram rails",
+    "C": "Path beside Hietalahdenranta/Bulevardi, then 470 m in traffic on Albertinkatu (30 km/h, no tram rails); no tram-street riding",
+    "D": "Porkkalankatu-side track, then 630 m in traffic on Hietalahdenkatu and Albertinkatu; 5 lights",
+    "E": "Baana and quiet Lastenkodinkatu/Abrahaminkatu, then Albertinkatu (470 m in traffic); +3 min",
+    "F": "Jätkäsaari start on quiet streets, then the same tram-railed Telakkakatu finish as A; +3 min",
+    "G": "Like A plus Tehtaankatu tram rails; ~600 m in traffic; +5 min",
+    "H": "Jätkäsaari detour with ~740 m in traffic, including Jätkäsaarenlaituri and the Telakkakatu tram rails; +5 min"
+  },
+  "notes": "All streets are 30 km/h; the main hazard is tram rails on Telakkakatu and Hietalahdenranta. C removes them at no real time cost, so it gets the calm card. A has only 2 lights, so no fewest-lights card. A and B are grouped geometrically (track vs carriageway on the same streets), although B is clearly worse for calm."
+}

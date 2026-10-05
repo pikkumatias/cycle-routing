@@ -1,0 +1,19 @@
+{
+  "od": "tapiola--otaniemi",
+  "rubricVersion": "v0",
+  "calmRanking": ["B", "E", "C", "D", "H", "F", "G", "A"],
+  "tiers": { "A": "D", "B": "A", "C": "A", "D": "A", "E": "A", "F": "C", "G": "A", "H": "A" },
+  "sameRoute": [["B", "E"]],
+  "picks": { "fewestLights": "B", "calm": "B" },
+  "rationale": {
+    "A": "Tapionraitti, then 540 m in mixed traffic on Tekniikantie/Vuorimiehentie; 3 lights",
+    "B": "Footpaths through Silkkiniitty and Otaniemi campus to Otabaana; no traffic; 0 lights; +0 min",
+    "C": "Same paths as B, then campus interior; 1 light",
+    "D": "Otsolahti shore path, then paths beside Vuorimiehentie/Tekniikantie; 3 lights",
+    "E": "Like B via Hopeahelka paths; 0 lights; +2 min",
+    "F": "B's start, then ~1.4 km beside Maarintie/Tekniikantie (up to 50 km/h)",
+    "G": "Forest paths through Aarnivalkea, but unsignalised Kalevalantie and Maarintie crossings (50 km/h)",
+    "H": "Longer Otsolahti shore and ridge paths; +5 min"
+  },
+  "notes": "B costs no extra time, has zero lights and no mixed traffic, so it takes both cards."
+}

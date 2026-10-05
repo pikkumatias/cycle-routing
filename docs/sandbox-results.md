@@ -45,3 +45,31 @@ regret 0.564; the same number of calls chosen greedily reaches 0.242. The wider
 via offsets (`#3`/`#4`: 600 m beside a signal cluster, 30 % of the trip sideways) earn more
 than the nearest ones, and returns flatten after ~8–10 calls. The exact generator indices are
 fitted in-sample; the family-level choice is what should carry over.
+
+## Claude pre-grading (dry run of `fit`)
+
+Three graders, working only from the rubric and the dossiers (never the model's scores),
+graded all 45 trips; each also graded the same 3 calibration trips. Agreement between
+graders on those trips: calm-ranking pair agreement 0.93–1.00, card picks identical on 2 of
+3 trips (2-of-3 majority on the third).
+
+Fitting the calm weights to these 1,202 within-trip ranking pairs (`npm run sandbox -- fit claude`):
+
+| | Pair agreement (leave-one-trip-out) |
+| --- | --- |
+| Prior weights | 0.848 |
+| Fitted weights | 0.866 |
+
+Fitted weights: away 0, quiet 0.01, adjacent 0.31, mixedLow 0.71, mixedHigh 1 (fixed),
+crossing penalty 49 m. This is a dry run — the user's reviewed labels are the training data.
+
+### Rubric gaps the graders hit (to settle when approving the rubric)
+
+1. **Same route, different experience** — riding in a street's carriageway vs on the
+   separated track beside the same street matches the geometric "same route" rule but
+   differs a lot for calm. Graders grouped these inconsistently.
+2. **"Dominant tier"** has no aggregation rule; graders knocked a route down a tier when
+   ~15 %+ of it is in tram-street or arterial traffic.
+3. **Zero-cost calm gains** — the detour rules cover only routes that cost extra time.
+4. **Unsignalised arterial crossings** appear often (e.g. Mannerheimintie). Some are likely
+   OSM gaps or a too-tight signal-attachment radius (`signals.crossM`); they affect calm.

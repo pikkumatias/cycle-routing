@@ -1,0 +1,19 @@
+{
+  "od": "kallio--kalasatama",
+  "rubricVersion": "v0",
+  "calmRanking": ["G", "A", "B", "F", "C", "E", "D", "H"],
+  "tiers": { "A": "B", "B": "B", "C": "C", "D": "C", "E": "C", "F": "C", "G": "B", "H": "D" },
+  "sameRoute": [["C", "D", "E", "F"]],
+  "picks": { "fewestLights": "C", "calm": null },
+  "rationale": {
+    "A": "Quiet Kallio/Vilhonvuori streets (Agricolankatu, Pengerkatu, Suvilahdenkatu); only 60 m on Helsinginkatu (tram); 5 lights",
+    "B": "Same start as A, then the path beside Lautatarhankatu; 60 m on Helsinginkatu; 5 lights",
+    "C": "Paths beside Sörnäisten rantatie (50 km/h), then 290 m in traffic on Koksikatu/Hermannin rantatie; 3 lights; +0 min",
+    "D": "Same as C, with an unsignalised Porthaninkatu crossing",
+    "E": "Same as C, on paths instead of the open area",
+    "F": "Same as C, short jog via Kaikukatu; 4 lights",
+    "G": "No mixed traffic at all: Pengerkatu, Kinaporinkatu, paths, Työpajankatu; 3 lights; one unsignalised Lautatarhankatu crossing",
+    "H": "~420 m in traffic on Helsinginkatu (370 m with tram rails); 6 lights"
+  },
+  "notes": "C saves 2 lights at no extra time. G is the calmest (+1 min, also 3 lights), but A is already a quiet-street route, so G is not a clear calm tier gain."
+}

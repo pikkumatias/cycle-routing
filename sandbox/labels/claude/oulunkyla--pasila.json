@@ -1,0 +1,19 @@
+{
+  "od": "oulunkyla--pasila",
+  "rubricVersion": "v0",
+  "calmRanking": ["C", "E", "F", "D", "H", "B", "G", "A"],
+  "tiers": { "A": "E", "B": "C", "C": "A", "D": "B", "E": "A", "F": "B", "G": "C", "H": "B" },
+  "sameRoute": [["C", "E"]],
+  "picks": { "fewestLights": "C", "calm": "C" },
+  "rationale": {
+    "A": "830 m mixed on Oulunkyläntie plus 1.1 km on Pohjolankatu (650 m with tram rails); unsignalised crossings",
+    "B": "No traffic, but all paths beside Oulunkyläntie/Käpyläntie/Koskelantie with unsignalised crossings; 4 lights",
+    "C": "Railway-side path via Käpylän asemaraitti; no road crossings, only ~1 km beside roads at the Pasila end; 1 light; +1 min",
+    "D": "Kumpula and Vallila valley paths; 220 m on Intiankatu; 3 lights",
+    "E": "Same as C",
+    "F": "Kumpula valley paths, no traffic, but four unsignalised crossings incl. Oulunkyläntie twice",
+    "G": "Paths beside Mäkelänkatu, unsignalised Mäkelänkatu/Koskelantie crossings, 270 m walking",
+    "H": "Kumpula streets and valley paths; 300 m on Intiankatu; +5 min"
+  },
+  "notes": "C is a clear win: +1 min, 2 fewer lights, and it replaces ~1.9 km of arterial and tram-street traffic with a railway-side path."
+}
