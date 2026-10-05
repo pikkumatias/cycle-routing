@@ -6,33 +6,21 @@ import {
   Button,
   ButtonBase,
   CircularProgress,
-  Collapse,
   FormControlLabel,
   Stack,
   Switch,
   Typography,
 } from '@mui/material'
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { useTranslation } from 'react-i18next'
 import i18n from './i18n'
 import './App.css'
-import {
-  parseLatLon,
-  fetchCandidateRoutes,
-  EXTRA_PRESETS,
-  type RouteCategory,
-  type CandidateRoute,
-} from './api/digitransit'
+import { parseLatLon } from './api/digitransit'
+import { defaultCard, fetchRoutePlan, type RoutePlan } from './api/routePlan'
 import { RouteMap } from './components/RouteMap'
-import { RouteCards, RouteCardsSkeleton, type ScoredRoute } from './components/RouteCards'
+import { RouteCards, RouteCardsSkeleton } from './components/RouteCards'
 import { SearchDrawer, type AddressOption } from './components/SearchDrawer'
 import { AddressTrigger } from './components/AddressTrigger'
-import {
-  estimateBboxFromEndpoints,
-  getRouteLegsFromPlanResponse,
-  getBoundsFromLegsAndPoints,
-  type LatLng,
-} from './utils/routeGeometry'
+import { getBoundsFromLegsAndPoints, type LatLng } from './utils/routeGeometry'
 import {
   fetchHazards,
   filterHazardsNearRoute,
@@ -43,9 +31,6 @@ import {
   filterStationsNearEndpoints,
   type CityBikeStation,
 } from './services/citybikes'
-import { fetchPoisAndInfrastructure, boundsToBbox } from './utils/overpass'
-import type { OsmPoi } from './utils/overpass'
-import { deduplicateRoutes, selectCalmRoute, selectDefaultRoutes } from './utils/routeSelection'
 import {
   getRecentSearches,
   addRecentSearch,
@@ -53,29 +38,12 @@ import {
 import { useBottomSheet } from './hooks/useBottomSheet'
 import { useGeolocation } from './hooks/useGeolocation'
 
-type RoutesState = {
+type PlanState = {
   loading: boolean
   error: string | null
-  routes: Partial<Record<RouteCategory, ScoredRoute>> | null
-  selectedRoute: RouteCategory
-  /** Fewest lights resolved to the Fastest route; shown as a badge on that card. */
-  fewestLightsMerged: boolean
-  /** Set once "more options" ran and found no route that isn't already shown. */
-  noCalmerAlternative: boolean
-}
-
-/** Build a subset of the routes map in the given order, skipping categories not yet loaded. */
-function pickRoutes(
-  routes: Partial<Record<RouteCategory, ScoredRoute>> | null,
-  keys: RouteCategory[],
-): Partial<Record<RouteCategory, ScoredRoute>> {
-  const out: Partial<Record<RouteCategory, ScoredRoute>> = {}
-  if (!routes) return out
-  for (const key of keys) {
-    const route = routes[key]
-    if (route) out[key] = route
-  }
-  return out
+  plan: RoutePlan | null
+  /** Route id of the selected card. */
+  selectedId: string | null
 }
 
 function App() {
@@ -85,38 +53,26 @@ function App() {
   const [fromInput, setFromInput] = useState('')
   const [toInput, setToInput] = useState('')
   const [recentSearches, setRecentSearches] = useState(() => getRecentSearches())
-  const [routesState, setRoutesState] = useState<RoutesState>({
+  const [planState, setPlanState] = useState<PlanState>({
     loading: false,
     error: null,
-    routes: null,
-    selectedRoute: 'fewestLights',
-    fewestLightsMerged: false,
-    noCalmerAlternative: false,
+    plan: null,
+    selectedId: null,
   })
   const [lastCoords, setLastCoords] = useState<{
     from: LatLng
     to: LatLng
   } | null>(null)
   const [hazardsData, setHazardsData] = useState<{ loading: boolean; items: Hazard[] }>({ loading: false, items: [] })
-  const hazardCacheRef = useRef<Partial<Record<RouteCategory, Hazard[]>>>({})
+  const hazardCacheRef = useRef<Record<string, Hazard[]>>({})
   // Raw hazards fetched once for the union bbox of all route variants; filtered
   // client-side per selected route so switching tabs needs no network round-trip.
   const rawHazardsRef = useRef<Hazard[] | null>(null)
-  const prevRoutesRef = useRef(routesState.routes)
+  const prevPlanRef = useRef(planState.plan)
   const [showHazards, setShowHazards] = useState(false)
   const [showCityBikes, setShowCityBikes] = useState(true)
   const [cityBikesData, setCityBikesData] = useState<{ loading: boolean; items: CityBikeStation[] }>({ loading: false, items: [] })
 
-  // Lazy "more route options" (calm): fetched only when the user expands the section.
-  // The default candidate pool + POIs from the last search are kept in refs so expanding
-  // reuses them and only fetches the EXTRA_PRESETS routes.
-  const [showMoreRoutes, setShowMoreRoutes] = useState(false)
-  const [moreRoutesLoading, setMoreRoutesLoading] = useState(false)
-  const poisRef = useRef<OsmPoi[]>([])
-  const defaultCandidatesRef = useRef<CandidateRoute[]>([])
-  const extraLoadedRef = useRef(false)
-  // Responses of the main cards, so Calm never repeats one of them.
-  const shownResponsesRef = useRef<unknown[]>([])
   const geolocation = useGeolocation()
   const isCurrentLocationOriginRef = useRef(false)
 
@@ -160,28 +116,28 @@ function App() {
   const { sheetRef, handleRef, contentRef, sheetStyle, contentStyle } = useBottomSheet()
 
   useEffect(() => {
-    // Clear caches whenever a new set of routes is loaded
-    if (routesState.routes !== prevRoutesRef.current) {
+    // Clear caches whenever a new plan is loaded
+    if (planState.plan !== prevPlanRef.current) {
       hazardCacheRef.current = {}
       rawHazardsRef.current = null
-      prevRoutesRef.current = routesState.routes
+      prevPlanRef.current = planState.plan
     }
 
-    if (!showHazards || !routesState.routes || !lastCoords) return
-    const routes = routesState.routes
+    if (!showHazards || !planState.plan || !planState.selectedId || !lastCoords) return
+    const routes = planState.plan.routes
+    const selectedId = planState.selectedId
     const coords = lastCoords
-    const selectedRouteData = routes[routesState.selectedRoute]
-    if (!selectedRouteData) return
+    const selected = routes.find((r) => r.id === selectedId)
+    if (!selected) return
 
     // Serve from per-route cache if this route was already filtered
-    const cached = hazardCacheRef.current[routesState.selectedRoute]
+    const cached = hazardCacheRef.current[selectedId]
     if (cached) {
       setHazardsData({ loading: false, items: cached })
       return
     }
 
-    const legs = getRouteLegsFromPlanResponse(selectedRouteData.response)
-    const polyline = legs.flatMap((leg) => leg.positions)
+    const polyline = selected.legs.flat()
     if (polyline.length === 0) return
 
     let cancelled = false
@@ -192,9 +148,7 @@ function App() {
         // variant. Subsequent tab switches reuse it and only re-filter locally.
         let raw = rawHazardsRef.current
         if (!raw) {
-          const allLegs = Object.values(routes).flatMap((r) =>
-            r ? getRouteLegsFromPlanResponse(r.response) : [],
-          )
+          const allLegs = routes.flatMap((r) => r.legs.map((positions) => ({ positions })))
           const bounds = getBoundsFromLegsAndPoints(allLegs, coords.from, coords.to)
           if (bounds.length < 2) return
           const BUFFER = 0.0003 // ~30m in degrees
@@ -219,7 +173,7 @@ function App() {
           }
         }
         if (!cancelled) {
-          hazardCacheRef.current[routesState.selectedRoute] = filtered
+          hazardCacheRef.current[selectedId] = filtered
           setHazardsData({ loading: false, items: filtered })
         }
       } catch (err) {
@@ -232,7 +186,7 @@ function App() {
     return () => {
       cancelled = true
     }
-  }, [showHazards, routesState.selectedRoute, routesState.routes, lastCoords])
+  }, [showHazards, planState.selectedId, planState.plan, lastCoords])
 
   useEffect(() => {
     // Stations are filtered to a radius around the origin/destination, so the
@@ -262,41 +216,6 @@ function App() {
     }
   }, [showCityBikes, lastCoords])
 
-  useEffect(() => {
-    // Lazily fetch the calm route when the user first expands "more options". Reuses the
-    // default candidate pool + POIs from the last search and only requests the
-    // EXTRA_PRESETS. The main cards are never replaced, and Calm skips routes they show.
-    if (!showMoreRoutes || extraLoadedRef.current || !lastCoords) return
-    const coords = lastCoords
-
-    let cancelled = false
-    void (async () => {
-      setMoreRoutesLoading(true)
-      try {
-        const from = { lat: coords.from[0], lon: coords.from[1] }
-        const to = { lat: coords.to[0], lon: coords.to[1] }
-        const extra = await fetchCandidateRoutes(from, to, EXTRA_PRESETS, 'extra')
-        if (cancelled) return
-        const combined = deduplicateRoutes([...defaultCandidatesRef.current, ...extra])
-        const calm = selectCalmRoute(combined, poisRef.current, shownResponsesRef.current)
-        if (cancelled) return
-        extraLoadedRef.current = true
-        setRoutesState((prev) => {
-          if (!prev.routes) return prev
-          return calm
-            ? { ...prev, routes: { ...prev.routes, calm } }
-            : { ...prev, noCalmerAlternative: true }
-        })
-      } catch (err) {
-        if (!cancelled) console.warn('[App] extra route fetch failed:', err)
-      } finally {
-        if (!cancelled) setMoreRoutesLoading(false)
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [showMoreRoutes, lastCoords])
 
 const resolveCoords = (option: AddressOption | null, input: string) => {
     if (option) return { lat: option.lat, lon: option.lon }
@@ -346,43 +265,9 @@ const resolveCoords = (option: AddressOption | null, input: string) => {
       const fromLatLng: LatLng = [from.lat, from.lon]
       const toLatLng: LatLng = [to.lat, to.lon]
 
-      setRoutesState({
-        loading: true,
-        error: null,
-        routes: null,
-        selectedRoute: 'fewestLights',
-        fewestLightsMerged: false,
-        noCalmerAlternative: false,
-      })
-      // Reset the lazy "more options" state for the new search.
-      setShowMoreRoutes(false)
-      extraLoadedRef.current = false
+      setPlanState({ loading: true, error: null, plan: null, selectedId: null })
 
-      // Estimate bbox from endpoints so Overpass can start in parallel with routes
-      const estimatedBounds = estimateBboxFromEndpoints(fromLatLng, toLatLng)
-      const estimatedBbox = boundsToBbox(estimatedBounds)
-
-      // Launch routes + Overpass in parallel
-      const [candidates, poisResult] = await Promise.all([
-        fetchCandidateRoutes(from, to),
-        estimatedBbox
-          ? fetchPoisAndInfrastructure(estimatedBbox).then(
-              (pois) => ({ pois, failed: false }),
-              () => ({ pois: [] as OsmPoi[], failed: true }),
-            )
-          : Promise.resolve({ pois: [] as OsmPoi[], failed: false }),
-      ])
-
-      const { pois, failed: poisFailed } = poisResult
-
-      // De-duplicate near-identical routes, then select the two default categories.
-      // Keep the deduped candidates + POIs so "more options" can extend the pool later.
-      const unique = deduplicateRoutes(candidates)
-      defaultCandidatesRef.current = unique
-      poisRef.current = pois
-      const { fastest, fewestLights } = selectDefaultRoutes(unique, pois)
-      const merged = fewestLights === fastest
-      shownResponsesRef.current = merged ? [fastest.response] : [fastest.response, fewestLights.response]
+      const plan = await fetchRoutePlan(from, to)
 
       if (fromOption) {
         addRecentSearch({ label: fromOption.label, lat: fromOption.lat, lon: fromOption.lon })
@@ -392,68 +277,54 @@ const resolveCoords = (option: AddressOption | null, input: string) => {
       }
       setRecentSearches(getRecentSearches())
 
-      setRoutesState({
+      setPlanState({
         loading: false,
-        error: poisFailed ? t('routes.scoringUnavailable') : null,
-        routes: merged ? { fastest } : { fastest, fewestLights },
-        selectedRoute: merged ? 'fastest' : 'fewestLights',
-        fewestLightsMerged: merged,
-        noCalmerAlternative: false,
+        error: null,
+        plan,
+        selectedId: defaultCard(plan.cards)?.routeId ?? null,
       })
       setLastCoords({ from: fromLatLng, to: toLatLng })
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Unknown error'
-      setRoutesState({
-        loading: false,
-        error: message,
-        routes: null,
-        selectedRoute: 'fewestLights',
-        fewestLightsMerged: false,
-        noCalmerAlternative: false,
-      })
+      setPlanState({ loading: false, error: message, plan: null, selectedId: null })
     }
   }
 
-  const selectedRouteData = routesState.routes?.[routesState.selectedRoute]
+  const routesById = useMemo(
+    () => Object.fromEntries((planState.plan?.routes ?? []).map((r) => [r.id, r])),
+    [planState.plan],
+  )
+  const selectedRoute = planState.selectedId ? routesById[planState.selectedId] : undefined
   const trafficLights = useMemo(
-    () => (selectedRouteData?.nearbyPois ?? []).filter((p) => p.category === 'traffic_signal'),
-    [selectedRouteData],
+    () => (selectedRoute?.signalStops ?? []).map((s) => s.at),
+    [selectedRoute],
   )
   const alternativeRoutes = useMemo(
     () =>
-      routesState.routes
-        ? (Object.entries(routesState.routes) as [RouteCategory, ScoredRoute][])
-            .filter(([key]) => key !== routesState.selectedRoute)
-            .map(([key, route]) => ({ category: key, response: route.response }))
-        : [],
-    [routesState.routes, routesState.selectedRoute],
+      (planState.plan?.routes ?? [])
+        .filter((r) => r.id !== planState.selectedId)
+        .map((r) => ({ id: r.id, legs: r.legs })),
+    [planState.plan, planState.selectedId],
   )
 
-  const onSelectRoute = (key: RouteCategory) =>
-    setRoutesState((prev) => ({ ...prev, selectedRoute: key }))
-  // When Fewest lights resolved to the Fastest route, only the Fastest card exists and
-  // carries an "also fewest lights" badge.
-  const mainRoutes = pickRoutes(routesState.routes, ['fewestLights', 'fastest'])
-  const mainBadges = routesState.fewestLightsMerged
-    ? { fastest: ['routes.alsoFewestLights'] }
-    : undefined
-  const extraRoutes = pickRoutes(routesState.routes, ['calm'])
+  const onSelectRoute = (id: string) =>
+    setPlanState((prev) => ({ ...prev, selectedId: id }))
 
   return (
     <div className="app-layout">
       <div className="map-section">
         <RouteMap
-          routeResponse={selectedRouteData?.response ?? null}
+          route={selectedRoute?.legs ?? null}
           from={lastCoords?.from}
           to={lastCoords?.to}
           height="100%"
           alternativeRoutes={alternativeRoutes}
           onSelectRoute={onSelectRoute}
-          hazards={showHazards && routesState.routes ? (DEBUG_SHOW_ALL_HAZARDS ? debugHazards : hazardsData.items) : []}
+          hazards={showHazards && planState.plan ? (DEBUG_SHOW_ALL_HAZARDS ? debugHazards : hazardsData.items) : []}
           hazardsLoading={hazardsData.loading}
           trafficLights={trafficLights}
-          cityBikes={showCityBikes && routesState.routes ? cityBikesData.items : []}
+          cityBikes={showCityBikes && planState.plan ? cityBikesData.items : []}
           onSetOrigin={handleSetOriginFromMap}
           onSetDestination={handleSetDestinationFromMap}
         />
@@ -524,26 +395,26 @@ const resolveCoords = (option: AddressOption | null, input: string) => {
               type="submit"
               variant="contained"
               fullWidth
-              disabled={routesState.loading}
+              disabled={planState.loading}
               sx={{ mt: 2 }}
             >
-              {routesState.loading ? t('routes.findingRoutes') : t('routes.findRoutes')}
+              {planState.loading ? t('routes.findingRoutes') : t('routes.findRoutes')}
             </Button>
           </form>
 
-          {routesState.error && (
-            <Alert severity={routesState.routes ? 'warning' : 'error'} sx={{ mt: 2 }}>
-              {routesState.error}
+          {planState.error && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {planState.error}
             </Alert>
           )}
 
-          {routesState.loading && (
+          {planState.loading && (
             <Box sx={{ mt: 2 }}>
               <RouteCardsSkeleton />
             </Box>
           )}
 
-          {routesState.routes && selectedRouteData && (
+          {planState.plan && selectedRoute && (
             <Stack spacing={2} sx={{ mt: 2 }}>
               <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
                 <FormControlLabel
@@ -578,50 +449,13 @@ const resolveCoords = (option: AddressOption | null, input: string) => {
                 </Box>
               )}
               <RouteCards
-                routes={mainRoutes}
-                badges={mainBadges}
-                selectedRoute={routesState.selectedRoute}
+                cards={planState.plan.cards}
+                routesById={routesById}
+                selectedId={planState.selectedId}
                 onSelect={onSelectRoute}
                 hazardCount={hazardsData.items.length}
                 hazardsLoading={hazardsData.loading}
               />
-              <Box>
-                <Button
-                  fullWidth
-                  variant="text"
-                  onClick={() => setShowMoreRoutes((v) => !v)}
-                  endIcon={
-                    <ExpandMoreIcon
-                      sx={{
-                        transform: showMoreRoutes ? 'rotate(180deg)' : 'none',
-                        transition: 'transform 0.2s',
-                      }}
-                    />
-                  }
-                  sx={{ justifyContent: 'space-between', textTransform: 'none', color: 'text.secondary' }}
-                >
-                  {t('routes.moreOptions')}
-                </Button>
-                <Collapse in={showMoreRoutes} unmountOnExit>
-                  <Box sx={{ mt: 1 }}>
-                    {moreRoutesLoading && Object.keys(extraRoutes).length === 0 ? (
-                      <RouteCardsSkeleton />
-                    ) : routesState.noCalmerAlternative ? (
-                      <Typography variant="caption" color="text.secondary" sx={{ px: 1 }}>
-                        {t('routes.noCalmerAlternative')}
-                      </Typography>
-                    ) : (
-                      <RouteCards
-                        routes={extraRoutes}
-                        selectedRoute={routesState.selectedRoute}
-                        onSelect={onSelectRoute}
-                        hazardCount={hazardsData.items.length}
-                        hazardsLoading={hazardsData.loading}
-                      />
-                    )}
-                  </Box>
-                </Collapse>
-              </Box>
             </Stack>
           )}
         </div>

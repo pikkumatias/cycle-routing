@@ -21,15 +21,13 @@ import type { AddressOption } from './SearchDrawer'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import {
-  getRouteLegsFromPlanResponse,
+  toDisplayLegs,
   getBoundsFromLegsAndPoints,
   type LatLng,
 } from '../utils/routeGeometry'
-import type { RouteCategory } from '../api/digitransit'
 import type { Hazard } from '../services/hazards'
 import { hazardToLatLng } from '../services/hazards'
 import type { CityBikeStation } from '../services/citybikes'
-import type { OsmPoi } from '../utils/overpass'
 
 const originIcon = L.divIcon({
   className: '',
@@ -341,7 +339,7 @@ function HazardPolygonLayer({ hazards, isMobile, onHazardClick }: HazardClusterL
   return null
 }
 
-function TrafficLightClusterLayer({ lights }: { lights: OsmPoi[] }) {
+function TrafficLightClusterLayer({ lights }: { lights: LatLng[] }) {
   const map = useMap()
 
   useEffect(() => {
@@ -359,7 +357,7 @@ function TrafficLightClusterLayer({ lights }: { lights: OsmPoi[] }) {
     })
 
     for (const light of lights) {
-      group.addLayer(L.marker([light.lat, light.lon], { icon: trafficLightIcon }))
+      group.addLayer(L.marker(light, { icon: trafficLightIcon }))
     }
 
     map.addLayer(group)
@@ -410,27 +408,29 @@ function CityBikeStationLayer({ stations }: { stations: CityBikeStation[] }) {
 }
 
 export type AlternativeRoute = {
-  category: RouteCategory
-  response: unknown
+  id: string
+  legs: LatLng[][]
 }
 
 export type RouteMapProps = {
-  routeResponse: unknown
+  /** Legs of the selected route. */
+  route: LatLng[][] | null
   from?: LatLng
   to?: LatLng
   height?: number | string
   alternativeRoutes?: AlternativeRoute[]
-  onSelectRoute?: (category: RouteCategory) => void
+  onSelectRoute?: (id: string) => void
   hazards?: Hazard[]
   hazardsLoading?: boolean
-  trafficLights?: OsmPoi[]
+  /** Signal stops counted on the selected route. */
+  trafficLights?: LatLng[]
   cityBikes?: CityBikeStation[]
   onSetOrigin?: (option: AddressOption) => void
   onSetDestination?: (option: AddressOption) => void
 }
 
 export function RouteMap({
-  routeResponse,
+  route,
   from,
   to,
   height = '100%',
@@ -446,15 +446,9 @@ export function RouteMap({
   const [selectedHazard, setSelectedHazard] = useState<Hazard | null>(null)
   const isMobile = useMediaQuery('(max-width:600px)')
   const handleHazardClick = useCallback((hazard: Hazard) => setSelectedHazard(hazard), [])
-  const legs = useMemo(
-    () => getRouteLegsFromPlanResponse(routeResponse),
-    [routeResponse],
-  )
+  const legs = useMemo(() => toDisplayLegs(route ?? []), [route])
   const altLegsArrays = useMemo(
-    () => (alternativeRoutes ?? []).map((r) => ({
-      category: r.category,
-      legs: getRouteLegsFromPlanResponse(r.response),
-    })),
+    () => (alternativeRoutes ?? []).map((r) => ({ id: r.id, legs: toDisplayLegs(r.legs) })),
     [alternativeRoutes],
   )
   const allLegs = useMemo(() => {
@@ -516,7 +510,7 @@ export function RouteMap({
                 opacity: 0.01,
               }}
               eventHandlers={{
-                click: () => onSelectRoute?.(altRoute.category),
+                click: () => onSelectRoute?.(altRoute.id),
               }}
             />
           )),
