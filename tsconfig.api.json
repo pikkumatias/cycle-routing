@@ -22,5 +22,6 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["api"]
+  "include": ["api", "src/routing", "src/mapbox-polyline.d.ts"],
+  "exclude": ["src/routing/**/*.test.ts", "src/routing/testHelpers.ts"]
 }
