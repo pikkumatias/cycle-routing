@@ -10,19 +10,13 @@
  * `--refresh` ignores the cache.
  */
 import { createHash } from 'node:crypto'
-import { createReadStream, createWriteStream } from 'node:fs'
-import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'
-import { createInterface } from 'node:readline'
-import { Readable } from 'node:stream'
-import { pipeline } from 'node:stream/promises'
-import type { ReadableStream as WebReadableStream } from 'node:stream/web'
-import { createGunzip } from 'node:zlib'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import polyline from '@mapbox/polyline'
 import { GridIndex, haversineDistance, resample, segmentDistance } from '../src/routing/geo'
 import type { OsmLayersFile, RoadClass, RoadRecord } from '../src/routing/layers'
 import type { LatLng } from '../src/routing/types'
+import { USER_AGENT, ensureExtract, readExtract, type Tags } from './lib/osmExtract'
 
-const EXTRACT_URL = 'https://download.bbbike.org/osm/bbbike/Helsinki/Helsinki.osm.gz'
 /** Helsinki, Espoo, Vantaa and Kauniainen, for the Overpass source. */
 const OVERPASS_REGION = { south: 60.08, west: 24.45, north: 60.42, east: 25.3 }
 const CHUNK_LAT = 0.04
@@ -32,7 +26,6 @@ const MAX_ATTEMPTS = 12
 const CACHE_DIR = '.cache/osm'
 const OUT_FILE = 'data/osm-layers.json'
 const META_FILE = 'data/meta.json'
-const USER_AGENT = 'cycle-routing/1.0 layer build (https://github.com/pikkumatias/cycle-routing)'
 
 /** Calm-network nodes are sampled this far apart along each car-free path. */
 const CALM_NODE_SPACING_M = 150
@@ -47,7 +40,6 @@ const PATH_LIKE = /^(path|footway|pedestrian|track|bridleway)$/
 const BIKE_ALLOWED = /^(yes|designated|permissive)$/
 const NON_STOPPING_SIGNALS = new Set(['blinker', 'emergency', 'ramp_meter'])
 
-type Tags = Record<string, string>
 type Signal = { id: number; lat: number; lon: number }
 type Way = { id: number; nodes: number[]; geom: LatLng[]; tags: Tags }
 
@@ -94,114 +86,17 @@ function addWay(c: Collected, way: Way): void {
 
 // ── Source: BBBike extract ──────────────────────────────────────────────────────────
 
-const decodeXml = (v: string) =>
-  v.replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')
-const attr = (line: string, name: string) => line.match(new RegExp(`\\s${name}="([^"]*)"`))?.[1]
-
-/**
- * Node coordinates for the whole extract in sorted typed arrays — osmium writes nodes
- * sorted by id and before any way — so millions of nodes fit in memory.
- */
-class NodeStore {
-  private ids = new Float64Array(1 << 20)
-  private lats = new Int32Array(1 << 20)
-  private lons = new Int32Array(1 << 20)
-  private size = 0
-
-  add(id: number, lat: number, lon: number): void {
-    if (this.size === this.ids.length) {
-      const ids = new Float64Array(this.ids.length * 2)
-      const lats = new Int32Array(this.ids.length * 2)
-      const lons = new Int32Array(this.ids.length * 2)
-      ids.set(this.ids)
-      lats.set(this.lats)
-      lons.set(this.lons)
-      this.ids = ids
-      this.lats = lats
-      this.lons = lons
-    }
-    this.ids[this.size] = id
-    this.lats[this.size] = Math.round(lat * 1e7)
-    this.lons[this.size] = Math.round(lon * 1e7)
-    this.size++
-  }
-
-  get(id: number): LatLng | null {
-    let lo = 0
-    let hi = this.size - 1
-    while (lo <= hi) {
-      const mid = (lo + hi) >> 1
-      const v = this.ids[mid]
-      if (v === id) return [this.lats[mid] / 1e7, this.lons[mid] / 1e7]
-      if (v < id) lo = mid + 1
-      else hi = mid - 1
-    }
-    return null
-  }
-}
-
-type Pending = { kind: 'node' | 'way'; id: number; lat: number; lon: number; refs: number[]; tags: Tags }
-
 async function collectFromExtract(refresh: boolean): Promise<Collected> {
-  const file = `${CACHE_DIR}/Helsinki.osm.gz`
-  const cached = !refresh && (await stat(file).then((s) => s.size > 0, () => false))
-  if (!cached) {
-    console.log(`downloading ${EXTRACT_URL}`)
-    const res = await fetch(EXTRACT_URL, { headers: { 'User-Agent': USER_AGENT } })
-    if (!res.ok || !res.body) throw new Error(`Extract download failed: HTTP ${res.status}`)
-    await pipeline(Readable.fromWeb(res.body as WebReadableStream), createWriteStream(file))
-  }
-
+  const file = await ensureExtract(refresh)
   const c = emptyCollected([0, 0, 0, 0])
-  const nodes = new NodeStore()
-  let current: Pending | null = null
-  let newestEdit = ''
-
-  const finish = (p: Pending) => {
-    if (p.kind === 'node') {
-      if (isStoppingSignal(p.tags)) c.signals.set(p.id, { id: p.id, lat: p.lat, lon: p.lon })
-      return
-    }
-    const geom = p.refs.map((r) => nodes.get(r)).filter((q): q is LatLng => q !== null)
-    addWay(c, { id: p.id, nodes: p.refs, geom, tags: p.tags })
-  }
-
   console.log('parsing extract…')
-  const lines = createInterface({ input: createReadStream(file).pipe(createGunzip()), crlfDelay: Infinity })
-  for await (const raw of lines) {
-    const line = raw.trimStart()
-    if (line.startsWith('<node ')) {
-      const id = Number(attr(line, 'id'))
-      const lat = Number(attr(line, 'lat'))
-      const lon = Number(attr(line, 'lon'))
-      nodes.add(id, lat, lon)
-      const ts = attr(line, 'timestamp')
-      if (ts && ts > newestEdit) newestEdit = ts
-      current = line.endsWith('/>') ? null : { kind: 'node', id, lat, lon, refs: [], tags: {} }
-    } else if (line.startsWith('<way ')) {
-      current = { kind: 'way', id: Number(attr(line, 'id')), lat: 0, lon: 0, refs: [], tags: {} }
-    } else if (line.startsWith('<nd ') && current) {
-      current.refs.push(Number(attr(line, 'ref')))
-    } else if (line.startsWith('<tag ') && current) {
-      const k = attr(line, 'k')
-      const v = attr(line, 'v')
-      if (k !== undefined && v !== undefined) current.tags[decodeXml(k)] = decodeXml(v)
-    } else if ((line.startsWith('</node>') || line.startsWith('</way>')) && current) {
-      finish(current)
-      current = null
-    } else if (line.startsWith('<relation ')) {
-      break // relations come last and are not needed
-    } else if (line.startsWith('<bounds ')) {
-      c.bbox = [
-        Number(attr(line, 'minlat')),
-        Number(attr(line, 'minlon')),
-        Number(attr(line, 'maxlat')),
-        Number(attr(line, 'maxlon')),
-      ]
-    }
-  }
-  lines.close()
-  // The newest edit in the extract approximates its OSM data timestamp.
+  const { bbox, newestEdit } = await readExtract(file, {
+    onNode: (id, lat, lon, tags) => {
+      if (isStoppingSignal(tags)) c.signals.set(id, { id, lat, lon })
+    },
+    onWay: (id, nodes, geom, tags) => addWay(c, { id, nodes, geom, tags }),
+  })
+  c.bbox = bbox
   c.osmTimestamp = newestEdit
   return c
 }
