@@ -7,14 +7,14 @@ Goal: trustworthy measurements, at most three genuinely different cards
 (Fastest, Fewest lights, Calm), weights calibrated in an offline sandbox.
 
 ## Phase 0 — fix today's app (`routing/phase-0-fixes`)
-- [ ] Exclude `.claude/**` and `sandbox/**` from Vitest
-- [ ] Overpass: also fetch `crossing=traffic_signals` nodes; drop blinker/emergency/ramp-meter signals
-- [ ] Overpass cache: round the bbox outward and fetch the rounded box, so a cached box always contains the request
-- [ ] Light counting: full-resolution polyline, 12 m hit distance, one light per 40 m along-route window
-- [ ] OSM bbox: equal padding in metres on both axes, max(1 km, 25 % of trip)
-- [ ] Fewest lights: within +30 % (≥ +4 min) of Fastest and saves ≥ 2 lights, otherwise merges into Fastest
-- [ ] UI: merged Fewest lights selects Fastest with an "also fewest lights" badge; light count on every card
-- [ ] UI: "more options" shows Calm only and never replaces the main cards; Scenic dropped
+- [x] Exclude `.claude/**` and `sandbox/**` from Vitest
+- [x] Overpass: also fetch `crossing=traffic_signals` nodes; drop blinker/emergency/ramp-meter signals
+- [x] Overpass cache: round the bbox outward and fetch the rounded box, so a cached box always contains the request
+- [x] Light counting: full-resolution polyline, 12 m hit distance, one light per 40 m along-route window
+- [x] OSM bbox: equal padding in metres on both axes, max(1 km, 25 % of trip)
+- [x] Fewest lights: within +30 % (≥ +4 min) of Fastest and saves ≥ 2 lights, otherwise merges into Fastest
+- [x] UI: merged Fewest lights selects Fastest with an "also fewest lights" badge; light count on every card
+- [x] UI: "more options" shows Calm only and never replaces the main cards; Scenic dropped
 
 ## Phase 1 — engine and data (`routing/phase-1-engine`)
 - [ ] `src/routing/` pure engine: types, config, geo, layers, signals, stress, profile, similarity, spur, otpClient, generators, select, planRoutes
