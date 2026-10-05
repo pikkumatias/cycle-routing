@@ -8,9 +8,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run build` — Type-check with `tsc -b` then build with Vite
 - `npm run lint` — ESLint (flat config, TS/TSX only)
 - `npm test` — Run all tests with Vitest (jsdom environment, globals enabled)
-- `npx vitest run src/utils/scenicScore.test.ts` — Run a single test file
+- `npx vitest run src/routing/profile.test.ts` — Run a single test file
 - `npm run route` — CLI script to query Digitransit routing API interactively
-- `npm run benchmark` — CLI script to benchmark route scoring performance
+- `npm run data:osm` — Rebuild `data/osm-layers.json` from Overpass (cached in `.cache/osm/`; `-- --refresh` to refetch)
 
 ## Environment Variables
 
@@ -21,55 +21,53 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Frontend (React + Vite + TypeScript)
 
-The app is a bicycle route planner for the Helsinki region. The user enters origin/destination addresses, and the app shows three route variants on a Leaflet map: **Fastest**, **Scenic**, and **Calm**.
+The app is a bicycle route planner for the Helsinki region. The user enters origin/destination addresses and the app shows up to three route cards on a Leaflet map: **Fastest**, **Fewest lights** and **Calm**. A route that wins several categories is shown once with badges.
 
 **Routing flow** (`src/App.tsx`):
 1. User selects addresses via geocoding autocomplete (`SearchDrawer` → `/api/digitransit-geocode`)
-2. On submit, two parallel fetches fire:
-   - `fetchCandidateRoutes` — calls `api/digitransit-route-batch` with 5 OTP triangle presets, each requesting 2 itineraries → up to 10 candidate routes
-   - `fetchPoisAndInfrastructure` — single combined Overpass API query for scenic POIs + cycling infrastructure in an estimated bbox (results cached in-memory by quantized bbox)
-3. `deduplicateRoutes` removes near-identical candidates (>85% bidirectional polyline overlap)
-4. `selectRoutes` scores all candidates and picks the best per category:
-   - **Fastest**: lowest duration
-   - **Scenic**: highest scenic POI score (parks, nature, water)
-   - **Calm**: highest cycling infrastructure score (cycleways, bike lanes)
+2. On submit, `fetchRoutePlan` (`src/api/routePlan.ts`) POSTs `{from, to}` to `/api/route-plan`
+3. The server runs the routing engine (`src/routing/planRoutes.ts`): OTP candidates (presets, then via-waypoint detours), measured against the prebuilt OSM layers, and `selectCards` picks the cards
+4. The client draws the shown routes, selects the card holding Fewest lights, and fetches hazards/city bikes for display
 
-**Triangle presets** (5 OTP optimization factors):
-1. `{ time: 1, safety: 0, slope: 0 }` — fastest
-2. `{ time: 0, safety: 1, slope: 0 }` — best infrastructure
-3. `{ time: 0, safety: 0, slope: 1 }` — flattest
-4. `{ time: 0.33, safety: 0.34, slope: 0.33 }` — balanced
-5. `{ time: 0.1, safety: 0.6, slope: 0.3 }` — safe + flat hybrid
+See `SCORING.md` for generators, light counting, traffic stress / calm index and selection rules.
 
-### Scoring System (`src/utils/scenicScore.ts`, `src/utils/overpass.ts`)
+### Routing engine (`src/routing/`)
 
-Two independent scores computed from OSM data within 150m of the route polyline:
-- **Scenic score**: weighted sum of nature/green POIs (nature reserves=4, parks=3, water=2, etc.)
-- **Infrastructure score**: weighted sum of cycling infra (separated cycleways=4, designated paths=2, painted lanes=1)
-- **Calm score**: `0.5 * normalized_scenic + 0.5 * normalized_infra`, scaled 0-100
+Pure TypeScript — no DOM or Node APIs — so the endpoint, the calibration sandbox and tests share it. It is type-checked under both `tsconfig.app.json` (no Node types) and `tsconfig.api.json` (no DOM). Imports inside it use `.js` specifiers for Node ESM on Vercel. All tunables live in `config.ts`.
 
-See `SCORING.md` for full weight tables and formulas.
+- `otpClient.ts` — Digitransit `planConnection` (direct bicycle, optional via point, steps)
+- `generators.ts`, `spur.ts` — round-2 via waypoints snapped to the calm network; out-and-back stub trimming
+- `signals.ts`, `stress.ts`, `profile.ts` — signal stops, per-segment traffic stress, absolute calm index
+- `similarity.ts`, `select.ts` — distinctness and card selection with badges
+- `layers.ts` — format and spatial index of `data/osm-layers.json`
+- `testHelpers.ts` — synthetic geometry/layers for unit tests
 
-### Backend Proxy (`api/`)
+### Backend (`api/`)
 
-Vercel-style serverless functions that proxy Digitransit API calls to keep the API key server-side:
-- `api/digitransit-route.ts` — POST, forwards a single routing request with triangle optimization factors
-- `api/digitransit-route-batch.ts` — POST, accepts an array of presets and runs them in parallel via `Promise.allSettled`
-- `api/digitransit-geocode.ts` — GET, forwards geocoding autocomplete requests
+Vercel functions (pinned to `arn1` in `vercel.json`):
+- `api/route-plan.ts` — POST, validates the trip, runs `planRoutes()` with layers from `data/osm-layers.json` (shipped via `includeFiles`), returns only the routes shown on cards
+- `api/digitransit-geocode.ts`, `api/digitransit-reverse-geocode.ts` — GET geocoding proxies
+- `api/citybike-stations.ts` — GET city bike stations
+
+Every file in `api/` deploys as a function; `.vercelignore` keeps `*.test.ts` out.
+
+### Offline tooling
+
+- `scripts/build-osm-layers.ts` — builds the OSM layer file
+- `sandbox/` — calibration sandbox (Node, `vite-node`); `sandbox/lib/legacy/` is the frozen pre-overhaul grading used as a baseline. `scripts/` and `sandbox/` are type-checked by `tsconfig.sandbox.json` and excluded from Vitest.
 
 ### Key Modules
 
-- `src/api/digitransit.ts` — Client-side API layer: `fetchCandidateRoutes`, `fetchGeocodingAutocomplete`, route cache, triangle presets, OTP types
-- `src/utils/routeGeometry.ts` — Polyline decoding (`@mapbox/polyline`), bbox estimation, bounds calculation
-- `src/utils/routeSelection.ts` — Route deduplication (polyline overlap) and per-category selection
-- `src/utils/overpass.ts` — Combined Overpass QL query builder, POI classification by OSM tags, in-memory bbox cache
-- `src/utils/scenicScore.ts` — Haversine distance, polyline sampling, per-route scoring, cross-route normalization
+- `src/api/routePlan.ts` — `fetchRoutePlan`, plan cache, `defaultCard`
+- `src/api/digitransit.ts` — `parseLatLon`, geocoding autocomplete and reverse geocoding
+- `src/utils/routeGeometry.ts` — polyline decoding, display smoothing, bounds
 - `src/utils/recentSearches.ts` — localStorage-backed recent search history (max 10 entries)
-- `src/components/RouteMap.tsx` — Leaflet map with HSL tiles (CacheStorage + 3× retry), route polylines, origin/destination markers, click-to-select alternatives
-- `src/components/RouteCards.tsx` — Route variant selector cards showing duration, distance, calm score, and infra badge; includes `RouteCardsSkeleton`
+- `src/components/RouteMap.tsx` — Leaflet map with HSL tiles (CacheStorage + 3× retry), route polylines by id, signal-stop markers, origin/destination markers, click-to-select alternatives
+- `src/components/RouteCards.tsx` — cards with title, badges and metric row (time, distance, +min, lights, calm band); includes `RouteCardsSkeleton`
 - `src/components/SearchDrawer.tsx` — Right-side drawer with debounced autocomplete (300ms), recent searches, coordinate input support
 - `src/components/AddressTrigger.tsx` — Tap target button that opens the search drawer
 - `src/hooks/useBottomSheet.ts` — Touch/mouse-draggable bottom sheet with three snap points and velocity-based snapping
+- `src/services/hazards.ts`, `src/services/citybikes.ts` — display-only overlays
 
 ### UI
 
