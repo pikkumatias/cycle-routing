@@ -43,6 +43,8 @@ export type OsmPoi = {
   category?: PoiCategory
 }
 
+const NON_STOPPING_SIGNALS = new Set(['blinker', 'emergency', 'ramp_meter'])
+
 /**
  * Classify an OSM element by its tags into a PoiCategory.
  * Cycling infrastructure is checked first, then scenic/nature categories.
@@ -50,8 +52,12 @@ export type OsmPoi = {
 export function classifyPoi(tags: Record<string, string> | undefined): PoiCategory | undefined {
   if (!tags) return undefined
 
-  // Traffic signals
-  if (tags.highway === 'traffic_signals') return 'traffic_signal'
+  // Traffic signals. Helsinki tags most signalised crossings as
+  // highway=crossing + crossing=traffic_signals rather than highway=traffic_signals.
+  // Flashing, emergency-vehicle and ramp-meter signals never stop a cyclist.
+  if (tags.highway === 'traffic_signals' || tags.crossing === 'traffic_signals') {
+    return NON_STOPPING_SIGNALS.has(tags.traffic_signals ?? '') ? undefined : 'traffic_signal'
+  }
 
   // Cycling infrastructure
   if (tags.highway === 'cycleway') return 'cycleway_separated'
@@ -113,6 +119,7 @@ function buildCombinedQuery(bbox: Bbox, timeoutSec: number): string {
   way["natural"="water"]${b};
   node["amenity"="fountain"]${b};
   node["highway"="traffic_signals"]${b};
+  node["crossing"="traffic_signals"]${b};
   way["waterway"="river"]${b};
   way["waterway"="stream"]${b};
   way["highway"="cycleway"]${b};
@@ -212,13 +219,27 @@ async function fetchQuery(
   throw lastError
 }
 
-// In-memory cache: quantized bbox key → POI results. Quantized to 0.01° grid (~1km) so
-// nearby queries share the same cache entry. OSM data rarely changes within a session.
+// In-memory cache keyed by the bbox snapped outward to a 0.01° grid (~1 km). The snapped
+// box is what gets fetched, so a cached entry always covers every request mapped to it.
+// OSM data rarely changes within a session.
 const poiCache = new Map<string, OsmPoi[]>()
+const GRID_DEG = 0.01
+
+/** Expand a bbox outward to the 0.01° grid so it contains the original box. */
+export function snapBboxOutward(bbox: Bbox): Bbox {
+  // Round to 6 decimals first so values already on the grid don't drift a cell outward.
+  const cells = (n: number) => Math.round((n / GRID_DEG) * 1e6) / 1e6
+  const toDeg = (c: number) => Number((c * GRID_DEG).toFixed(2))
+  return {
+    south: toDeg(Math.floor(cells(bbox.south))),
+    west: toDeg(Math.floor(cells(bbox.west))),
+    north: toDeg(Math.ceil(cells(bbox.north))),
+    east: toDeg(Math.ceil(cells(bbox.east))),
+  }
+}
 
 function bboxCacheKey(bbox: Bbox): string {
-  const q = (n: number) => Math.round(n / 0.01) * 0.01
-  return `${q(bbox.south)},${q(bbox.west)},${q(bbox.north)},${q(bbox.east)}`
+  return [bbox.south, bbox.west, bbox.north, bbox.east].map((n) => n.toFixed(2)).join(',')
 }
 
 /**
@@ -231,13 +252,13 @@ export async function fetchPoisAndInfrastructure(
   options?: { timeoutSec?: number; signal?: AbortSignal },
 ): Promise<OsmPoi[]> {
   const timeoutSec = options?.timeoutSec ?? DEFAULT_TIMEOUT_SEC
-  const capped = capBbox(bbox)
-  const cacheKey = bboxCacheKey(capped)
+  const snapped = snapBboxOutward(capBbox(bbox))
+  const cacheKey = bboxCacheKey(snapped)
 
   const cached = poiCache.get(cacheKey)
   if (cached) return cached
 
-  const result = await fetchQuery(buildCombinedQuery(capped, timeoutSec), timeoutSec, options?.signal)
+  const result = await fetchQuery(buildCombinedQuery(snapped, timeoutSec), timeoutSec, options?.signal)
   poiCache.set(cacheKey, result)
   return result
 }
