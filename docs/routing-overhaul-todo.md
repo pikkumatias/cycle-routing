@@ -41,7 +41,7 @@ Goal: trustworthy measurements, at most three genuinely different cards
 - [x] Review page `/sandbox/review/` + dev-only label endpoints
 - [x] Generator-yield curve — see `docs/sandbox-results.md`
 - [x] Claude pre-grading of all 45 trips from dossiers (3 graders + consistency check)
-- [ ] **User: approve or edit `sandbox/rubric.md`**
+- [x] **User: approve or edit `sandbox/rubric.md`** (approved as v0, 2026-10-08)
 - [ ] **User: review session** (≥ 30 trips + trade-off questions; see `sandbox/README.md`)
 - [ ] `npm run sandbox -- fit` on the user's labels
 - [ ] **User: pick the live OTP budget** from the yield curve

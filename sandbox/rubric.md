@@ -1,4 +1,4 @@
-# Grading rubric (v0 — awaiting user approval)
+# Grading rubric (v0 — approved by the user 2026-10-08)
 
 Used by Claude to pre-grade the sandbox dossiers and by the user when reviewing. Labels
 record which rubric version they followed (`rubricVersion`).
