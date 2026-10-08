@@ -1,4 +1,4 @@
-import { minDistanceToPolyline } from '../utils/scenicScore'
+import { minDistanceToPolyline } from '../routing/geo'
 import type { LatLng } from '../utils/routeGeometry'
 
 export type HazardType = 'excavation' | 'traffic_arrangement' | 'area_rental'

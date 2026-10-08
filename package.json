@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "route": "node scripts/digitransit-route.js",
-    "benchmark": "node scripts/benchmark-routes.js",
+    "data:osm": "vite-node scripts/build-osm-layers.ts",
     "test": "vitest"
   },
   "dependencies": {

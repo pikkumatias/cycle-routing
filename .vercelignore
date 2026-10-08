@@ -1,0 +1,5 @@
+# Every file in api/ becomes a serverless function; keep tests out of the deployment.
+api/**/*.test.ts
+# Offline tooling and caches are not part of the app.
+sandbox
+.cache

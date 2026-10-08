@@ -16,6 +16,7 @@ export function decodePolyline(encoded: string): LatLng[] {
 
 export type RouteLeg = {
   positions: LatLng[]
+  mode?: string
 }
 
 function smoothPolyline(points: LatLng[], iterations = 2): LatLng[] {
@@ -35,9 +36,53 @@ function smoothPolyline(points: LatLng[], iterations = 2): LatLng[] {
   return pts
 }
 
-/** Route legs as drawn on the map: smoothed, empty legs dropped. */
-export function toDisplayLegs(legs: LatLng[][]): RouteLeg[] {
-  return legs.filter((leg) => leg.length > 0).map((leg) => ({ positions: smoothPolyline(leg) }))
+type OtpLeg = {
+  legGeometry?: { points?: string }
+  mode?: string
+}
+
+type OtpResponse = {
+  data?: { plan?: { itineraries?: { legs?: OtpLeg[] }[] } }
+}
+
+/**
+ * Extract route legs with decoded geometry from Digitransit plan response.
+ */
+export function getRouteLegsFromPlanResponse(response: unknown): RouteLeg[] {
+  const legs = (response as OtpResponse)?.data?.plan?.itineraries?.[0]?.legs
+  if (!Array.isArray(legs)) return []
+
+  return legs
+    .map((leg) => {
+      const encoded = leg?.legGeometry?.points
+      const positions = smoothPolyline(decodePolyline(encoded ?? ''))
+      return { positions, mode: leg?.mode }
+    })
+    .filter((leg: RouteLeg) => leg.positions.length > 0)
+}
+
+/**
+ * Estimate a bounding box from just origin and destination with padding.
+ * Bicycle routes typically stay within ~20% beyond the endpoint bounding box.
+ * Used to start Overpass fetch in parallel with route requests.
+ */
+export function estimateBboxFromEndpoints(
+  from: LatLng,
+  to: LatLng,
+  paddingFraction: number = 0.2,
+): [LatLng, LatLng] {
+  const minLat = Math.min(from[0], to[0])
+  const maxLat = Math.max(from[0], to[0])
+  const minLon = Math.min(from[1], to[1])
+  const maxLon = Math.max(from[1], to[1])
+
+  const latPad = (maxLat - minLat) * paddingFraction || 0.005
+  const lonPad = (maxLon - minLon) * paddingFraction || 0.005
+
+  return [
+    [minLat - latPad, minLon - lonPad],
+    [maxLat + latPad, maxLon + lonPad],
+  ]
 }
 
 /**

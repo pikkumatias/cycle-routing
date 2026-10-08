@@ -1,7 +1,6 @@
 import type { LatLng } from './routeGeometry'
 import type { OsmPoi } from './overpass'
-import type { CandidateRoute, RouteCategory } from '../api/digitransit'
-import type { ScoredRoute } from '../components/RouteCards'
+import type { CandidateRoute, RouteCategory, ScoredRoute } from './types'
 import {
   haversineDistance,
   samplePolyline,
@@ -116,20 +115,10 @@ const toScoredRoute = (c: ScoredCandidate): ScoredRoute => ({
   nearbyPois: c.nearbyPois,
 })
 
-/** Fewest lights may cost at most this share of Fastest's duration… */
-export const FEWEST_LIGHTS_MAX_EXTRA_FRACTION = 0.3
-/** …but short trips may always spend at least this many extra seconds. */
-export const FEWEST_LIGHTS_MIN_EXTRA_SEC = 240
-/** A route must avoid at least this many lights to be shown instead of Fastest. */
-export const MIN_LIGHTS_SAVED = 2
-
 /**
- * Select the two default categories shown up front:
+ * Select only the two default categories shown up front:
  * - Fastest: lowest duration
- * - FewestLights: fewest signal stops among routes within the detour cap
- *   (ties → faster). It must save at least MIN_LIGHTS_SAVED lights over Fastest;
- *   otherwise Fastest is returned for both, since a ±1 difference is within counting
- *   noise and not worth a slower route. Callers detect the merge by identity.
+ * - FewestLights: lowest measured traffic-signal score across all candidates
  */
 export function selectDefaultRoutes(
   candidates: CandidateRoute[],
@@ -144,42 +133,69 @@ export function selectDefaultRoutes(
   const fastest = scored.reduce((best, c) =>
     c.durationSec < best.durationSec ? c : best,
   )
-  const maxDurationSec =
-    fastest.durationSec +
-    Math.max(fastest.durationSec * FEWEST_LIGHTS_MAX_EXTRA_FRACTION, FEWEST_LIGHTS_MIN_EXTRA_SEC)
-  const fewestLights = scored
-    .filter((c) => c.durationSec <= maxDurationSec)
-    .reduce((best, c) =>
-      c.lightCount < best.lightCount ||
-      (c.lightCount === best.lightCount && c.durationSec < best.durationSec)
-        ? c
-        : best,
-    )
+  // Pick fewestLights from the full pool by measured lightScore.
+  // Excluding fastest would force the selection onto a candidate that may actually have
+  // more lights — the OTP safety preset optimises for cycling infra, not signal count.
+  const fewestLights = scored.reduce((best, c) =>
+    c.lightScore < best.lightScore ? c : best,
+  )
 
-  const fastestRoute = toScoredRoute(fastest)
-  const savesEnough = fastest.lightCount - fewestLights.lightCount >= MIN_LIGHTS_SAVED
   return {
-    fastest: fastestRoute,
-    fewestLights: savesEnough ? toScoredRoute(fewestLights) : fastestRoute,
+    fewestLights: toScoredRoute(fewestLights),
+    fastest: toScoredRoute(fastest),
   }
 }
 
 /**
- * Pick the Calm route (highest cycling-infrastructure score) from the pool, skipping
- * routes already shown as other cards so it never duplicates them. Returns null when
- * every candidate is already shown.
+ * Score all candidates and select the best route per category.
+ *
+ * - Fastest: lowest duration
+ * - Scenic: highest scenic POI score (parks, nature, water)
+ * - Calm: highest infrastructure score (cycleways, bike lanes)
  */
-export function selectCalmRoute(
+export function selectRoutes(
   candidates: CandidateRoute[],
   pois: OsmPoi[],
-  shownResponses: unknown[],
-): ScoredRoute | null {
-  const shown = new Set(shownResponses)
-  // Score the whole pool so normalised scores stay comparable, then skip shown routes.
-  const remaining = scoreCandidates(candidates, pois).filter((c) => !shown.has(c.response))
-  if (remaining.length === 0) return null
+): Record<RouteCategory, ScoredRoute> {
+  if (candidates.length === 0) {
+    throw new Error('No candidate routes available')
+  }
 
-  return toScoredRoute(
-    remaining.reduce((best, c) => (c.infraScore > best.infraScore ? c : best)),
+  const scored = scoreCandidates(candidates, pois)
+
+  // Pick fastest: minimum duration
+  const fastest = scored.reduce((best, c) =>
+    c.durationSec < best.durationSec ? c : best,
   )
+
+  // Pick scenic: highest scenic score, excluding fastest if possible
+  const scenicPool = scored.length > 1
+    ? scored.filter((c) => c !== fastest)
+    : scored
+  const scenic = scenicPool.reduce((best, c) =>
+    c.scenicScore > best.scenicScore ? c : best,
+  )
+
+  // Pick calm: highest infra score, excluding already-picked if possible
+  const calmPool = scored.length > 2
+    ? scored.filter((c) => c !== fastest && c !== scenic)
+    : scored.length > 1
+      ? scored.filter((c) => c !== fastest)
+      : scored
+  const calm = calmPool.reduce((best, c) =>
+    c.infraScore > best.infraScore ? c : best,
+  )
+
+  // Pick fewestLights by measured lightScore across the full pool — excluding candidates
+  // risks picking a route with more lights than ones already assigned to other categories.
+  const fewestLights = scored.reduce((best, c) =>
+    c.lightScore < best.lightScore ? c : best,
+  )
+
+  return {
+    fastest: toScoredRoute(fastest),
+    scenic: toScoredRoute(scenic),
+    calm: toScoredRoute(calm),
+    fewestLights: toScoredRoute(fewestLights),
+  }
 }

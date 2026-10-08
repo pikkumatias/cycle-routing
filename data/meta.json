@@ -1,0 +1,19 @@
+{
+  "generatedAt": "2026-10-05T15:25:55.620Z",
+  "source": "extract",
+  "osmTimestamp": "2026-10-02T21:41:28Z",
+  "bbox": [
+    60.113,
+    24.588,
+    60.353,
+    25.242
+  ],
+  "counts": {
+    "signals": 6929,
+    "roads": 21923,
+    "tramRoads": 963,
+    "calmNodes": 15462,
+    "gradeSeparated": 6274
+  },
+  "bytes": 2921917
+}
