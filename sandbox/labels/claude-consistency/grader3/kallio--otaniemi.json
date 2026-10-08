@@ -1,0 +1,19 @@
+{
+  "od": "kallio--otaniemi",
+  "rubricVersion": "v0",
+  "calmRanking": ["F", "C", "G", "B", "H", "E", "D", "A"],
+  "tiers": { "A": "C", "B": "C", "C": "A", "D": "C", "E": "C", "F": "A", "G": "A", "H": "A" },
+  "sameRoute": [["A", "D"], ["C", "F", "G"]],
+  "picks": { "fewestLights": "F", "calm": "F" },
+  "rationale": {
+    "A": "Through Töölö on Mannerheimintie/Tukholmankatu (260 m in traffic, tram rails), long Paciuksenkatu-side track, 4 unsignalised arterial crossings, 11 lights",
+    "B": "Central Park paths via Auroransilta instead of Töölö; no mixed traffic, but the Helsinginkatu-side start and 3 unsignalised crossings; 4 lights",
+    "C": "Hammarskjöldintie and Central Park paths, no mixed traffic; only a short Helsinginkatu-side stretch; 4 lights",
+    "D": "Like A, through Töölö with Mannerheimintie/Tukholmankatu traffic and Meilahdentie; 10 lights",
+    "E": "Mostly paths via Mississippi/Taivallahti, but 80 m on Eino Leinon katu with tram rails, several unsignalised crossings, 9 lights",
+    "F": "Quiet Kallio streets, Hammarskjöldintie and Central Park; fewest unsignalised crossings, 3 lights; +2 min",
+    "G": "Close to C via Hannes Kolehmaisen lenkki; 5 lights",
+    "H": "Central Park and Tilkka paths, car-free but +9 min and extra walking"
+  },
+  "notes": "Every candidate shares the long track beside Kuusisaarentie/Pikkuniementie to Otaniemi, so all differences come from the first ~4 km. B (+1 min, 4 lights) would also do for fewest lights; F (+2 min, 3 lights) gets the card because it is also calmest. B vs C is borderline on same-route (about 1 km on different parallel paths)."
+}

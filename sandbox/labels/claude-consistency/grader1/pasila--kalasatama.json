@@ -1,0 +1,19 @@
+{
+  "od": "pasila--kalasatama",
+  "rubricVersion": "v0",
+  "calmRanking": ["D", "F", "H", "B", "C", "G", "E", "A"],
+  "tiers": { "A": "D", "B": "C", "C": "C", "D": "B", "E": "D", "F": "C", "G": "C", "H": "B" },
+  "sameRoute": [["A", "B"], ["D", "F"]],
+  "picks": { "fewestLights": "D", "calm": "D" },
+  "rationale": {
+    "A": "~730 m mixed traffic on tram streets (Asemapäällikönkatu, Ratamestarinkatu, Kumpulantie), then path beside Teollisuuskatu; 7 lights",
+    "B": "Same corridor on the path beside Teollisuuskatu (50 km/h); no traffic; unsignalised crossings; 7 lights",
+    "C": "Paths beside Aleksis Kiven katu and Teollisuuskatu; unsignalised Sturenkatu; 7 lights",
+    "D": "Vallila valley park path, Jyrängöntie, then path beside Hermannin rantatie; no traffic, no unsignalised crossings; 5 lights; +2 min",
+    "E": "410 m in traffic on Aleksis Kiven katu (250 m tram); 7 lights",
+    "F": "Same as D, with a longer stretch beside Hermannin rantatie; 7 lights",
+    "G": "Quiet Vallila wooden-house streets, but 260 m on Elimäenkatu and path beside Teollisuuskatu; 5 lights",
+    "H": "Vallila valley and Kangasalantie, but an unsignalised Hämeentie crossing; 4 lights; +4 min"
+  },
+  "notes": "A and B differ only by about a block over 600 m, so they count as the same route by geometry, though B avoids A's tram-street traffic. D at +2 min removes that traffic, adds park path and saves 2 lights."
+}

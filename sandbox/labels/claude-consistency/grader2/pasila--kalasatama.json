@@ -1,0 +1,19 @@
+{
+  "od": "pasila--kalasatama",
+  "rubricVersion": "v0",
+  "calmRanking": ["D", "F", "H", "B", "C", "G", "E", "A"],
+  "tiers": { "A": "E", "B": "C", "C": "C", "D": "A", "E": "D", "F": "A", "G": "C", "H": "B" },
+  "sameRoute": [["D", "F"]],
+  "picks": { "fewestLights": "D", "calm": "D" },
+  "rationale": {
+    "A": "~730 m in traffic on tram streets (Asemapäällikönkatu, Ratamestarinkatu, Kumpulantie), 7 lights",
+    "B": "Side paths beside Teollisuuskatu (50 km/h) most of the way; no mixed traffic, 7 lights",
+    "C": "Side paths beside Aleksis Kiven katu and Teollisuuskatu; no mixed traffic, 7 lights",
+    "D": "Vallila valley path then Hermannin rantatie side path and Vanha talvitie; no traffic, 5 lights, +2 min",
+    "E": "~410 m on Aleksis Kiven katu in traffic incl. tram rails",
+    "F": "Same as D with a longer Hermannin rantatie side path; 7 lights",
+    "G": "Quiet Vallila residential streets, 260 m on Elimäenkatu in traffic, Teollisuuskatu side path",
+    "H": "Vallila valley and Kangasalantie, short Hämeentie side tracks; 4 lights, +4 min"
+  },
+  "notes": "D removes A's tram-street carriageway riding for +2 min and saves 2 lights, so it covers both cards. H saves 3 lights but costs 4 min."
+}

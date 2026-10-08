@@ -1,0 +1,19 @@
+{
+  "od": "leppavaara--rautatientori",
+  "rubricVersion": "v0",
+  "calmRanking": ["E", "D", "F", "C", "A", "B", "H", "G"],
+  "tiers": { "A": "A", "B": "C", "C": "A", "D": "A", "E": "A", "F": "A", "G": "C", "H": "C" },
+  "sameRoute": [],
+  "picks": { "fewestLights": "C", "calm": "E" },
+  "rationale": {
+    "A": "Mostly paths via Perkkaa and Munkkiniemi, but ~1.6 km on the Paciuksenkatu-side track, 50 m on Runeberginkatu, 5 unsignalised crossings; 8 lights",
+    "B": "Like A but more roadside riding (Itsehallintotie, Tarvaspääntie) and 70 m on tram-railed Eino Leinon katu; 8 lights",
+    "C": "Munkkiniemi, Central Park, Olympic area and Töölönlahti; no mixed traffic; ~1.9 km roadside; 2 lights; +2 min",
+    "D": "Same as C but starts through quiet Pellavaniemi, avoiding the Itsehallintotie-side track; 2 lights",
+    "E": "Via Perkkaa, Pitäjänmäki and Tilkka to Central Park; almost nothing beside major roads; 3 lights; +3 min",
+    "F": "Like C but ends via Eläintarha and Kaisaniemi; 1 light; +5 min",
+    "G": "Long tracks beside Turuntie (60 km/h) and Vihdintie, unsignalised Turuntie crossings, 250 m on Valimotie; +9 min",
+    "H": "Otaniemi detour with long Kuusisaarentie/Paciuksenkatu-side tracks and several unsignalised crossings; +18 min"
+  },
+  "notes": "A is already fairly calm, so the calm pick is borderline: E moves ~2.5 km (~23%) of arterial-side riding onto paths for +3 min. C saves 6 lights for +2 min. C and D share ~77% (they differ over the first 2 km), so I kept them apart."
+}

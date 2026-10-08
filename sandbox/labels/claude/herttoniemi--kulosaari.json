@@ -1,0 +1,18 @@
+{
+  "od": "herttoniemi--kulosaari",
+  "rubricVersion": "v0",
+  "calmRanking": ["F", "A", "E", "B", "D", "G", "C"],
+  "tiers": { "A": "C", "B": "C", "C": "C", "D": "C", "E": "B", "F": "C", "G": "B" },
+  "sameRoute": [["A", "C"], ["B", "D"]],
+  "picks": { "fewestLights": null, "calm": null },
+  "rationale": {
+    "A": "Track beside Kipparlahdensilmukka and Itäväylä, then 90 m on Tupasaarentie and quiet Svinhufvudintie; 1 light",
+    "B": "Path, then 380 m in mixed traffic on Kulosaaren puistotie (30 km/h); 3 unsignalised minor-arterial crossings; 0 lights",
+    "C": "Same streets as A but the track runs right beside Itäväylä (70 km/h) and crosses a trunk-road ramp without signals",
+    "D": "Same as B",
+    "E": "Detour via quiet Kulosaari manor road; still 200 m in traffic on Kulosaaren puistotie and the Itäväylä-side track; +5 min",
+    "F": "Kipparlahdenraitti and paths, slightly less arterial-side than A; 3 lights; +5 min",
+    "G": "Kivinokka detour on a quiet road, but the same 380 m on Kulosaaren puistotie as B; +6 min"
+  },
+  "notes": "Short trip; differences are small. A has only 1 light, so a fewest-lights card can never pay off. No candidate clearly beats A's tier for its 5–6 min detour. Ranking B against A is a judgement call: 380 m in 30 km/h mixed traffic against a longer arterial-side track."
+}

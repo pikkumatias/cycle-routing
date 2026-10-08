@@ -1,0 +1,19 @@
+{
+  "od": "eira--kaivopuisto",
+  "rubricVersion": "v0",
+  "calmRanking": ["E", "H", "F", "C", "B", "G", "D", "A"],
+  "tiers": { "A": "E", "B": "B", "C": "B", "D": "D", "E": "B", "F": "A", "G": "A", "H": "B" },
+  "sameRoute": [["B", "C"], ["E", "H"]],
+  "picks": { "fewestLights": null, "calm": "E" },
+  "rationale": {
+    "A": "780 m of its 1.2 km in mixed traffic on Tehtaankatu with tram rails",
+    "B": "Cuts Tehtaankatu to 350 m, then quiet Kapteeninkatu/Pietarinkatu",
+    "C": "Same as B, one block over (Laivurinkatu); only 170 m on Tehtaankatu",
+    "D": "210 m Tehtaankatu tram plus 350 m mixed traffic on Merikatu before the shore path",
+    "E": "Quiet Ullanlinna streets (Tarkk'ampujankatu, Neitsytpolku); no tram street, only 180 m on 30 km/h Pursimiehenkatu; two unsignalised crossings",
+    "F": "Short Tehtaankatu stretch (170 m), then park and shore paths; some walking",
+    "G": "Long shore path, but 320 m in traffic on tram street Telakkakatu, 3 lights and several unsignalised crossings",
+    "H": "Same quiet streets as E with a jog via Korkeavuorenkatu and more walking; +4 min"
+  },
+  "notes": "No lights on any route, so no fewest-lights card. E at about +1 min removes A's tram-street riding entirely."
+}

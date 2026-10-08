@@ -1,0 +1,19 @@
+{
+  "od": "arabianranta--toolontori",
+  "rubricVersion": "v0",
+  "calmRanking": ["B", "D", "H", "E", "C", "A", "F", "G"],
+  "tiers": { "A": "D", "B": "A", "C": "A", "D": "A", "E": "A", "F": "D", "G": "D", "H": "A" },
+  "sameRoute": [["B", "C", "D", "E"]],
+  "picks": { "fewestLights": "B", "calm": "B" },
+  "rationale": {
+    "A": "~1.2 km in traffic (Helsinginkatu, Runeberginkatu with tram rails), several unsignalled Sturenkatu crossings, 15 lights",
+    "B": "Vallila valley and Central Park paths almost end to end; only ~170 m on Runeberginkatu; 6 lights for +1 min",
+    "C": "Same Vallila valley/Central Park route, but Pasila leg runs beside Ratapihantie/Asemapäällikönkatu with extra lights",
+    "D": "Essentially identical to B",
+    "E": "Like C: same corridor, Pasila leg beside Ratapihantie",
+    "F": "Long shore path, then ~860 m in traffic on Helsinginkatu incl. tram rails, 15 lights",
+    "G": "Most traffic of all: Hämeentie and Helsinginkatu (tram) in the carriageway, 16 lights",
+    "H": "Calm park paths, avoids Runeberginkatu tram but ~460 m on Pohjoinen Hesperiankatu (mostly 30 km/h); +3 min"
+  },
+  "notes": "B-E are the same Vallila valley/Pasila/Central Park route; C/E take a parallel Pasila alignment (~700 m) one block over. B saves 9 lights and removes most mixed traffic for +1 min, so it covers both cards."
+}

@@ -1,0 +1,19 @@
+{
+  "od": "espoon-keskus--leppavaara",
+  "rubricVersion": "v0",
+  "calmRanking": ["F", "E", "D", "H", "G", "C", "A", "B"],
+  "tiers": { "A": "D", "B": "D", "C": "D", "D": "C", "E": "C", "F": "C", "G": "C", "H": "C" },
+  "sameRoute": [["D", "E"]],
+  "picks": { "fewestLights": "F", "calm": "F" },
+  "rationale": {
+    "A": "~4.9 km in mixed traffic on 40-50 km/h Tuomarilantie/Friisinmäentie/Nuijalantie, many unsignalled crossings",
+    "B": "As A plus Siltakatu in traffic at the start; most mixed traffic",
+    "C": "Tuomarilantie 1.6 km in traffic, then quieter Kilo streets and park paths",
+    "D": "Same corridor as A but entirely on side paths beside the 50 km/h roads; no mixed traffic",
+    "E": "Same as D with a park-path start",
+    "F": "Kirkkojärvi and Kauniainen/Kilo park paths about half the way, side paths the rest, no mixed traffic, 2 lights for +3 min",
+    "G": "All separated but mostly beside Turuntie (60 km/h); +7 min",
+    "H": "All separated, mostly side paths beside collectors; +7 min"
+  },
+  "notes": "A/B ride in the carriageway of the same streets that D/E follow on side paths. The geometry is nearly the same, but they are very different for calm, so I did not group them. F has both the fewest lights (2 vs 8) and the calmest route for +3 min."
+}

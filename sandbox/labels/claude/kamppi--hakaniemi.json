@@ -1,0 +1,19 @@
+{
+  "od": "kamppi--hakaniemi",
+  "rubricVersion": "v0",
+  "calmRanking": ["B", "C", "E", "G", "D", "F", "H", "A"],
+  "tiers": { "A": "A", "B": "A", "C": "A", "D": "A", "E": "A", "F": "A", "G": "A", "H": "C" },
+  "sameRoute": [["B", "C"], ["E", "G"], ["A", "D"]],
+  "picks": { "fewestLights": "B", "calm": "B" },
+  "rationale": {
+    "A": "Kaisaniemi park, but rides Pitkäsilta in traffic with tram rails; 5 lights",
+    "B": "Kaisaniemi park then Eläintarhantie side path, no mixed traffic, 2 lights; +1 min",
+    "C": "Same as B",
+    "D": "Same line as A but on the Pitkäsilta/Unioninkatu side tracks; 5 lights",
+    "E": "Töölönlahti park; Eläintarhantie side path; 2 lights, +3 min",
+    "F": "Kaisaniemi then Hakaniemenranta side paths; 2 lights, +3 min",
+    "G": "Same as E",
+    "H": "Through the station area beside Kaivokatu/Unioninkatu, 8 lights"
+  },
+  "notes": "B saves 3 lights and drops A's tram-rail stretch on Pitkäsilta for +1 min, so one route covers both cards. A and D take the same line; D uses the side track where A rides the carriageway on Pitkäsilta."
+}

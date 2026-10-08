@@ -1,0 +1,19 @@
+{
+  "od": "myyrmaki--kamppi",
+  "rubricVersion": "v0",
+  "calmRanking": ["C", "G", "H", "E", "F", "B", "D", "A"],
+  "tiers": { "A": "D", "B": "A", "C": "A", "D": "C", "E": "A", "F": "A", "G": "A", "H": "A" },
+  "sameRoute": [["E", "F"]],
+  "picks": { "fewestLights": "E", "calm": "C" },
+  "rationale": {
+    "A": "~4 km in mixed traffic on Korutie, Kanneltie, Kantelettarentie, Ilkantie and Nuijamiestentie, with 9 unsignalised arterial crossings",
+    "B": "Rail-side path and Central Park, but 510 m in traffic on Naapuripellontie (30 km/h); 5 lights",
+    "C": "Residential paths through Malminkartano, then the rail-side path, Central Park and Töölönlahti; least roadside riding; 3 lights; +2 min",
+    "D": "No mixed traffic, but ~2.9 km on tracks beside Nuijamiestentie, Kantelettarentie and Näyttelijäntie",
+    "E": "Kartanonkaari-side track and Kaupinmäki paths, then the rail-side path and Central Park; 2 lights; +2 min",
+    "F": "Same as E with a short jog via Ohjaajantie/Aino Acktén tie",
+    "G": "Kaarela and Keskuspuistontaival through Central Park; little roadside riding; 2 lights; +3 min",
+    "H": "Malminkartano station paths beside Korutie, then the rail-side path and Central Park; 3 lights"
+  },
+  "notes": "Almost any alternative beats A, which rides about 4 km in mixed traffic. C (+2) is the calmest. E (+2) has the fewest lights (2 vs 5); G has as few lights but is +3."
+}

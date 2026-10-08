@@ -1,0 +1,19 @@
+{
+  "od": "kumpula--kalasatama",
+  "rubricVersion": "v0",
+  "calmRanking": ["D", "C", "E", "H", "F", "B", "G", "A"],
+  "tiers": { "A": "D", "B": "C", "C": "C", "D": "B", "E": "C", "F": "C", "G": "C", "H": "C" },
+  "sameRoute": [["A", "C"], ["F", "H"]],
+  "picks": { "fewestLights": "D", "calm": "D" },
+  "rationale": {
+    "A": "460 m in mixed traffic on Hermannin rantatie (40 km/h); 5 lights",
+    "B": "Path beside Kustaa Vaasan tie (50 km/h) and Hermannin rantatie; 80 m on Intiankatu; 6 lights",
+    "C": "A's corridor via Kumpulantaival, on the path beside Hermannin rantatie instead of the road; 4 lights",
+    "D": "Kumpulantaival, then quiet Hermanni streets (Vellamonkatu); little roadside riding; 3 lights; +2 min",
+    "E": "Kumpula/Vallila valley paths, then 1.2 km beside Hermannin rantatie; 5 lights",
+    "F": "Arabianranta streets and paths, but unsignalised Hämeentie and Väinö Auerin katu crossings",
+    "G": "Paths beside Hämeentie/Sturenkatu with unsignalised Hämeentie and Sturenkatu crossings",
+    "H": "Same as F, on the path instead of the Berliininkatu streets"
+  },
+  "notes": "D at +2 min saves 2 lights and moves roughly a third of the ride from the busy Hermannin rantatie corridor onto quiet streets."
+}

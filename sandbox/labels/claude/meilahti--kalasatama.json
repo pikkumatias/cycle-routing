@@ -1,0 +1,19 @@
+{
+  "od": "meilahti--kalasatama",
+  "rubricVersion": "v0",
+  "calmRanking": ["H", "G", "D", "B", "C", "E", "F", "A"],
+  "tiers": { "A": "D", "B": "C", "C": "C", "D": "C", "E": "C", "F": "D", "G": "C", "H": "C" },
+  "sameRoute": [["B", "D"]],
+  "picks": { "fewestLights": "H", "calm": "H" },
+  "rationale": {
+    "A": "~1 km in mixed traffic incl. ~620 m on tram streets (Tukholmankatu, Aleksis Kiven katu, Reijolankatu); 17 lights",
+    "B": "Paths beside Nordenskiöldinkatu, Viipurinkatu, Teollisuuskatu; 140 m in traffic; 14 lights",
+    "C": "Like B but via Karjalankatu/Konepajanraitti; beside Teollisuuskatu (50 km/h), several unsignalised crossings; 12 lights",
+    "D": "Same as B; only 60 m in traffic",
+    "E": "Töölönlahti/Eläintarha paths, then ~390 m on Helsinginkatu tram rails; 15 lights",
+    "F": "Töölö streets in traffic (Haartmaninkatu, Topeliuksenkatu), then ~530 m on Helsinginkatu with trams; 15 lights",
+    "G": "No traffic: Ruskeasuo paths, Urheilukatu, then B's corridor; but an unsignalised Mannerheimintie crossing; 10 lights",
+    "H": "No traffic: Ruskeasuo residential streets, Pasila paths, then B's corridor; least arterial-side riding; 8 lights; +4 min"
+  },
+  "notes": "H at +4 min saves 9 lights and removes ~1 km of tram-street traffic, so it gets both cards. Many crossings are listed without signals (incl. Mannerheimintie for G), which may be OSM gaps."
+}

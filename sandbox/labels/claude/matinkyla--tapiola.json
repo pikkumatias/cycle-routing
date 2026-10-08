@@ -1,0 +1,19 @@
+{
+  "od": "matinkyla--tapiola",
+  "rubricVersion": "v0",
+  "calmRanking": ["A", "B", "D", "H", "E", "F", "G", "C"],
+  "tiers": { "A": "A", "B": "A", "C": "C", "D": "A", "E": "A", "F": "C", "G": "C", "H": "A" },
+  "sameRoute": [],
+  "picks": { "fewestLights": null, "calm": null },
+  "rationale": {
+    "A": "Entirely on paths away from major roads, no arterial crossings, 1 light",
+    "B": "Paths via Matinniitty and Telamäentie; ~800 m beside 40 km/h roads, 3 unsignalised crossings; 3 lights",
+    "C": "Mostly on tracks beside Merituulentie and Kuitinmäentie (50 km/h); 8 lights",
+    "D": "Paths via Niittykumpu; ~1 km beside Merituulentie; 2 lights",
+    "E": "Paths and Madetie, but 1.3 km beside Hauenkalliontie; 3 unsignalised crossings",
+    "F": "Long tracks beside Mellstenintie and Haukilahdenranta, 4 unsignalised crossings; +5 min",
+    "G": "Tracks beside Merituulentie with a Haltila detour; 6 lights; +5 min",
+    "H": "Niittykumpu and Mankkaa paths, about 1 km roadside; +6 min"
+  },
+  "notes": "The fastest route is also the calmest with 1 light, so both cards merge into Fastest."
+}

@@ -1,0 +1,19 @@
+{
+  "od": "tikkurila--pasila",
+  "rubricVersion": "v0",
+  "calmRanking": ["G", "C", "B", "D", "F", "E", "H", "A"],
+  "tiers": { "A": "E", "B": "A", "C": "A", "D": "A", "E": "C", "F": "A", "G": "A", "H": "C" },
+  "sameRoute": [["B", "C"]],
+  "picks": { "fewestLights": null, "calm": "C" },
+  "rationale": {
+    "A": "~5.6 km in traffic: Malminkaari at 50 km/h, Oulunkyläntie, Pohjolankatu tram rails; unsignalled arterial crossings",
+    "B": "Malminkaari side path, then Vantaa/Viikki paths, Kumpulantaival and Vallila valley; no traffic, 3 lights, +3 min",
+    "C": "Same as B via the Viikinmäki bridge; slightly shorter",
+    "D": "Same family via Arabia/Kumpula with Hämeentie and Kustaa Vaasan tie crossings; 5 lights",
+    "E": "No traffic but many side paths (Oulunkyläntie, Käpyläntie, Mäkelänkatu) and 290 m walking",
+    "F": "Malmi park paths, Viikki and Vanhankaupunginlahti, Vallila valley; side paths beside Viikintie/Pihlajamäentie",
+    "G": "Quiet Malmi streets and park paths, then the B/C corridor; least side path, 2 lights, +6 min",
+    "H": "Northern loop with Karhusuontie in traffic and long side paths; +7 min"
+  },
+  "notes": "C (or B) removes all of A's arterial traffic for +3 min, a clear calm win. Fewest lights: C saves 2 lights for 3 min and G saves 3 for 6 min, neither worth a card. G is marginally calmer than C but not worth 3 more minutes."
+}

@@ -1,0 +1,632 @@
+[
+  {
+    "id": "kamppi--hakaniemi",
+    "name": "Kamppi → Hakaniemi",
+    "from": [
+      60.1699,
+      24.932
+    ],
+    "to": [
+      60.1795,
+      24.951
+    ],
+    "straightKm": 1.5,
+    "bucket": "short"
+  },
+  {
+    "id": "toolontori--meilahti",
+    "name": "Töölöntori → Meilahti",
+    "from": [
+      60.179,
+      24.922
+    ],
+    "to": [
+      60.19,
+      24.905
+    ],
+    "straightKm": 1.5,
+    "bucket": "short"
+  },
+  {
+    "id": "eira--kaivopuisto",
+    "name": "Eira → Kaivopuisto",
+    "from": [
+      60.159,
+      24.938
+    ],
+    "to": [
+      60.157,
+      24.955
+    ],
+    "straightKm": 1.0,
+    "bucket": "short"
+  },
+  {
+    "id": "ruoholahti--eira",
+    "name": "Ruoholahti → Eira",
+    "from": [
+      60.1636,
+      24.915
+    ],
+    "to": [
+      60.159,
+      24.938
+    ],
+    "straightKm": 1.4,
+    "bucket": "short"
+  },
+  {
+    "id": "kallio--kalasatama",
+    "name": "Kallio → Kalasatama",
+    "from": [
+      60.1841,
+      24.9497
+    ],
+    "to": [
+      60.1872,
+      24.9772
+    ],
+    "straightKm": 1.6,
+    "bucket": "short"
+  },
+  {
+    "id": "alppila--hakaniemi",
+    "name": "Alppila → Hakaniemi",
+    "from": [
+      60.192059,
+      24.945831
+    ],
+    "to": [
+      60.1795,
+      24.951
+    ],
+    "straightKm": 1.4,
+    "bucket": "short"
+  },
+  {
+    "id": "kumpula--kalasatama",
+    "name": "Kumpula → Kalasatama",
+    "from": [
+      60.209,
+      24.962
+    ],
+    "to": [
+      60.1872,
+      24.9772
+    ],
+    "straightKm": 2.6,
+    "bucket": "short"
+  },
+  {
+    "id": "tapiola--otaniemi",
+    "name": "Tapiola → Otaniemi",
+    "from": [
+      60.176,
+      24.805
+    ],
+    "to": [
+      60.1867,
+      24.8286
+    ],
+    "straightKm": 1.8,
+    "bucket": "short"
+  },
+  {
+    "id": "herttoniemi--kulosaari",
+    "name": "Herttoniemi → Kulosaari",
+    "from": [
+      60.1951,
+      25.0309
+    ],
+    "to": [
+      60.188,
+      25.008
+    ],
+    "straightKm": 1.5,
+    "bucket": "short"
+  },
+  {
+    "id": "kapyla--oulunkyla",
+    "name": "Käpylä → Oulunkylä",
+    "from": [
+      60.214,
+      24.948
+    ],
+    "to": [
+      60.229,
+      24.966
+    ],
+    "straightKm": 1.9,
+    "bucket": "short"
+  },
+  {
+    "id": "lapinlahti--kamppi",
+    "name": "Lapinlahti → Kamppi",
+    "from": [
+      60.168,
+      24.91
+    ],
+    "to": [
+      60.1699,
+      24.932
+    ],
+    "straightKm": 1.2,
+    "bucket": "short"
+  },
+  {
+    "id": "hietaniemi--rautatientori",
+    "name": "Hietaniemi → Rautatientori",
+    "from": [
+      60.172,
+      24.903
+    ],
+    "to": [
+      60.171,
+      24.944
+    ],
+    "straightKm": 2.3,
+    "bucket": "short"
+  },
+  {
+    "id": "alppila--kamppi",
+    "name": "Alppila → Kamppi",
+    "from": [
+      60.192059,
+      24.945831
+    ],
+    "to": [
+      60.1699,
+      24.932
+    ],
+    "straightKm": 2.6,
+    "bucket": "short"
+  },
+  {
+    "id": "pasila--kalasatama",
+    "name": "Pasila → Kalasatama",
+    "from": [
+      60.1989,
+      24.9332
+    ],
+    "to": [
+      60.1872,
+      24.9772
+    ],
+    "straightKm": 2.8,
+    "bucket": "short"
+  },
+  {
+    "id": "pasila--rautatientori",
+    "name": "Pasila → Rautatientori",
+    "from": [
+      60.1989,
+      24.9332
+    ],
+    "to": [
+      60.171,
+      24.944
+    ],
+    "straightKm": 3.2,
+    "bucket": "medium"
+  },
+  {
+    "id": "munkkiniemi--kamppi",
+    "name": "Munkkiniemi → Kamppi",
+    "from": [
+      60.198,
+      24.877
+    ],
+    "to": [
+      60.1699,
+      24.932
+    ],
+    "straightKm": 4.4,
+    "bucket": "medium"
+  },
+  {
+    "id": "lauttasaari--rautatientori",
+    "name": "Lauttasaari → Rautatientori",
+    "from": [
+      60.16,
+      24.876
+    ],
+    "to": [
+      60.171,
+      24.944
+    ],
+    "straightKm": 4.0,
+    "bucket": "medium"
+  },
+  {
+    "id": "herttoniemi--rautatientori",
+    "name": "Herttoniemi → Rautatientori",
+    "from": [
+      60.1951,
+      25.0309
+    ],
+    "to": [
+      60.171,
+      24.944
+    ],
+    "straightKm": 5.5,
+    "bucket": "medium"
+  },
+  {
+    "id": "kapyla--kamppi",
+    "name": "Käpylä → Kamppi",
+    "from": [
+      60.214,
+      24.948
+    ],
+    "to": [
+      60.1699,
+      24.932
+    ],
+    "straightKm": 5.0,
+    "bucket": "medium"
+  },
+  {
+    "id": "arabianranta--toolontori",
+    "name": "Arabianranta → Töölöntori",
+    "from": [
+      60.205,
+      24.978
+    ],
+    "to": [
+      60.179,
+      24.922
+    ],
+    "straightKm": 4.2,
+    "bucket": "medium"
+  },
+  {
+    "id": "haaga--pasila",
+    "name": "Haaga → Pasila",
+    "from": [
+      60.219,
+      24.898
+    ],
+    "to": [
+      60.1989,
+      24.9332
+    ],
+    "straightKm": 3.0,
+    "bucket": "short"
+  },
+  {
+    "id": "meilahti--kalasatama",
+    "name": "Meilahti → Kalasatama",
+    "from": [
+      60.19,
+      24.905
+    ],
+    "to": [
+      60.1872,
+      24.9772
+    ],
+    "straightKm": 4.0,
+    "bucket": "medium"
+  },
+  {
+    "id": "jatkasaari--kallio",
+    "name": "Jätkäsaari → Kallio",
+    "from": [
+      60.158,
+      24.92
+    ],
+    "to": [
+      60.1841,
+      24.9497
+    ],
+    "straightKm": 3.3,
+    "bucket": "medium"
+  },
+  {
+    "id": "kaivopuisto--pasila",
+    "name": "Kaivopuisto → Pasila",
+    "from": [
+      60.157,
+      24.955
+    ],
+    "to": [
+      60.1989,
+      24.9332
+    ],
+    "straightKm": 4.8,
+    "bucket": "medium"
+  },
+  {
+    "id": "leppavaara--otaniemi",
+    "name": "Leppävaara → Otaniemi",
+    "from": [
+      60.219,
+      24.813
+    ],
+    "to": [
+      60.1867,
+      24.8286
+    ],
+    "straightKm": 3.7,
+    "bucket": "medium"
+  },
+  {
+    "id": "oulunkyla--pasila",
+    "name": "Oulunkylä → Pasila",
+    "from": [
+      60.229,
+      24.966
+    ],
+    "to": [
+      60.1989,
+      24.9332
+    ],
+    "straightKm": 3.8,
+    "bucket": "medium"
+  },
+  {
+    "id": "viikki--kalasatama",
+    "name": "Viikki → Kalasatama",
+    "from": [
+      60.227,
+      25.015
+    ],
+    "to": [
+      60.1872,
+      24.9772
+    ],
+    "straightKm": 4.9,
+    "bucket": "medium"
+  },
+  {
+    "id": "matinkyla--tapiola",
+    "name": "Matinkylä → Tapiola",
+    "from": [
+      60.16,
+      24.738
+    ],
+    "to": [
+      60.176,
+      24.805
+    ],
+    "straightKm": 4.1,
+    "bucket": "medium"
+  },
+  {
+    "id": "itakeskus--herttoniemi",
+    "name": "Itäkeskus → Herttoniemi",
+    "from": [
+      60.21,
+      25.08
+    ],
+    "to": [
+      60.1951,
+      25.0309
+    ],
+    "straightKm": 3.2,
+    "bucket": "medium"
+  },
+  {
+    "id": "lauttasaari--pasila",
+    "name": "Lauttasaari → Pasila",
+    "from": [
+      60.16,
+      24.876
+    ],
+    "to": [
+      60.1989,
+      24.9332
+    ],
+    "straightKm": 5.4,
+    "bucket": "medium"
+  },
+  {
+    "id": "kallio--otaniemi",
+    "name": "Kallio → Otaniemi",
+    "from": [
+      60.1841,
+      24.9497
+    ],
+    "to": [
+      60.1867,
+      24.8286
+    ],
+    "straightKm": 6.7,
+    "bucket": "medium"
+  },
+  {
+    "id": "malmi--rautatientori",
+    "name": "Malmi → Rautatientori",
+    "from": [
+      60.251,
+      25.011
+    ],
+    "to": [
+      60.171,
+      24.944
+    ],
+    "straightKm": 9.6,
+    "bucket": "long"
+  },
+  {
+    "id": "itakeskus--kamppi",
+    "name": "Itäkeskus → Kamppi",
+    "from": [
+      60.21,
+      25.08
+    ],
+    "to": [
+      60.1699,
+      24.932
+    ],
+    "straightKm": 9.3,
+    "bucket": "long"
+  },
+  {
+    "id": "vuosaari--kalasatama",
+    "name": "Vuosaari → Kalasatama",
+    "from": [
+      60.208,
+      25.144
+    ],
+    "to": [
+      60.1872,
+      24.9772
+    ],
+    "straightKm": 9.5,
+    "bucket": "long"
+  },
+  {
+    "id": "leppavaara--rautatientori",
+    "name": "Leppävaara → Rautatientori",
+    "from": [
+      60.219,
+      24.813
+    ],
+    "to": [
+      60.171,
+      24.944
+    ],
+    "straightKm": 9.0,
+    "bucket": "long"
+  },
+  {
+    "id": "tikkurila--pasila",
+    "name": "Tikkurila → Pasila",
+    "from": [
+      60.292,
+      25.044
+    ],
+    "to": [
+      60.1989,
+      24.9332
+    ],
+    "straightKm": 12.0,
+    "bucket": "long"
+  },
+  {
+    "id": "myyrmaki--kamppi",
+    "name": "Myyrmäki → Kamppi",
+    "from": [
+      60.261,
+      24.854
+    ],
+    "to": [
+      60.1699,
+      24.932
+    ],
+    "straightKm": 11.0,
+    "bucket": "long"
+  },
+  {
+    "id": "matinkyla--kamppi",
+    "name": "Matinkylä → Kamppi",
+    "from": [
+      60.16,
+      24.738
+    ],
+    "to": [
+      60.1699,
+      24.932
+    ],
+    "straightKm": 10.8,
+    "bucket": "long"
+  },
+  {
+    "id": "espoon-keskus--leppavaara",
+    "name": "Espoon keskus → Leppävaara",
+    "from": [
+      60.205,
+      24.656
+    ],
+    "to": [
+      60.219,
+      24.813
+    ],
+    "straightKm": 8.8,
+    "bucket": "long"
+  },
+  {
+    "id": "kontula--kumpula",
+    "name": "Kontula → Kumpula",
+    "from": [
+      60.236,
+      25.082
+    ],
+    "to": [
+      60.209,
+      24.962
+    ],
+    "straightKm": 7.3,
+    "bucket": "long"
+  },
+  {
+    "id": "kannelmaki--kallio",
+    "name": "Kannelmäki → Kallio",
+    "from": [
+      60.24,
+      24.878
+    ],
+    "to": [
+      60.1841,
+      24.9497
+    ],
+    "straightKm": 7.4,
+    "bucket": "long"
+  },
+  {
+    "id": "viikki--munkkiniemi",
+    "name": "Viikki → Munkkiniemi",
+    "from": [
+      60.227,
+      25.015
+    ],
+    "to": [
+      60.198,
+      24.877
+    ],
+    "straightKm": 8.3,
+    "bucket": "long"
+  },
+  {
+    "id": "aviapolis--pasila",
+    "name": "Aviapolis → Pasila",
+    "from": [
+      60.295,
+      24.962
+    ],
+    "to": [
+      60.1989,
+      24.9332
+    ],
+    "straightKm": 10.8,
+    "bucket": "long"
+  },
+  {
+    "id": "espoonlahti--tapiola",
+    "name": "Espoonlahti → Tapiola",
+    "from": [
+      60.148,
+      24.66
+    ],
+    "to": [
+      60.176,
+      24.805
+    ],
+    "straightKm": 8.6,
+    "bucket": "long"
+  },
+  {
+    "id": "hakaniemi--arabianranta",
+    "name": "Hakaniemi → Arabianranta",
+    "from": [
+      60.1795,
+      24.951
+    ],
+    "to": [
+      60.205,
+      24.978
+    ],
+    "straightKm": 3.2,
+    "bucket": "medium"
+  }
+]

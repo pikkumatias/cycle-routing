@@ -1,0 +1,19 @@
+{
+  "od": "alppila--kamppi",
+  "rubricVersion": "v0",
+  "calmRanking": ["F", "C", "H", "E", "D", "B", "A", "G"],
+  "tiers": { "A": "C", "B": "C", "C": "A", "D": "B", "E": "A", "F": "A", "G": "D", "H": "A" },
+  "sameRoute": [["A", "B"]],
+  "picks": { "fewestLights": "D", "calm": "C" },
+  "rationale": {
+    "A": "Töölönlahti paths but 150 m in traffic on tram-railed Aleksis Kiven katu + 100 m Helsinginkatu, two unsignalised arterial crossings",
+    "B": "Same as A but starts on tram-railed Viipurinkatu (30 km/h) instead; one unsignalised crossing",
+    "C": "No traffic at all: paths via Töölönlahti and Baana; only ~0.9 km beside arterials; +1 min",
+    "D": "Linnunlaulu and Töölönlahti paths, 1 light, but 180 m in traffic on tram-railed Viipurinkatu",
+    "E": "Car-free via Olympic stadium/opera paths; a bit more beside Mäntymäentie and an extra unsignalised crossing",
+    "F": "Car-free through Kaisaniemi park and Kaisantunneli to Baana, least arterial-side riding, 1 light",
+    "G": "Through Kallio streets: 230 m on Porvoonkatu with tram rails, arterial-side tracks, 7 lights",
+    "H": "Car-free, but its first 0.7 km is a track beside Aleksis Kiven katu; +5 min"
+  },
+  "notes": "C, E and F are all car-free; F is marginally calmest but C gets the calm card because it removes the tier-E stretch for only +1 min. D saves 2 lights for +2 min."
+}

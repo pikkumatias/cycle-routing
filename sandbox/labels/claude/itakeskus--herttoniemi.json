@@ -1,0 +1,19 @@
+{
+  "od": "itakeskus--herttoniemi",
+  "rubricVersion": "v0",
+  "calmRanking": ["C", "B", "F", "E", "A", "D", "G", "H"],
+  "tiers": { "A": "C", "B": "A", "C": "A", "D": "C", "E": "A", "F": "A", "G": "C", "H": "C" },
+  "sameRoute": [["B", "C"], ["D", "G"]],
+  "picks": { "fewestLights": null, "calm": null },
+  "rationale": {
+    "A": "About half on tracks beside 40–50 km/h Varikkotie/Mekaanikonkatu, 50 m in traffic on Marjaniementie, 5 unsignalised crossings",
+    "B": "Itäpolku and paths with no mixed traffic; about a third beside industrial 40 km/h streets; 4 unsignalised crossings",
+    "C": "Same as B with slightly less roadside riding; 1 light",
+    "D": "Hedvigin rantapolku shore path, but ~60% on tracks beside Abraham Wetterin tie/Linnanrakentajantie; 5 lights",
+    "E": "Shore path plus longer park paths; ~35% roadside; 4 lights",
+    "F": "Park paths and quiet Laippatie/Oravatie; ~third roadside; 2 lights; +4 min",
+    "G": "Like D with an extra Roihuvuorentie-side stretch; 5 lights",
+    "H": "Through Siilitie/Kettutie with 70 m in traffic, long Varikkotie-side track, 8 unsignalised crossings incl. trunk ramps; +8 min"
+  },
+  "notes": "A is already mostly separated (tier C) with only 50 m in traffic. B/C move only ~20% of distance off the roadside, just under the ¼ threshold, so no calm card; borderline. C saves only one light."
+}

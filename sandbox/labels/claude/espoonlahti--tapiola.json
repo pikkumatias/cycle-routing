@@ -1,0 +1,19 @@
+{
+  "od": "espoonlahti--tapiola",
+  "rubricVersion": "v0",
+  "calmRanking": ["E", "G", "D", "C", "F", "H", "A", "B"],
+  "tiers": { "A": "C", "B": "D", "C": "A", "D": "A", "E": "A", "F": "C", "G": "A", "H": "C" },
+  "sameRoute": [],
+  "picks": { "fewestLights": "D", "calm": "E" },
+  "rationale": {
+    "A": "Almost all on tracks beside 50 km/h arterials (Kuitinmäentie, Martinsillantie, Merituulentie); 15 lights",
+    "B": "Shore route but ~2 km in mixed traffic, including Soukanväylä at 60 km/h, Kaitaantie and Haukilahdenranta",
+    "C": "Inland park paths via Finnoo and Gräsanlaakso; ~40% beside 40–50 km/h roads; 3 lights",
+    "D": "Shore paths via Nuottalahti and Haukilahti, no mixed traffic; ~30% beside roads, several unsignalised crossings; 1 light",
+    "E": "Shore, then Matinkylä park paths; least arterial-side riding of all; 1 light; +4 min",
+    "F": "Like A but cuts through Kuitinmäki residential paths; still mostly arterial-side; 9 lights",
+    "G": "Kaitaa and Matinkylä park paths; little arterial-side riding, few unsignalised crossings; 3 lights",
+    "H": "Like A with a Kuitinmäki jog; mostly arterial-side; 12 lights"
+  },
+  "notes": "D saves 14 lights for +2 min. E (+4) moves about half the distance from arterial-side tracks to park and shore paths. D would also be a defensible calm pick."
+}

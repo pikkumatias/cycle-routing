@@ -1,0 +1,19 @@
+{
+  "od": "toolontori--meilahti",
+  "rubricVersion": "v0",
+  "calmRanking": ["C", "D", "F", "E", "A", "G", "B", "H"],
+  "tiers": { "A": "D", "B": "D", "C": "C", "D": "C", "E": "D", "F": "C", "G": "C", "H": "C" },
+  "sameRoute": [["A", "B"], ["C", "D"]],
+  "picks": { "fewestLights": "D", "calm": "C" },
+  "rationale": {
+    "A": "~730 m in mixed traffic on Topeliuksenkatu and Haartmaninkatu (40 km/h), unsignalised Haartmaninkatu crossing; 6 lights",
+    "B": "Same as A but rides the whole of Topeliuksenkatu in traffic (~920 m)",
+    "C": "Quiet Välskärinkatu, then the Hesperia/Paciuksenkatu-side path; no mixed traffic, all arterial crossings signalised; 3 lights; +1 min",
+    "D": "Same as C via Kesärannantie, but crosses Paciuksenkatu (50 km/h) without signals; 2 lights",
+    "E": "~710 m in traffic on Nordenskiöldinkatu, Topeliuksenkatu and Haartmaninkatu; 7 lights",
+    "F": "Park paths with no mixed traffic, but an unsignalised Mechelininkatu crossing; 2 lights; +2 min",
+    "G": "Detour via Mannerheimintie-side tracks; 350 m in traffic including tram-railed Reijolankatu/Haartmaninkatu; 11 lights; +5 min",
+    "H": "Long Mannerheimintie-side tracks, 330 m in traffic with tram rails, many crossings; 13 lights; +5 min"
+  },
+  "notes": "C and D are nearly the same route; C is calmer (signalised Paciuksenkatu crossing) and D has one light fewer. Either could serve both cards."
+}

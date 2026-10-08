@@ -1,0 +1,19 @@
+{
+  "od": "lauttasaari--rautatientori",
+  "rubricVersion": "v0",
+  "calmRanking": ["C", "E", "G", "H", "A", "B", "F", "D"],
+  "tiers": { "A": "C", "B": "C", "C": "B", "D": "C", "E": "B", "F": "C", "G": "C", "H": "C" },
+  "sameRoute": [["A", "B"], ["D", "F"]],
+  "picks": { "fewestLights": null, "calm": "C" },
+  "rationale": {
+    "A": "680 m in mixed traffic on Lauttasaarentie (busy 40 km/h arterial), then bridge/Itämerenkatu paths and Baana; 4 lights",
+    "B": "Same as A",
+    "C": "Avoids Lauttasaarentie on Tallbergin puistotie/Pajalahdentie, then the same bridge path and Baana; no mixed traffic; 3 lights; +0 min",
+    "D": "Lauttasaarentie traffic, Salmisaari, Lapinlahdentie, unsignalised Mechelininkatu crossing; 6 lights",
+    "E": "Like C through quieter Lauttasaari paths, but three unsignalised local crossings; +3 min",
+    "F": "Lauttasaarentie traffic, then Salmisaari shore; unsignalised Mechelininkatu crossing; 5 lights",
+    "G": "Lauttasaarentie traffic, then Jätkäsaari shore paths to Baana; unsignalised Länsisatamankatu",
+    "H": "Lauttasaarentie traffic, then a longer Jätkäsaari loop; unsignalised Välimerenkatu; +7 min"
+  },
+  "notes": "C costs no extra time and removes the Lauttasaarentie traffic stretch, a clear calm pick. Its one-light saving is not enough for a fewest-lights card."
+}

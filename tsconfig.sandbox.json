@@ -23,5 +23,6 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["scripts/**/*.ts", "sandbox/**/*.ts", "src/mapbox-polyline.d.ts"]
+  "include": ["scripts/**/*.ts", "sandbox/**/*.ts", "src/mapbox-polyline.d.ts"],
+  "exclude": ["sandbox/review"]
 }

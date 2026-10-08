@@ -1,0 +1,19 @@
+{
+  "od": "alppila--hakaniemi",
+  "rubricVersion": "v0",
+  "calmRanking": ["H", "G", "B", "E", "C", "D", "F", "A"],
+  "tiers": { "A": "E", "B": "B", "C": "B", "D": "B", "E": "B", "F": "B", "G": "C", "H": "C" },
+  "sameRoute": [["C", "D"]],
+  "picks": { "fewestLights": "G", "calm": "G" },
+  "rationale": {
+    "A": "~640 m in mixed traffic on tram streets (Porthaninkatu, Aleksis Kiven katu, Fleminginkatu); 5 lights",
+    "B": "Quiet Kallio side streets (Läntinen Brahenkatu, Kirstinkatu, Kolmas linja); only 70 m on Helsinginkatu, but two unsignalised crossings",
+    "C": "Quiet streets via Kirstinkatu/Kolmas linja, but 230 m on Porvoonkatu incl. 140 m with tram rails",
+    "D": "Same as C with a one-block jog via Itäinen Papinkatu",
+    "E": "Like C but finishes on quiet Toinen linja, avoiding the Siltasaarenkatu crossings; 3 lights",
+    "F": "Mostly paths and quiet streets, but 250 m on Fleminginkatu (150 m tram) and some Aleksis Kiven katu traffic",
+    "G": "No traffic: Kotkankatu/Tivolitie then the Eläintarhanlahti path; 1 light, but three unsignalised crossings incl. Aleksis Kiven katu twice",
+    "H": "All bike path, no traffic, though about half is beside 40 km/h roads; +5 min"
+  },
+  "notes": "G at +3 min removes all of A's tram-street riding and saves 4 lights, so it gets both cards. H is slightly calmer but costs 2 more minutes for a marginal gain."
+}

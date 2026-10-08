@@ -1,0 +1,18 @@
+{
+  "od": "munkkiniemi--kamppi",
+  "rubricVersion": "v0",
+  "calmRanking": ["F", "D", "C", "A", "B", "G", "E"],
+  "tiers": { "A": "C", "B": "C", "C": "C", "D": "A", "E": "C", "F": "A", "G": "C" },
+  "sameRoute": [["A", "B"]],
+  "picks": { "fewestLights": "F", "calm": "F" },
+  "rationale": {
+    "A": "1.6 km side path beside Paciuksenkatu (50 km/h), then 180 m in traffic on Eteläinen Rautatiekatu; 7 lights",
+    "B": "Same as A",
+    "C": "Same Paciuksenkatu side path, then Töölö via Arkadiankatu; no mixed traffic; 7 lights",
+    "D": "Mississipinraitti shore path, shorter Paciuksenkatu side path, Baana finish; 4 lights, +2 min",
+    "E": "Paciuksenkatu side path then Eino Leinon katu tram in traffic; 9 lights",
+    "F": "Through Central Park (Ratsastie, Auroransilta) and Töölönlahti to Baana; barely any side path; 3 lights, +2 min",
+    "G": "Mannerheimintie/Tukholmankatu side tracks with a short tram-rail carriageway; 11 lights"
+  },
+  "notes": "F swaps the Paciuksenkatu side path for Central Park paths and saves 4 lights for +2 min, so it covers both cards."
+}

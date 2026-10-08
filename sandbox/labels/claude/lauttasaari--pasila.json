@@ -1,0 +1,19 @@
+{
+  "od": "lauttasaari--pasila",
+  "rubricVersion": "v0",
+  "calmRanking": ["F", "C", "G", "E", "D", "H", "B", "A"],
+  "tiers": { "A": "D", "B": "D", "C": "C", "D": "C", "E": "C", "F": "A", "G": "C", "H": "C" },
+  "sameRoute": [],
+  "picks": { "fewestLights": "F", "calm": "F" },
+  "rationale": {
+    "A": "~2.3 km in mixed traffic: Lauttasaarentie, then Helsinginkatu, Vauhtitie, Veturitie and Pasilankatu at the Pasila end; 12 lights",
+    "B": "Avoids Lauttasaarentie but has the same ~1.6 km in traffic on Vauhtitie/Veturitie/Pasilankatu; 11 lights",
+    "C": "Baana, Linnunlaulu and the rail-side path, but 680 m in traffic on Lauttasaarentie; 5 lights",
+    "D": "680 m on Lauttasaarentie, then Baana, a Mannerheimintie-side track and Central Park; 8 lights",
+    "E": "680 m on Lauttasaarentie, then Baana and paths partly beside Helsinginkatu; 7 lights",
+    "F": "No mixed traffic: Tallberginpuisto paths, Baana, Linnunlauluntie and the rail-side path; 4 lights; +2 min",
+    "G": "Salmisaari shore and Lapinlahti paths to Baana, but 680 m on Lauttasaarentie; +4 min",
+    "H": "Lauttasaarentie plus Mechelininkatu and Hietaniemi, several unsignalised Mechelininkatu crossings; 14 lights; +5 min"
+  },
+  "notes": "Clear case: F removes all mixed traffic and 8 lights for +2 min. C and F share most of the route but differ on Lauttasaari (Lauttasaarentie in traffic vs park path), so I did not group them."
+}

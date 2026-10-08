@@ -1,0 +1,17 @@
+{
+  "od": "matinkyla--kamppi",
+  "rubricVersion": "v0",
+  "calmRanking": ["D", "B", "E", "C", "F", "A"],
+  "tiers": { "A": "C", "B": "A", "C": "A", "D": "A", "E": "A", "F": "A" },
+  "sameRoute": [["B", "D"]],
+  "picks": { "fewestLights": "D", "calm": "D" },
+  "rationale": {
+    "A": "~1.2 km in traffic on Hauenkalliontie/Haukilahdenkatu plus Malminrinne tram; many unsignalled crossings, 9 lights",
+    "B": "Coastal path through Westend and Lauttasaari, Baana; only 180 m on Eteläinen Rautatiekatu; same time as A",
+    "C": "Like B but Lauttasaari via Wavulinintie in traffic; 7 lights",
+    "D": "Same coastal path as B but finishing via Baana with no mixed traffic; 4 lights, +3 min",
+    "E": "Like B with a Tapiola detour; +10 min",
+    "F": "Long side paths beside Kuusisaarentie/Paciuksenkatu (50 km/h) via Munkkiniemi; +11 min"
+  },
+  "notes": "B (+0) already removes A's collector traffic. D is the same route with a calmer finish and 5 fewer lights than A, so one D card covers both."
+}

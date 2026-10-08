@@ -1,0 +1,19 @@
+{
+  "od": "kallio--otaniemi",
+  "rubricVersion": "v0",
+  "calmRanking": ["F", "C", "B", "G", "H", "E", "D", "A"],
+  "tiers": { "A": "C", "B": "A", "C": "A", "D": "C", "E": "C", "F": "A", "G": "A", "H": "A" },
+  "sameRoute": [["B", "C", "F", "G"], ["A", "D"]],
+  "picks": { "fewestLights": "C", "calm": "C" },
+  "rationale": {
+    "A": "Mannerheimintie/Tukholmankatu with ~260 m in traffic incl. tram rails, then Paciuksenkatu and Kuusisaarentie side paths; 11 lights",
+    "B": "Central Park via Auroransilta and Ratsastie, then Kuusisaarentie side path; no traffic, 4 lights",
+    "C": "Same Central Park route as B via quiet Hammarskjöldintie; fewest unsignalled crossings; 4 lights",
+    "D": "Same as A via Meilahdentie; 10 lights",
+    "E": "Mississipinraitti shore, but Eino Leinon katu tram in traffic and long Paciuksenkatu side path; 9 lights",
+    "F": "Same as C with Kallio side streets at the start and least Helsinginkatu side path; 3 lights, +2 min",
+    "G": "Same Central Park route as B/C; 5 lights",
+    "H": "Central Park then Tilkka streets and paths, more walking; +9 min"
+  },
+  "notes": "All routes share the 2.2 km Kuusisaarentie side path. B/C/F/G are one Central Park route with small start variations. C removes A's carriageway riding on Mannerheimintie/Tukholmankatu and saves 7 lights for +1 min, so it covers both cards. F is marginally calmer and saves 1 more light, which is noise."
+}

@@ -1,0 +1,17 @@
+{
+  "od": "vuosaari--kalasatama",
+  "rubricVersion": "v0",
+  "calmRanking": ["E", "D", "F", "C", "B", "A"],
+  "tiers": { "A": "D", "B": "D", "C": "C", "D": "C", "E": "A", "F": "C" },
+  "sameRoute": [["B", "C"]],
+  "picks": { "fewestLights": "C", "calm": "E" },
+  "rationale": {
+    "A": "~3.5 km in mixed traffic: Meripellontie at 50 km/h, Hitsaajankatu, Kipparlahdensilmukka and 1.4 km of Kulosaaren puistotie; many unsignalised crossings",
+    "B": "~3 km in traffic on Marjaniementie, Tulisuontie, Hitsaajankatu and Kulosaaren puistotie",
+    "C": "Same corridor as B but on the tracks beside Tulisuontie and Hitsaajankatu; still ~1.8 km in traffic (Marjaniementie, Kulosaaren puistotie); 4 lights",
+    "D": "Paths via Itäkeskus and Herttoniemi industrial area; only Kulosaaren puistotie and Hiihtomäentie in traffic (~1.3 km); 6 lights",
+    "E": "Vuosaari paths, Hedvigin rantapolku and Herttoniemenranta shore path; only the shared 1.1 km of Kulosaaren puistotie in traffic; 4 lights; +4 min",
+    "F": "Like D via Siilitie, mostly separated paths beside 40–50 km/h roads, unsignalised trunk-ramp crossings; +7 min"
+  },
+  "notes": "Every candidate rides Kulosaaren puistotie (30 km/h, mixed) for ~1.1 km; no option avoids it. C saves 3 lights for +1 min. E removes A's 50 km/h Meripellontie stretch and ~2.3 km of other mixed traffic for +4 min. B and C use the same streets (carriageway vs side track)."
+}

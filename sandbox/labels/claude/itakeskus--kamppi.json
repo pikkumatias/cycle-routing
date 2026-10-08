@@ -1,0 +1,19 @@
+{
+  "od": "itakeskus--kamppi",
+  "rubricVersion": "v0",
+  "calmRanking": ["E", "H", "D", "A", "C", "F", "G", "B"],
+  "tiers": { "A": "C", "B": "D", "C": "C", "D": "C", "E": "A", "F": "C", "G": "C", "H": "C" },
+  "sameRoute": [["A", "D"]],
+  "picks": { "fewestLights": null, "calm": "E" },
+  "rationale": {
+    "A": "Herttoniemi paths beside Mekaanikonkatu/Varikkotie, then 1.75 km mixed (Kulosaaren puistotie, Sompasaarenlaituri); many unsignalised crossings",
+    "B": "Rides Mekaanikonkatu, Laivalahdenkatu and Hitsaajankatu in traffic: ~3.9 km mixed on 40 km/h industrial streets; 9 lights",
+    "C": "A's corridor with Capellan puistotie and the Pohjoisranta/Kaivokatu finish; ~1.7 km mixed; 8 lights",
+    "D": "Same corridor as A, but the Kalasatama section is on paths; ~1.2 km mixed; 4 lights",
+    "E": "Via Laajasalo shore paths and the car-free Kruunuvuorensilta bridge; only ~650 m in light traffic; +9 min",
+    "F": "A's corridor then Sörnäinen/Hämeentie; ~1.5 km mixed; 15 lights",
+    "G": "Like F via Hermannin rantatie and Haukilahdenkatu; ~2.1 km mixed; 18 lights",
+    "H": "No mixed traffic, but ~4.5 km beside 40–50 km/h roads (Viikintie, Viilarintie) and unsignalised arterial crossings; +18 min"
+  },
+  "notes": "Calm pick E costs +9 min on a 45-min ride, but several km move from roadside paths and Kulosaaren puistotie traffic onto shore paths and a car-free bridge. Ambiguous: a stricter reader of 'ten minutes is too much' might choose null."
+}

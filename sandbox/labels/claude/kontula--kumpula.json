@@ -1,0 +1,19 @@
+{
+  "od": "kontula--kumpula",
+  "rubricVersion": "v0",
+  "calmRanking": ["G", "A", "D", "C", "E", "F", "H", "B"],
+  "tiers": { "A": "A", "B": "C", "C": "C", "D": "C", "E": "C", "F": "C", "G": "A", "H": "C" },
+  "sameRoute": [["C", "D"]],
+  "picks": { "fewestLights": null, "calm": null },
+  "rationale": {
+    "A": "No mixed traffic; Myllypuro and Viikki paths, ~40% beside Viikintie/Karpalotie/Myllypurontie; 6 unsignalised crossings",
+    "B": "Like A but 820 m in traffic on Myllypurontie and Latokartanonkaari",
+    "C": "No mixed traffic but ~45% beside Latokartanonkaari/Viikintie (50 km/h) and an unsignalised Hämeentie crossing",
+    "D": "Same as C apart from the Kontula start",
+    "E": "410 m in traffic on Myllärintie, otherwise paths; unsignalised Hämeentie crossing; +4 min",
+    "F": "No mixed traffic but ~60% on tracks beside Viikintie/Viilarintie/Myllypurontie; 5 lights; +5 min",
+    "G": "Via Malmi cemetery and Viikinmäki bridge; least roadside riding (~1.9 km), 1 light; but +10 min",
+    "H": "Through Herttoniemi with 290 m in traffic on Kettutie and many unsignalised crossings; +12 min"
+  },
+  "notes": "A, the fastest, is already one of the calmest. G is calmer but costs +10 min for a modest gain, and it saves only 2 lights. Both cards merge into Fastest."
+}
