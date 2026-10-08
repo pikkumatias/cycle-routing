@@ -15,19 +15,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Environment Variables
 
 - `DIGITRANSIT_API_KEY` — Server-side API key (used by `api/` serverless functions), set in `.env.local`
-- `VITE_DIGITRANSIT_API_KEY` — Client-side key exposed to browser (for map tiles), set in `.env.local`
+- `VITE_DIGITRANSIT_API_KEY` — Only for the dev-only sandbox review page (HSL raster tiles), set in `.env.local`. The app itself needs no client-side key (OpenFreeMap vector tiles)
 
 ## Architecture
 
 ### Frontend (React + Vite + TypeScript)
 
-The app is a bicycle route planner for the Helsinki region. The user enters origin/destination addresses and the app shows up to three route cards on a Leaflet map: **Fastest**, **Fewest lights** and **Calm**. A route that wins several categories is shown once with badges.
+The app is a bicycle route planner for the Helsinki region. The user picks a start and destination and the app shows up to three route options over a MapLibre map: **Fastest**, **Fewest lights** and **Calm**. A route that wins several categories is shown once with badges.
 
 **Routing flow** (`src/App.tsx`):
-1. User selects addresses via geocoding autocomplete (`SearchDrawer` → `/api/digitransit-geocode`)
-2. On submit, `fetchRoutePlan` (`src/api/routePlan.ts`) POSTs `{from, to}` to `/api/route-plan`
+1. User picks places via geocoding autocomplete (`SearchPanel` → `/api/digitransit-geocode`), typed coordinates, their location, or a long-press/right-click on the map (`MapContextMenu`)
+2. Once both ends are set, `fetchRoutePlan` (`src/api/routePlan.ts`) POSTs `{from, to}` to `/api/route-plan`
 3. The server runs the routing engine (`src/routing/planRoutes.ts`): OTP candidates (presets, then via-waypoint detours), measured against the prebuilt OSM layers, and `selectCards` picks the cards
-4. The client draws the shown routes, selects the card holding Fewest lights, and fetches hazards/city bikes for display
+4. The client draws the shown routes, selects the card holding Fewest lights, and fetches roadworks (`useRoadworks`, from `src/services/hazards.ts`) and city bikes for display
 
 See `SCORING.md` for generators, light counting, traffic stress / calm index and selection rules.
 
@@ -62,13 +62,14 @@ Every file in `api/` deploys as a function; `.vercelignore` keeps `*.test.ts` ou
 - `src/api/digitransit.ts` — `parseLatLon`, geocoding autocomplete and reverse geocoding
 - `src/utils/routeGeometry.ts` — polyline decoding, display smoothing, bounds
 - `src/utils/recentSearches.ts` — localStorage-backed recent search history (max 10 entries)
-- `src/components/RouteMap.tsx` — Leaflet map with HSL tiles (CacheStorage + 3× retry), route polylines by id, signal-stop markers, origin/destination markers, click-to-select alternatives
-- `src/components/RouteCards.tsx` — cards with title, badges and metric row (time, distance, +min, lights, calm band); includes `RouteCardsSkeleton`
-- `src/components/SearchDrawer.tsx` — Right-side drawer with debounced autocomplete (300ms), recent searches, coordinate input support
-- `src/components/AddressTrigger.tsx` — Tap target button that opens the search drawer
-- `src/hooks/useBottomSheet.ts` — Touch/mouse-draggable bottom sheet with three snap points and velocity-based snapping
+- `src/components/RouteMap.tsx` — MapLibre map (`react-map-gl/maplibre`): routes, tappable route-time labels, signal stops, city bikes, roadworks, pins, locate button; the sheet/panel footprint is the map's persistent padding
+- `src/map/` — `mapStyle.ts` (OpenFreeMap basemap, cycleways emphasised, labels in the app language), `palette.ts` (reads colours from CSS tokens), `features.ts` (GeoJSON builders), `routeProgress.ts`, `worker.ts` (MapLibre worker URL for Vite)
+- `src/components/RouteOptions.tsx`, `RouteRibbon.tsx` — route rows as a radio group; the ribbon's length is the ride time, its colour the calm band, and its pips the traffic lights along the route
+- `src/components/TripPlanner.tsx`, `SearchPanel.tsx` — start/destination with swap; full-screen cmdk search with recents, coordinates and your location
+- `src/components/OptionsMenu.tsx` — map layers (city bikes, roadworks), language, appearance (auto/light/dark)
+- `src/hooks/useBottomSheet.ts` — draggable sheet: collapsed (to the trip planner), expanded (fits content), full; disabled at ≥768px where it is a side panel
 - `src/services/hazards.ts`, `src/services/citybikes.ts` — display-only overlays
 
 ### UI
 
-Uses MUI (Material UI) v7 components and MUI Icons. Map tiles from Digitransit CDN (HSL map). Bottom sheet snaps to collapsed (30%), expanded, and full-screen positions.
+Tailwind CSS v4 + shadcn/ui (Radix, `src/components/ui/`, generated) + lucide icons, font Schibsted Grotesk. **All colours are tokens in `src/styles/theme.css`** (light and dark); `src/index.css` maps them to shadcn/Tailwind and the map reads them too, so reskinning means editing that one file. Light/dark follows the system unless set in the options menu (`src/theme/colorScheme.ts`). `@/` aliases `src/`. Copy is in `src/locales/{en,fi}.json`.

@@ -38,7 +38,8 @@ export default async function handler(req: VercelReq, res: VercelRes) {
     url.searchParams.set('point.lat', lat)
     url.searchParams.set('point.lon', lon)
     url.searchParams.set('size', '1')
-    url.searchParams.set('lang', 'en')
+    const lang = req.query.lang
+    url.searchParams.set('lang', lang === 'fi' || lang === 'sv' ? lang : 'en')
 
     const upstream = await fetch(url.toString(), {
       headers: {

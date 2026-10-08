@@ -1,5 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/postcss'
+import { fileURLToPath } from 'node:url'
 import { config as dotenvConfig } from 'dotenv'
 import type { Plugin } from 'vite'
 import type { ServerResponse } from 'node:http'
@@ -95,7 +97,8 @@ function vercelApiDevPlugin(): Plugin {
 export default defineConfig({
   plugins: [react(), vercelApiDevPlugin()],
   build: {
-    chunkSizeWarningLimit: 700,
+    // maplibre-gl alone is ~1.1 MB minified (~300 kB gzip)
+    chunkSizeWarningLimit: 1200,
     rollupOptions: {
       output: {
         // Split large, rarely-changing vendors into their own chunks so app-code
@@ -104,20 +107,24 @@ export default defineConfig({
         // bugs where react-dom initializes before React's runtime.
         manualChunks(id) {
           if (!id.includes('node_modules')) return
-          // Keep all of MUI + Emotion together first. Emotion ships an
-          // `@emotion/react` package whose path matches the broad `/react/`
-          // test below; if it leaked into the react chunk it would create a
-          // circular mui <-> react chunk and a load-order TDZ crash.
-          if (id.includes('/@mui/') || id.includes('/@emotion/')) return 'mui'
+          // MapLibre is the largest vendor by far and changes least often
+          if (id.includes('maplibre') || id.includes('/@vis.gl/')) return 'map'
           if (
             id.includes('/react-dom/') ||
             id.includes('/react/') ||
             id.includes('/scheduler/')
           ) return 'react'
-          if (id.includes('leaflet')) return 'leaflet'
+          if (id.includes('/radix-ui/') || id.includes('/@radix-ui/') || id.includes('/cmdk/')) return 'ui'
           if (id.includes('i18next')) return 'i18n'
         },
       },
     },
+  },
+  // Tailwind runs as a PostCSS plugin here rather than a Vite plugin; same output
+  css: {
+    postcss: { plugins: [tailwindcss()] },
+  },
+  resolve: {
+    alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
 })

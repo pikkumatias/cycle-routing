@@ -1,598 +1,534 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import {
-  MapContainer,
-  Polyline,
+import Map, {
+  AttributionControl,
+  Layer,
   Marker,
   Popup,
-  useMap,
-} from 'react-leaflet'
-import 'leaflet.markercluster'
-import 'leaflet.markercluster/dist/MarkerCluster.css'
-import { useMediaQuery } from '@mui/material'
-import Dialog from '@mui/material/Dialog'
-import DialogTitle from '@mui/material/DialogTitle'
-import DialogContent from '@mui/material/DialogContent'
-import IconButton from '@mui/material/IconButton'
-import Typography from '@mui/material/Typography'
-import CloseIcon from '@mui/icons-material/Close'
-import { MapContextMenu } from './MapContextMenu'
-import type { AddressOption } from './SearchDrawer'
-import L from 'leaflet'
-import 'leaflet/dist/leaflet.css'
-import {
-  toDisplayLegs,
-  getBoundsFromLegsAndPoints,
-  type LatLng,
-} from '../utils/routeGeometry'
-import type { Hazard } from '../services/hazards'
-import { hazardToLatLng } from '../services/hazards'
+  Source,
+  type MapLayerMouseEvent,
+  type MapRef,
+} from 'react-map-gl/maplibre'
+import type { GeoJSONSource } from 'maplibre-gl'
+import 'maplibre-gl/dist/maplibre-gl.css'
+import '../map/worker'
+import { toast } from 'sonner'
+import { LocateFixed } from 'lucide-react'
+import type { PlannedRoute } from '../api/routePlan'
+import { appLanguage } from '../i18n'
+import { bikeFeatures, hazardFeatures, pointFeatures, routeFeatures } from '../map/features'
+import { buildMapStyle } from '../map/mapStyle'
+import { readMapPalette } from '../map/palette'
+import { mostDistinctPoint } from '../map/routeProgress'
 import type { CityBikeStation } from '../services/citybikes'
+import type { Hazard } from '../services/hazards'
+import { useColorScheme } from '../theme/colorScheme'
+import type { AddressOption } from '../utils/address'
+import { getBoundsFromLegsAndPoints, toDisplayLegs, type LatLng } from '../utils/routeGeometry'
+import { MapContextMenu } from './MapContextMenu'
+import { RoadworkDetails } from './RoadworkDetails'
+import { cn } from '@/lib/utils'
 
-const originIcon = L.divIcon({
-  className: '',
-  html: '<div style="width:20px;height:20px;border-radius:50%;background:#4CAF50;border:3px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.3)"></div>',
-  iconSize: [20, 20],
-  iconAnchor: [10, 10],
-})
+const HELSINKI: LatLng = [60.1699, 24.9384]
 
-const destinationIcon = L.divIcon({
-  className: '',
-  html: '<div style="width:20px;height:20px;border-radius:50%;background:#E91E63;border:3px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.3)"></div>',
-  iconSize: [20, 20],
-  iconAnchor: [10, 10],
-})
+/** Free space around routes when fitting the view, on top of the panels. */
+export type MapInsets = { top: number; right: number; bottom: number; left: number }
 
-const retinaParam = window.devicePixelRatio > 1 ? '@2x' : ''
-
-export const HSL_TILE_CONFIG = {
-  url: `https://cdn.digitransit.fi/map/v3/hsl-map-en/{z}/{x}/{y}${retinaParam}.png?digitransit-subscription-key=${import.meta.env.VITE_DIGITRANSIT_API_KEY}`,
-  minZoom: 5,
-  maxZoom: 20,
-  maxNativeZoom: 18,
-  tileSize: 256,
-  attribution:
-    'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, Tiles &copy; <a href="https://digitransit.fi">Digitransit</a>',
-} as const
-
-const TILE_CACHE_NAME = 'hsl-tiles-v1'
-
-const makeHazardIcon = (emoji: string, bg: string) =>
-  L.divIcon({
-    className: '',
-    html: `<div style="width:28px;height:28px;border-radius:50%;background:${bg};border:2px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;font-size:14px">${emoji}</div>`,
-    iconSize: [28, 28],
-    iconAnchor: [14, 14],
-  })
-
-const excavationIcon = makeHazardIcon('⚠️', '#FF8C00')
-
-const HAZARD_ICONS = {
-  excavation: excavationIcon,
-  traffic_arrangement: makeHazardIcon('🚧', '#D32F2F'),
-  // Area rental reuses the excavation icon — its amber circle was too close to
-  // the city bike marker colour to tell apart.
-  area_rental: excavationIcon,
-}
-
-const trafficLightIcon = makeHazardIcon('🚦', '#1A237E')
-
-const CITYBIKE_COLOR = '#FCBB00'
-
-const makeCityBikeIcon = (count: number) =>
-  L.divIcon({
-    className: '',
-    html: `<div style="min-width:30px;height:30px;padding:0 5px;border-radius:15px;background:${CITYBIKE_COLOR};border:2px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;color:#333;font-weight:700;font-size:13px;font-family:sans-serif;box-sizing:border-box">${count}</div>`,
-    iconSize: [30, 30],
-    iconAnchor: [15, 15],
-  })
-
-const HAZARD_TYPE_KEYS: Record<Hazard['type'], string> = {
-  excavation: 'hazardTypes.excavation',
-  traffic_arrangement: 'hazardTypes.traffic_arrangement',
-  area_rental: 'hazardTypes.area_rental',
-}
-
-class HslCachingTileLayer extends L.TileLayer {
-  tileBlobUrls = new WeakMap<HTMLElement, string>()
-
-  override createTile(coords: L.Coords, done?: L.DoneCallback): HTMLElement {
-    const img = document.createElement('img')
-    if (!done) return img
-    const url = this.getTileUrl(coords)
-
-    let settled = false
-    const settle = (err: Error | undefined) => {
-      if (settled) return
-      settled = true
-      done(err, img)
-    }
-
-    const setImgSrc = (blob: Blob, attemptsLeft: number) => {
-      // Revoke any previous blob URL held by this img (retry path)
-      const prev = this.tileBlobUrls.get(img)
-      if (prev) URL.revokeObjectURL(prev)
-
-      const objUrl = URL.createObjectURL(blob)
-      this.tileBlobUrls.set(img, objUrl)
-      img.onload = () => settle(undefined)
-      img.onerror = () => {
-        if (attemptsLeft > 1) {
-          setTimeout(() => load(attemptsLeft - 1), 400)
-        } else {
-          URL.revokeObjectURL(objUrl)
-          this.tileBlobUrls.delete(img)
-          settle(new Error('img load'))
-        }
-      }
-      img.src = objUrl
-    }
-
-    const load = async (attemptsLeft: number): Promise<void> => {
-      try {
-        if (typeof caches !== 'undefined') {
-          const cache = await caches.open(TILE_CACHE_NAME)
-          const cached = await cache.match(url)
-          if (cached) {
-            const blob = await cached.blob()
-            setImgSrc(blob, attemptsLeft)
-            return
-          }
-        }
-
-        const resp = await fetch(url)
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
-        const forCache = resp.clone()
-        const blob = await resp.blob()
-
-        if (typeof caches !== 'undefined') {
-          caches.open(TILE_CACHE_NAME).then((c) => c.put(url, forCache)).catch(() => {})
-        }
-
-        setImgSrc(blob, attemptsLeft)
-      } catch (err) {
-        if (attemptsLeft > 1) {
-          setTimeout(() => load(attemptsLeft - 1), 400)
-        } else {
-          settle(err instanceof Error ? err : new Error(String(err)))
-        }
-      }
-    }
-
-    load(3)
-    return img
-  }
-}
-
-function HslTileLayer() {
-  const map = useMap()
-  useEffect(() => {
-    const layer = new HslCachingTileLayer(HSL_TILE_CONFIG.url, {
-      attribution: HSL_TILE_CONFIG.attribution,
-      minZoom: HSL_TILE_CONFIG.minZoom,
-      maxZoom: HSL_TILE_CONFIG.maxZoom,
-      maxNativeZoom: HSL_TILE_CONFIG.maxNativeZoom,
-      tileSize: HSL_TILE_CONFIG.tileSize,
-      keepBuffer: 4,
-      updateWhenIdle: false,
-    })
-    const onTileUnload = (e: L.TileEvent) => {
-      const blobUrl = layer.tileBlobUrls.get(e.tile)
-      if (blobUrl) {
-        URL.revokeObjectURL(blobUrl)
-        layer.tileBlobUrls.delete(e.tile)
-      }
-    }
-    layer.on('tileunload', onTileUnload)
-    layer.addTo(map)
-    return () => {
-      layer.remove()
-      layer.off('tileunload', onTileUnload)
-    }
-  }, [map])
-  return null
-}
-
-const ROUTE_COLOR = '#007AC9'
-const ROUTE_WEIGHT = 5
-
-type FitBoundsProps = {
-  bounds: LatLng[] | null
+type RouteMapProps = {
+  routes: PlannedRoute[]
+  selectedId: string | null
+  onSelectRoute: (id: string) => void
   from?: LatLng
   to?: LatLng
-}
-
-function FitBounds({ bounds, from, to }: FitBoundsProps) {
-  const map = useMap()
-  // Only re-fit when the origin/destination changes, not on route variant switch
-  useEffect(() => {
-    if (!bounds || bounds.length < 2) return
-    map.fitBounds(bounds as L.LatLngBoundsExpression, {
-      paddingTopLeft: [40, 40],
-      paddingBottomRight: [40, 200],
-      maxZoom: 16,
-    })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [map, from?.[0], from?.[1], to?.[0], to?.[1]])
-  return null
-}
-
-const ALT_ROUTE_COLOR = '#9e9e9e'
-const ALT_ROUTE_WEIGHT = 3
-const ALT_ROUTE_OPACITY = 0.4
-
-const esc = (s: string) =>
-  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-
-type HazardClusterLayerProps = {
+  userLocation?: LatLng
+  /** The start is the device location; its pin already marks it. */
+  fromIsUser?: boolean
+  onLocate: () => void
   hazards: Hazard[]
-  isMobile: boolean
-  onHazardClick: (hazard: Hazard) => void
+  cityBikes: CityBikeStation[]
+  onSetOrigin: (option: AddressOption) => void
+  onSetDestination: (option: AddressOption) => void
+  /** Space the sheet or side panel covers; routes are fitted inside the rest. */
+  insets: MapInsets
+  /** Whether the layout is the wide one (side panel). */
+  wide: boolean
 }
 
-function HazardClusterLayer({ hazards, isMobile, onHazardClick }: HazardClusterLayerProps) {
-  const map = useMap()
-  const { t } = useTranslation()
-  // Keep callback ref so the effect doesn't re-run on every render
-  const onClickRef = useRef(onHazardClick)
-  useEffect(() => { onClickRef.current = onHazardClick })
+// Layer ids that respond to taps
+const ROUTE_HIT = 'route-alt-hit'
+const BIKE_POINTS = 'bike-points'
+const BIKE_CLUSTERS = 'bike-clusters'
+const WORKS_POINTS = 'works-points'
+const WORKS_CLUSTERS = 'works-clusters'
+const INTERACTIVE = [WORKS_POINTS, WORKS_CLUSTERS, BIKE_POINTS, BIKE_CLUSTERS, ROUTE_HIT]
+/** Route lines sit under all basemap labels. */
+const BELOW_LABELS = 'label-water'
 
-  useEffect(() => {
-    const group = L.markerClusterGroup({
-      maxClusterRadius: 40,
-      showCoverageOnHover: false,
-      spiderfyDistanceMultiplier: 1.4,
-      iconCreateFunction: (cluster) =>
-        L.divIcon({
-          className: '',
-          html: `<div style="width:34px;height:34px;border-radius:50%;background:#E65100;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:13px;font-family:sans-serif">${cluster.getChildCount()}</div>`,
-          iconSize: [34, 34],
-          iconAnchor: [17, 17],
-        }),
-    })
-
-    for (const hazard of hazards) {
-      const pos = hazardToLatLng(hazard)
-      if (!pos) continue
-
-      const marker = L.marker(pos, { icon: HAZARD_ICONS[hazard.type] })
-
-      if (isMobile) {
-        marker.on('click', () => onClickRef.current(hazard))
-      } else {
-        let html = `<strong>${esc(t(HAZARD_TYPE_KEYS[hazard.type]))}</strong>`
-        if (hazard.address) html += `<div>${esc(hazard.address)}</div>`
-        if (hazard.purpose) html += `<div style="font-size:0.85em;color:#555">${esc(hazard.purpose)}</div>`
-        if (hazard.startDate || hazard.endDate) {
-          html += `<div style="font-size:0.8em;margin-top:4px">${esc(hazard.startDate ?? '?')} – ${esc(hazard.endDate ?? '?')}</div>`
-        }
-        marker.bindPopup(L.popup({ maxHeight: 300 }).setContent(html))
-      }
-
-      group.addLayer(marker)
-    }
-
-    map.addLayer(group)
-    return () => { map.removeLayer(group) }
-  }, [map, hazards, isMobile, t])
-
-  return null
-}
-
-const HAZARD_FILL: Record<Hazard['type'], string> = {
-  excavation: '#FF8C00',
-  traffic_arrangement: '#D32F2F',
-  area_rental: '#FF8C00',
-}
-
-function HazardPolygonLayer({ hazards, isMobile, onHazardClick }: HazardClusterLayerProps) {
-  const map = useMap()
-  const { t } = useTranslation()
-  const onClickRef = useRef(onHazardClick)
-  useEffect(() => { onClickRef.current = onHazardClick })
-
-  useEffect(() => {
-    const polygonHazards = hazards.filter(
-      (h) => h.geometry.type === 'Polygon' || h.geometry.type === 'MultiPolygon',
-    )
-    if (polygonHazards.length === 0) return
-
-    const hazardById = new Map(polygonHazards.map((h) => [h.id, h]))
-
-    const layer = L.geoJSON(
-      {
-        type: 'FeatureCollection',
-        features: polygonHazards.map((h) => ({
-          type: 'Feature',
-          id: h.id,
-          geometry: h.geometry as unknown,
-          properties: { hazardId: h.id },
-        })),
-      } as Parameters<typeof L.geoJSON>[0],
-      {
-        style: (feature) => {
-          const h = hazardById.get(feature?.properties?.hazardId as string)
-          const color = HAZARD_FILL[h?.type ?? 'excavation']
-          return { color, weight: 2, fillColor: color, fillOpacity: 0.2, opacity: 0.85 }
-        },
-        onEachFeature: (feature, featureLayer) => {
-          const h = hazardById.get((feature.properties as { hazardId: string }).hazardId)
-          if (!h) return
-          if (isMobile) {
-            featureLayer.on('click', () => onClickRef.current(h))
-          } else {
-            let html = `<strong>${esc(t(HAZARD_TYPE_KEYS[h.type]))}</strong>`
-            if (h.address) html += `<div>${esc(h.address)}</div>`
-            if (h.purpose) html += `<div style="font-size:0.85em;color:#555">${esc(h.purpose)}</div>`
-            if (h.startDate || h.endDate)
-              html += `<div style="font-size:0.8em;margin-top:4px">${esc(h.startDate ?? '?')} – ${esc(h.endDate ?? '?')}</div>`
-            featureLayer.bindPopup(L.popup({ maxHeight: 300 }).setContent(html))
-          }
-        },
-      },
-    )
-
-    layer.addTo(map)
-    return () => { layer.remove() }
-  }, [map, hazards, isMobile, t])
-
-  return null
-}
-
-function TrafficLightClusterLayer({ lights }: { lights: LatLng[] }) {
-  const map = useMap()
-
-  useEffect(() => {
-    const group = L.markerClusterGroup({
-      maxClusterRadius: 40,
-      showCoverageOnHover: false,
-      spiderfyDistanceMultiplier: 1.4,
-      iconCreateFunction: (cluster) =>
-        L.divIcon({
-          className: '',
-          html: `<div style="width:34px;height:34px;border-radius:50%;background:#1A237E;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:13px;font-family:sans-serif">${cluster.getChildCount()}</div>`,
-          iconSize: [34, 34],
-          iconAnchor: [17, 17],
-        }),
-    })
-
-    for (const light of lights) {
-      group.addLayer(L.marker(light, { icon: trafficLightIcon }))
-    }
-
-    map.addLayer(group)
-    return () => { map.removeLayer(group) }
-  }, [map, lights])
-
-  return null
-}
-
-function CityBikeStationLayer({ stations }: { stations: CityBikeStation[] }) {
-  const map = useMap()
-  const { t } = useTranslation()
-
-  useEffect(() => {
-    const group = L.markerClusterGroup({
-      maxClusterRadius: 40,
-      showCoverageOnHover: false,
-      spiderfyDistanceMultiplier: 1.4,
-      iconCreateFunction: (cluster) => {
-        const totalBikes = (
-          cluster.getAllChildMarkers() as Array<L.Marker & { bikesAvailable?: number }>
-        ).reduce((sum, m) => sum + (m.bikesAvailable ?? 0), 0)
-        return L.divIcon({
-          className: '',
-          html: `<div style="width:34px;height:34px;border-radius:50%;background:${CITYBIKE_COLOR};border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;color:#333;font-weight:700;font-size:13px;font-family:sans-serif">${totalBikes}</div>`,
-          iconSize: [34, 34],
-          iconAnchor: [17, 17],
-        })
-      },
-    })
-
-    for (const station of stations) {
-      const marker = L.marker([station.lat, station.lon], {
-        icon: makeCityBikeIcon(station.bikesAvailable),
-      }) as L.Marker & { bikesAvailable: number }
-      marker.bikesAvailable = station.bikesAvailable
-      let html = `<strong>${esc(station.name)}</strong>`
-      html += `<div style="margin-top:2px">${esc(t('cityBikes.bikesAvailable', { count: station.bikesAvailable }))}</div>`
-      marker.bindPopup(L.popup({ maxHeight: 200 }).setContent(html))
-      group.addLayer(marker)
-    }
-
-    map.addLayer(group)
-    return () => { map.removeLayer(group) }
-  }, [map, stations, t])
-
-  return null
-}
-
-export type AlternativeRoute = {
-  id: string
-  legs: LatLng[][]
-}
-
-export type RouteMapProps = {
-  /** Legs of the selected route. */
-  route: LatLng[][] | null
-  from?: LatLng
-  to?: LatLng
-  height?: number | string
-  alternativeRoutes?: AlternativeRoute[]
-  onSelectRoute?: (id: string) => void
-  hazards?: Hazard[]
-  hazardsLoading?: boolean
-  /** Signal stops counted on the selected route. */
-  trafficLights?: LatLng[]
-  cityBikes?: CityBikeStation[]
-  onSetOrigin?: (option: AddressOption) => void
-  onSetDestination?: (option: AddressOption) => void
-}
+const minutes = (sec: number) => Math.round(sec / 60)
+/** Space kept around the trip when framing it, inside the free map area. */
+const FIT_MARGIN = 40
 
 export function RouteMap({
-  route,
+  routes,
+  selectedId,
+  onSelectRoute,
   from,
   to,
-  height = '100%',
-  alternativeRoutes,
-  onSelectRoute,
+  userLocation,
+  fromIsUser,
+  onLocate,
   hazards,
-  trafficLights,
   cityBikes,
   onSetOrigin,
   onSetDestination,
+  insets,
+  wide,
 }: RouteMapProps) {
-  const { t } = useTranslation()
-  const [selectedHazard, setSelectedHazard] = useState<Hazard | null>(null)
-  const isMobile = useMediaQuery('(max-width:600px)')
-  const handleHazardClick = useCallback((hazard: Hazard) => setSelectedHazard(hazard), [])
-  const legs = useMemo(() => toDisplayLegs(route ?? []), [route])
-  const altLegsArrays = useMemo(
-    () => (alternativeRoutes ?? []).map((r) => ({ id: r.id, legs: toDisplayLegs(r.legs) })),
-    [alternativeRoutes],
-  )
-  const allLegs = useMemo(() => {
-    const all = [...legs]
-    altLegsArrays.forEach((a) => all.push(...a.legs))
-    return all
-  }, [legs, altLegsArrays])
-  const bounds = useMemo(
-    () => getBoundsFromLegsAndPoints(allLegs, from, to),
-    [allLegs, from, to],
-  )
-  const center: LatLng = useMemo(() => {
-    if (bounds.length >= 2) {
-      return [
-        (bounds[0][0] + bounds[1][0]) / 2,
-        (bounds[0][1] + bounds[1][1]) / 2,
-      ]
+  const { t, i18n } = useTranslation()
+  const { scheme } = useColorScheme()
+  const lang = appLanguage(i18n.language)
+  const mapRef = useRef<MapRef>(null)
+  const [mapKey, setMapKey] = useState(0)
+  const [cursor, setCursor] = useState<string>('')
+  const [bikePopup, setBikePopup] = useState<CityBikeStation | null>(null)
+  const [hazardId, setHazardId] = useState<string | null>(null)
+  const contextMenuHandler = useRef<((e: MapLayerMouseEvent) => void) | null>(null)
+  const loaded = useRef(false)
+  // Whether the person has moved the map since we last framed the trip
+  const userMoved = useRef(false)
+
+  // scheme and lang are read so the style rebuilds when either changes; the
+  // palette itself comes from the CSS tokens, already switched by then.
+  const palette = useMemo(() => readMapPalette(), [scheme]) // eslint-disable-line react-hooks/exhaustive-deps
+  const mapStyle = useMemo(() => buildMapStyle(palette, lang), [palette, lang])
+
+  const selected = routes.find((r) => r.id === selectedId)
+  const routeData = useMemo(() => routeFeatures(routes, selectedId), [routes, selectedId])
+  const signalData = useMemo(() => pointFeatures((selected?.signalStops ?? []).map((s) => s.at)), [selected])
+  const bikeData = useMemo(() => bikeFeatures(cityBikes), [cityBikes])
+  const hazardData = useMemo(() => hazardFeatures(hazards), [hazards])
+  const hazard = hazards.find((h) => h.id === hazardId) ?? null
+
+  // Label anchors: where each route is most clearly its own line. Computed per
+  // plan, not per selection, so labels stay put when switching.
+  const labelAnchors = useMemo(() => {
+    const anchors: Record<string, LatLng> = {}
+    for (const r of routes) {
+      const others = routes.filter((o) => o.id !== r.id).flatMap((o) => o.legs)
+      const at = mostDistinctPoint(r.legs, others)
+      if (at) anchors[r.id] = at
     }
-    if (from) return from
-    if (to) return to
-    return [60.1699, 24.9384]
-  }, [bounds, from, to])
+    return anchors
+  }, [routes])
+
+  // --- Framing ---------------------------------------------------------------
+
+  // The panels' footprint is the map's persistent padding: the camera centres
+  // in the free area, and MapLibre adds any per-call padding on top of it.
+  const padding = useMemo(() => {
+    const map = mapRef.current
+    const h = map?.getContainer().clientHeight ?? window.innerHeight
+    const w = map?.getContainer().clientWidth ?? window.innerWidth
+    // Always leave some map between the paddings
+    const room = 2 * FIT_MARGIN + 120
+    return {
+      top: insets.top,
+      right: insets.right,
+      bottom: Math.max(0, Math.min(insets.bottom, h - insets.top - room)),
+      left: Math.max(0, Math.min(insets.left, w - insets.right - room)),
+    }
+  }, [insets])
+
+  const frame = useCallback(
+    (animate: boolean) => {
+      const map = mapRef.current
+      if (!map) return
+      const legs = routes.flatMap((r) => toDisplayLegs(r.legs))
+      const bounds = getBoundsFromLegsAndPoints(legs, from, to)
+      if (bounds.length < 2) return
+      const [[s, w], [n, e]] = bounds
+      if (s === n && w === e) {
+        map.easeTo({ center: [w, s], zoom: Math.max(map.getZoom(), 14), duration: animate ? 600 : 0 })
+      } else {
+        map.fitBounds(
+          [
+            [w, s],
+            [e, n],
+          ],
+          { padding: FIT_MARGIN, maxZoom: 16, duration: animate ? 700 : 0 },
+        )
+      }
+      userMoved.current = false
+    },
+    [routes, from, to],
+  )
+
+  // New trip or new endpoints: frame them
+  const routesKey = routes.map((r) => r.id).join('|')
+  const endpointsKey = `${from?.join(',')}>${to?.join(',')}`
+  useEffect(() => {
+    if (loaded.current) frame(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routesKey, endpointsKey])
+
+  // Panel resized: move the free area, and re-frame unless the person has been
+  // exploring the map
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !loaded.current) return
+    map.setPadding(padding)
+    if (!userMoved.current) frame(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [padding])
+
+  // First location fix: centre on it when there is nothing else to show
+  const centredOnUser = useRef(false)
+  useEffect(() => {
+    if (!userLocation || centredOnUser.current || from || to || routes.length) return
+    const map = mapRef.current
+    if (!map || !loaded.current) return
+    centredOnUser.current = true
+    map.easeTo({ center: [userLocation[1], userLocation[0]], zoom: 14, duration: 600 })
+  }, [userLocation, from, to, routes.length])
+
+  const locate = () => {
+    onLocate()
+    const map = mapRef.current
+    if (map && userLocation) {
+      map.easeTo({ center: [userLocation[1], userLocation[0]], zoom: Math.max(map.getZoom(), 15), duration: 600 })
+    }
+  }
+
+  // --- Interaction -----------------------------------------------------------
+
+  const onClick = (e: MapLayerMouseEvent) => {
+    const feature = e.features?.[0]
+    if (!feature) return
+    const layer = feature.layer.id
+    const map = mapRef.current
+    if (layer === WORKS_POINTS) {
+      setHazardId(String(feature.properties.id))
+    } else if (layer === BIKE_POINTS) {
+      setBikePopup(cityBikes.find((s) => s.stationId === String(feature.properties.id)) ?? null)
+    } else if ((layer === BIKE_CLUSTERS || layer === WORKS_CLUSTERS) && map && feature.geometry.type === 'Point') {
+      const source = map.getSource(feature.source) as GeoJSONSource | undefined
+      const center = feature.geometry.coordinates as [number, number]
+      void source
+        ?.getClusterExpansionZoom(Number(feature.properties.cluster_id))
+        .then((zoom) => map.easeTo({ center, zoom, duration: 400 }))
+    } else if (layer === ROUTE_HIT) {
+      onSelectRoute(String(feature.properties.id))
+    }
+  }
+
+  const onError = (e: { error?: Error }) => {
+    // Tile hiccups after load are retried by MapLibre as you pan; only a
+    // failure to load the style itself leaves the map blank.
+    if (loaded.current) return
+    console.warn('[RouteMap] map failed to load:', e.error)
+    toast.error(t('map.mapError'), {
+      id: 'map-error',
+      duration: Infinity,
+      action: { label: t('map.retry'), onClick: () => setMapKey((k) => k + 1) },
+    })
+  }
+
+  const sheetCoversMap = insets.bottom > window.innerHeight * 0.6
+
+  const bindContextMenu = useCallback((handler: (e: MapLayerMouseEvent) => void) => {
+    contextMenuHandler.current = handler
+  }, [])
 
   return (
-    <div style={{ height, width: '100%' }}>
-      <MapContainer
-        center={center}
-        zoom={13}
-        minZoom={HSL_TILE_CONFIG.minZoom}
-        maxZoom={HSL_TILE_CONFIG.maxZoom}
-        style={{ height: '100%', width: '100%' }}
-        scrollWheelZoom
-        zoomControl={false}
+    <div className="relative size-full">
+      <Map
+        key={mapKey}
+        ref={mapRef}
+        mapStyle={mapStyle}
+        initialViewState={{ longitude: HELSINKI[1], latitude: HELSINKI[0], zoom: 12 }}
+        minZoom={5}
+        maxZoom={19}
+        dragRotate={false}
+        touchPitch={false}
+        pitchWithRotate={false}
+        attributionControl={false}
+        interactiveLayerIds={INTERACTIVE}
+        cursor={cursor}
+        onMouseEnter={() => setCursor('pointer')}
+        onMouseLeave={() => setCursor('')}
+        onClick={onClick}
+        onContextMenu={(e) => contextMenuHandler.current?.(e)}
+        onMoveStart={(e) => {
+          if ('originalEvent' in e && e.originalEvent) userMoved.current = true
+        }}
+        onLoad={(e) => {
+          loaded.current = true
+          e.target.setPadding(padding)
+          // Compact attribution starts expanded; keep it as the (i) button until tapped
+          e.target.getContainer().querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show')
+          toast.dismiss('map-error')
+          if (routes.length || from || to) frame(false)
+        }}
+        onError={onError}
+        style={{ width: '100%', height: '100%' }}
       >
-        <HslTileLayer />
-        <FitBounds bounds={bounds.length >= 2 ? bounds : null} from={from} to={to} />
-        {altLegsArrays.map((altRoute, altIdx) =>
-          altRoute.legs.map((leg, legIdx) => (
-            <Polyline
-              key={`alt-visual-${altIdx}-${legIdx}`}
-              positions={leg.positions}
-              pathOptions={{
-                color: ALT_ROUTE_COLOR,
-                weight: ALT_ROUTE_WEIGHT,
-                opacity: ALT_ROUTE_OPACITY,
-                interactive: false,
-              }}
-            />
-          )),
-        )}
-        {altLegsArrays.map((altRoute, altIdx) =>
-          altRoute.legs.map((leg, legIdx) => (
-            <Polyline
-              key={`alt-hit-${altIdx}-${legIdx}`}
-              positions={leg.positions}
-              pathOptions={{
-                color: ALT_ROUTE_COLOR,
-                weight: 16,
-                opacity: 0.01,
-              }}
-              eventHandlers={{
-                click: () => onSelectRoute?.(altRoute.id),
-              }}
-            />
-          )),
-        )}
-        {legs.map((leg, i) => (
-          <Polyline
-            key={i}
-            positions={leg.positions}
-            pathOptions={{
-              color: ROUTE_COLOR,
-              weight: ROUTE_WEIGHT,
-              opacity: 0.9,
+        <AttributionControl
+          key={wide ? 'wide' : 'narrow'}
+          position={wide ? 'bottom-right' : 'top-left'}
+          compact
+        />
+
+        {/* City bikes sit under the routes: context, not the subject */}
+        <Source
+          id="bikes"
+          type="geojson"
+          data={bikeData}
+          cluster
+          clusterRadius={28}
+          clusterProperties={{ bikes: ['+', ['get', 'bikes']] }}
+        >
+          <Layer
+            id={BIKE_CLUSTERS}
+            type="circle"
+            beforeId={BELOW_LABELS}
+            filter={['has', 'point_count']}
+            paint={{
+              'circle-color': palette.bike,
+              'circle-radius': 11,
+              'circle-stroke-color': palette.routeCasing,
+              'circle-stroke-width': 1.5,
             }}
           />
-        ))}
+          <Layer
+            id={BIKE_POINTS}
+            type="circle"
+            beforeId={BELOW_LABELS}
+            filter={['!', ['has', 'point_count']]}
+            paint={{
+              // An empty station reads as greyed out
+              'circle-color': ['case', ['>', ['get', 'bikes'], 0], palette.bike, palette.path],
+              'circle-radius': 8,
+              'circle-stroke-color': palette.routeCasing,
+              'circle-stroke-width': 1.5,
+            }}
+          />
+          <Layer
+            id="bike-count"
+            type="symbol"
+            beforeId={BELOW_LABELS}
+            layout={{
+              'text-field': ['to-string', ['get', 'bikes']],
+              'text-font': ['Noto Sans Bold'],
+              'text-size': 10,
+              'text-allow-overlap': true,
+            }}
+            paint={{ 'text-color': palette.bikeInk }}
+          />
+        </Source>
+
+        <Source id="routes" type="geojson" data={routeData}>
+          <Layer
+            id="route-alt-casing"
+            type="line"
+            beforeId={BELOW_LABELS}
+            filter={['==', ['get', 'selected'], false]}
+            layout={{ 'line-cap': 'round', 'line-join': 'round' }}
+            paint={{ 'line-color': palette.routeCasing, 'line-width': 7 }}
+          />
+          <Layer
+            id="route-alt"
+            type="line"
+            beforeId={BELOW_LABELS}
+            filter={['==', ['get', 'selected'], false]}
+            layout={{ 'line-cap': 'round', 'line-join': 'round' }}
+            paint={{ 'line-color': palette.routeAlt, 'line-width': 4 }}
+          />
+          <Layer
+            id={ROUTE_HIT}
+            type="line"
+            filter={['==', ['get', 'selected'], false]}
+            paint={{ 'line-color': '#000000', 'line-opacity': 0.01, 'line-width': 24 }}
+          />
+          <Layer
+            id="route-selected-casing"
+            type="line"
+            beforeId={BELOW_LABELS}
+            filter={['==', ['get', 'selected'], true]}
+            layout={{ 'line-cap': 'round', 'line-join': 'round' }}
+            paint={{ 'line-color': palette.routeCasing, 'line-width': 10 }}
+          />
+          <Layer
+            id="route-selected"
+            type="line"
+            beforeId={BELOW_LABELS}
+            filter={['==', ['get', 'selected'], true]}
+            layout={{ 'line-cap': 'round', 'line-join': 'round' }}
+            paint={{ 'line-color': palette.routeSelected, 'line-width': 6 }}
+          />
+        </Source>
+
+        <Source id="works" type="geojson" data={hazardData.areas}>
+          <Layer
+            id="works-area"
+            type="fill"
+            beforeId={BELOW_LABELS}
+            paint={{ 'fill-color': palette.works, 'fill-opacity': 0.18 }}
+          />
+          <Layer
+            id="works-outline"
+            type="line"
+            beforeId={BELOW_LABELS}
+            paint={{ 'line-color': palette.works, 'line-width': 1.5, 'line-opacity': 0.7 }}
+          />
+        </Source>
+
+        <Source id="signals" type="geojson" data={signalData}>
+          <Layer
+            id="signals"
+            type="circle"
+            paint={{
+              'circle-color': palette.signal,
+              'circle-radius': ['interpolate', ['linear'], ['zoom'], 11, 3, 15, 6],
+              'circle-stroke-color': palette.routeCasing,
+              'circle-stroke-width': 2,
+            }}
+          />
+        </Source>
+
+        <Source id="works-points" type="geojson" data={hazardData.points} cluster clusterRadius={36}>
+          <Layer
+            id={WORKS_CLUSTERS}
+            type="circle"
+            filter={['has', 'point_count']}
+            paint={{
+              'circle-color': palette.works,
+              'circle-radius': 13,
+              'circle-stroke-color': palette.routeCasing,
+              'circle-stroke-width': 2,
+            }}
+          />
+          <Layer
+            id="works-cluster-count"
+            type="symbol"
+            filter={['has', 'point_count']}
+            layout={{ 'text-field': ['get', 'point_count'], 'text-font': ['Noto Sans Bold'], 'text-size': 12 }}
+            paint={{ 'text-color': '#ffffff' }}
+          />
+          <Layer
+            id={WORKS_POINTS}
+            type="circle"
+            filter={['!', ['has', 'point_count']]}
+            paint={{
+              'circle-color': palette.works,
+              'circle-radius': 8,
+              'circle-stroke-color': palette.routeCasing,
+              'circle-stroke-width': 2,
+            }}
+          />
+          <Layer
+            id="works-point-mark"
+            type="symbol"
+            filter={['!', ['has', 'point_count']]}
+            layout={{ 'text-field': '!', 'text-font': ['Noto Sans Bold'], 'text-size': 12 }}
+            paint={{ 'text-color': '#ffffff' }}
+          />
+        </Source>
+
+
+        {routes.length > 1 &&
+          routes.map((r) => {
+            const at = labelAnchors[r.id]
+            if (!at) return null
+            const isSelected = r.id === selectedId
+            return (
+              <Marker key={r.id} longitude={at[1]} latitude={at[0]} anchor="bottom" style={{ zIndex: isSelected ? 2 : 1 }}>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onSelectRoute(r.id)
+                  }}
+                  aria-pressed={isSelected}
+                  className={cn(
+                    'tabular mb-1.5 flex h-8 items-center gap-1.5 rounded-full px-3 text-sm font-semibold shadow-md outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
+                    isSelected ? 'bg-baltic text-primary-foreground' : 'bg-surface text-ink',
+                  )}
+                >
+                  {t('routes.minutes', { count: minutes(r.durationSec) })}
+                  <span aria-hidden className="size-2 rounded-full bg-signal ring-2 ring-surface" />
+                  <span className="sr-only">{t('routes.lights', { count: r.lights })}</span>
+                  <span aria-hidden>{r.lights}</span>
+                </button>
+              </Marker>
+            )
+          })}
+
+        {userLocation && !fromIsUser && (
+          <Marker longitude={userLocation[1]} latitude={userLocation[0]} anchor="center">
+            <span aria-hidden className="block size-4 rounded-full bg-baltic ring-[3px] ring-surface shadow-[0_0_0_8px_color-mix(in_srgb,var(--accent)_20%,transparent)]" />
+          </Marker>
+        )}
         {from && (
-          <Marker position={from} icon={originIcon}>
-            <Popup>{t('map.start')}</Popup>
+          <Marker longitude={from[1]} latitude={from[0]} anchor="center">
+            <span
+              role="img"
+              aria-label={t('map.start')}
+              className="block size-[18px] rounded-full border-4 border-[var(--pin)] bg-[var(--pin-ring)] shadow-md"
+            />
           </Marker>
         )}
         {to && (
-          <Marker position={to} icon={destinationIcon}>
-            <Popup>{t('map.end')}</Popup>
+          <Marker longitude={to[1]} latitude={to[0]} anchor="center">
+            <span
+              role="img"
+              aria-label={t('map.end')}
+              className="block size-[18px] rounded-full bg-[var(--pin)] ring-[3px] ring-[var(--pin-ring)] shadow-md"
+            />
           </Marker>
         )}
-        {(hazards ?? []).length > 0 && (
-          <HazardPolygonLayer
-            hazards={hazards ?? []}
-            isMobile={isMobile}
-            onHazardClick={handleHazardClick}
-          />
+
+        {bikePopup && (
+          <Popup
+            longitude={bikePopup.lon}
+            latitude={bikePopup.lat}
+            anchor="bottom"
+            offset={14}
+            closeButton={false}
+            onClose={() => setBikePopup(null)}
+          >
+            <div className="flex flex-col px-4 py-3">
+              <span className="text-sm font-semibold">{bikePopup.name}</span>
+              <span className="text-xs text-ink-muted">
+                {t('cityBikes.bikesAvailable', { count: bikePopup.bikesAvailable })}
+              </span>
+            </div>
+          </Popup>
         )}
-        {(hazards ?? []).length > 0 && (
-          <HazardClusterLayer
-            hazards={hazards ?? []}
-            isMobile={isMobile}
-            onHazardClick={handleHazardClick}
-          />
+
+        <RoadworkDetails hazard={hazard} wide={wide} onClose={() => setHazardId(null)} />
+
+        <MapContextMenu
+          onSetOrigin={onSetOrigin}
+          onSetDestination={onSetDestination}
+          bindContextMenu={bindContextMenu}
+        />
+      </Map>
+
+      <button
+        type="button"
+        onClick={locate}
+        aria-label={t('map.locate')}
+        // Hidden while the sheet covers most of the screen
+        tabIndex={sheetCoversMap ? -1 : 0}
+        aria-hidden={sheetCoversMap}
+        className={cn(
+          'absolute right-4 z-10 flex size-12 items-center justify-center rounded-full bg-surface text-ink shadow-lg outline-none transition-[bottom,opacity] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] focus-visible:ring-[3px] focus-visible:ring-ring/50',
+          sheetCoversMap && 'pointer-events-none opacity-0',
         )}
-        {(trafficLights ?? []).length > 0 && (
-          <TrafficLightClusterLayer lights={trafficLights ?? []} />
-        )}
-        {(cityBikes ?? []).length > 0 && (
-          <CityBikeStationLayer stations={cityBikes ?? []} />
-        )}
-        {onSetOrigin && onSetDestination && (
-          <MapContextMenu onSetOrigin={onSetOrigin} onSetDestination={onSetDestination} />
-        )}
-      </MapContainer>
-      <Dialog
-        open={selectedHazard !== null}
-        onClose={() => setSelectedHazard(null)}
-        fullWidth
-        maxWidth="xs"
-        PaperProps={{ sx: { maxHeight: '85dvh', mx: 2, borderRadius: 2 } }}
+        style={{ bottom: insets.bottom + 16 }}
       >
-        <DialogTitle
-          sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1 }}
-        >
-          <Typography variant="subtitle1" fontWeight="bold">
-            {selectedHazard && t(HAZARD_TYPE_KEYS[selectedHazard.type])}
-          </Typography>
-          <IconButton size="small" onClick={() => setSelectedHazard(null)} edge="end" aria-label={t('map.close')}>
-            <CloseIcon fontSize="small" />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent sx={{ overflowY: 'auto', pt: 0 }}>
-          {selectedHazard?.address && (
-            <Typography variant="body2">{selectedHazard.address}</Typography>
-          )}
-          {selectedHazard?.purpose && (
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-              {selectedHazard.purpose}
-            </Typography>
-          )}
-          {(selectedHazard?.startDate || selectedHazard?.endDate) && (
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-              {selectedHazard.startDate ?? '?'} – {selectedHazard.endDate ?? '?'}
-            </Typography>
-          )}
-        </DialogContent>
-      </Dialog>
+        <LocateFixed className={cn('size-5', userLocation && 'text-baltic')} />
+      </button>
     </div>
   )
 }

@@ -1,40 +1,76 @@
 {
+  "app": {
+    "title": "Helsingin pyöräreitit"
+  },
   "search": {
-    "origin": "Lähtöpiste",
+    "origin": "Lähtö",
     "destination": "Määränpää",
     "whereTo": "Minne?",
-    "placeholder": "Osoite, paikka tai yrityksen nimi",
+    "placeholder": "Osoite, paikka tai yritys",
     "back": "Takaisin",
     "clear": "Tyhjennä",
-    "noResults": "Ei hakutuloksia"
+    "noResults": "Ei osumia. Kokeile kadun tai paikan nimeä.",
+    "useCoordinates": "Käytä koordinaatteja {{coords}}",
+    "recent": "Viimeisimmät",
+    "results": "Paikat"
+  },
+  "trip": {
+    "swap": "Vaihda lähtö ja määränpää",
+    "editTrip": "Muokkaa matkaa"
   },
   "routes": {
-    "findRoutes": "Hae reittejä",
+    "findRoutes": "Hae reitit",
     "findingRoutes": "Haetaan reittejä…",
+    "options": "Reittivaihtoehdot",
     "fastest": "Nopein",
     "calm": "Rauhallinen",
     "fewestLights": "Vähiten valoja",
     "badge_fastest": "Nopein",
     "badge_fewestLights": "Vähiten valoja",
     "badge_calm": "Rauhallisin",
+    "minutes": "{{count}} min",
+    "distance": "{{km}} km",
     "extraTime": "+{{minutes}} min",
-    "lights_zero": "🚦 Ei liikennevaloja",
-    "lights_one": "🚦 {{count}} valo",
-    "lights_other": "🚦 {{count}} valoa",
-    "calmBand_veryCalm": "Erittäin rauhallinen · {{index}}",
-    "calmBand_calm": "Rauhallinen · {{index}}",
-    "calmBand_mixed": "Jonkin verran liikennettä · {{index}}",
-    "calmBand_busy": "Vilkas · {{index}}",
-    "showHazards": "Näytä vaaranpaikat",
-    "showCityBikes": "Näytä kaupunkipyörät",
-    "checkingHazards": "Tarkistetaan vaaroja…",
-    "hazard_one": "⚠️ {{count}} vaara",
-    "hazard_other": "⚠️ {{count}} vaaraa"
+    "lights_zero": "Ei valoja",
+    "lights_one": "{{count}} valo",
+    "lights_other": "{{count}} valoa",
+    "calmBand_veryCalm": "Erittäin rauhallinen",
+    "calmBand_calm": "Rauhallinen",
+    "calmBand_mixed": "Jonkin verran liikennettä",
+    "calmBand_busy": "Vilkas",
+    "calmScore": "Rauhallisuus {{index}}/100",
+    "ribbonLabel": "{{minutes}} min ajo, {{lights}}",
+    "error": "Reittejä ei löytynyt. Tarkista osoitteet ja yritä uudelleen.",
+    "noRoutes": "Paikkojen välille ei löytynyt pyöräreittiä. Kokeile osoitteita lähempää pääkaupunkiseutua."
+  },
+  "roadworks": {
+    "checking": "Tarkistetaan tietöitä…",
+    "count_zero": "Ei tietöitä reitillä",
+    "count_one": "{{count}} tietyö reitillä",
+    "count_other": "{{count}} tietyötä reitillä",
+    "dates": "{{start}}–{{end}}"
+  },
+  "options": {
+    "open": "Kartta ja asetukset",
+    "showOnMap": "Näytä kartalla",
+    "cityBikes": "Kaupunkipyörät",
+    "roadworks": "Tietyöt",
+    "language": "Kieli",
+    "appearance": "Ulkoasu",
+    "system": "Auto",
+    "light": "Vaalea",
+    "dark": "Tumma"
   },
   "map": {
     "start": "Lähtö",
     "end": "Määränpää",
-    "close": "sulje"
+    "locate": "Näytä sijaintini",
+    "mapError": "Kartta ei latautunut. Tarkista yhteys.",
+    "retry": "Yritä uudelleen",
+    "setStart": "Aseta lähdöksi",
+    "setDestination": "Aseta määränpääksi",
+    "close": "Sulje",
+    "dragHandle": "Muuta paneelin kokoa vetämällä"
   },
   "hazardTypes": {
     "excavation": "Kaivutyö",
@@ -42,17 +78,13 @@
     "area_rental": "Aluevuokraus"
   },
   "cityBikes": {
-    "bikesAvailable_one": "{{count}} pyörä saatavilla",
-    "bikesAvailable_other": "{{count}} pyörää saatavilla"
+    "bikesAvailable_one": "{{count}} pyörä vapaana",
+    "bikesAvailable_other": "{{count}} pyörää vapaana"
   },
   "location": {
-    "currentLocation": "Nykyinen sijaintisi",
-    "useCurrentLocation": "Käytä nykyistä sijaintia",
+    "currentLocation": "Sijaintisi",
+    "useCurrentLocation": "Käytä sijaintiasi",
     "locating": "Haetaan sijaintiasi…",
-    "denied": "Sijainnin käyttö estetty"
-  },
-  "contextMenu": {
-    "origin": "Lähtöpiste",
-    "destination": "Määränpää"
+    "denied": "Sijainti ei ole käytössä. Valitse lähtöosoite."
   }
 }

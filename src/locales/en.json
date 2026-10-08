@@ -1,44 +1,80 @@
 {
+  "app": {
+    "title": "Helsinki bike routes"
+  },
   "search": {
-    "origin": "Origin",
+    "origin": "Start",
     "destination": "Destination",
     "whereTo": "Where to?",
-    "placeholder": "Address, place or business name",
+    "placeholder": "Address, place or business",
     "back": "Back",
     "clear": "Clear",
-    "noResults": "No results found"
+    "noResults": "No matches. Try a street or place name.",
+    "useCoordinates": "Use coordinates {{coords}}",
+    "recent": "Recent",
+    "results": "Places"
+  },
+  "trip": {
+    "swap": "Swap start and destination",
+    "editTrip": "Edit trip"
   },
   "routes": {
     "findRoutes": "Find routes",
     "findingRoutes": "Finding routes…",
+    "options": "Route options",
     "fastest": "Fastest",
     "calm": "Calm",
-    "fewestLights": "Fewest Lights",
+    "fewestLights": "Fewest lights",
     "badge_fastest": "Fastest",
     "badge_fewestLights": "Fewest lights",
     "badge_calm": "Calmest",
+    "minutes": "{{count}} min",
+    "distance": "{{km}} km",
     "extraTime": "+{{minutes}} min",
-    "lights_zero": "🚦 No lights",
-    "lights_one": "🚦 {{count}} light",
-    "lights_other": "🚦 {{count}} lights",
-    "calmBand_veryCalm": "Very calm · {{index}}",
-    "calmBand_calm": "Calm · {{index}}",
-    "calmBand_mixed": "Some traffic · {{index}}",
-    "calmBand_busy": "Busy · {{index}}",
-    "showHazards": "Show hazards",
-    "showCityBikes": "Show city bikes",
-    "checkingHazards": "Checking hazards…",
-    "hazard_one": "⚠️ {{count}} hazard",
-    "hazard_other": "⚠️ {{count}} hazards"
+    "lights_zero": "No lights",
+    "lights_one": "{{count}} light",
+    "lights_other": "{{count}} lights",
+    "calmBand_veryCalm": "Very calm",
+    "calmBand_calm": "Calm",
+    "calmBand_mixed": "Some traffic",
+    "calmBand_busy": "Busy",
+    "calmScore": "Calm score {{index}} of 100",
+    "ribbonLabel": "{{minutes}} min ride, {{lights}}",
+    "error": "Couldn't find routes. Check both addresses and try again.",
+    "noRoutes": "No bike routes between these places. Try addresses closer to the Helsinki region."
+  },
+  "roadworks": {
+    "checking": "Checking roadworks…",
+    "count_zero": "No roadworks on this route",
+    "count_one": "{{count}} roadwork on this route",
+    "count_other": "{{count}} roadworks on this route",
+    "dates": "{{start}} to {{end}}"
+  },
+  "options": {
+    "open": "Map and settings",
+    "showOnMap": "Show on map",
+    "cityBikes": "City bikes",
+    "roadworks": "Roadworks",
+    "language": "Language",
+    "appearance": "Appearance",
+    "system": "Auto",
+    "light": "Light",
+    "dark": "Dark"
   },
   "map": {
     "start": "Start",
-    "end": "End",
-    "close": "close"
+    "end": "Destination",
+    "locate": "Show my location",
+    "mapError": "The map didn't load. Check your connection.",
+    "retry": "Retry",
+    "setStart": "Set as start",
+    "setDestination": "Set as destination",
+    "close": "Close",
+    "dragHandle": "Drag to resize the panel"
   },
   "hazardTypes": {
     "excavation": "Excavation",
-    "traffic_arrangement": "Traffic works",
+    "traffic_arrangement": "Traffic arrangement",
     "area_rental": "Area rental"
   },
   "cityBikes": {
@@ -46,13 +82,9 @@
     "bikesAvailable_other": "{{count}} bikes available"
   },
   "location": {
-    "currentLocation": "Your current location",
-    "useCurrentLocation": "Use current location",
-    "locating": "Getting your location…",
-    "denied": "Location access denied"
-  },
-  "contextMenu": {
-    "origin": "Origin",
-    "destination": "Destination"
+    "currentLocation": "Your location",
+    "useCurrentLocation": "Use your location",
+    "locating": "Finding your location…",
+    "denied": "Location is off. Choose a start address."
   }
 }
