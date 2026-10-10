@@ -1,103 +1,120 @@
-import { useRef, useState, useEffect, useCallback, useMemo } from 'react'
+import { useRef, useState, useEffect, useCallback, useMemo, type CSSProperties } from 'react'
 
-const COLLAPSED_FRACTION = 0.30
-const MAX_EXPANDED_FRACTION = 0.85
-const VELOCITY_THRESHOLD = 0.5 // px/ms
+/** Panel height as a fraction of the viewport; its top edge is the "full" snap. */
+export const PANEL_FRACTION = 0.88
+/** Collapsed height when there is no peek element to measure. */
+const FALLBACK_COLLAPSED_FRACTION = 0.3
+/** Collapsed never shows less than this, so the handle stays easy to grab. */
+const MIN_COLLAPSED_PX = 120
+const VELOCITY_THRESHOLD = 0.4 // px/ms
 const DEAD_ZONE = 5 // px — ignore micro-movements (protects taps)
-const HANDLE_HEIGHT = 36 // px — handle area including padding
+const HANDLE_HEIGHT = 28 // px — handle area
 const SNAP_TRANSITION = 'transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)'
 const SNAP_DURATION = 350 // ms — safety timeout, slightly longer than transition
 
-type SnapPoint = 'collapsed' | 'expanded' | 'full'
+export type SnapPoint = 'collapsed' | 'expanded' | 'full'
 
-function getViewportHeight() {
-  return window.innerHeight
-}
-
-/** How far to push the panel down so only COLLAPSED_FRACTION is visible */
-function getCollapsedTranslateY() {
-  const vh = getViewportHeight()
-  const panelHeight = vh * MAX_EXPANDED_FRACTION
-  const collapsedVisible = vh * COLLAPSED_FRACTION
-  return panelHeight - collapsedVisible
+export type SnapGeometry = {
+  /** translateY of each snap; 0 is fully open. */
+  full: number
+  expanded: number
+  collapsed: number
 }
 
 /**
- * How far to push the panel down when "expanded".
- * Only open as far as the content needs, capped at MAX_EXPANDED_FRACTION.
- */
-function getExpandedTranslateY(contentEl: HTMLElement | null) {
-  const vh = getViewportHeight()
-  const panelHeight = vh * MAX_EXPANDED_FRACTION
-  if (!contentEl) return 0
-
-  const neededHeight = contentEl.scrollHeight + HANDLE_HEIGHT
-  if (neededHeight >= panelHeight) return 0 // content fills the full panel
-
-  // Panel only needs to show neededHeight, push the rest down
-  return panelHeight - neededHeight
-}
-
-/**
- * Pick the best snap point after a drag ends.
+ * Pick the snap point after a drag ends.
  *
  * - Fast swipe: steps exactly one snap level in the swipe direction.
  * - Slow drag: picks the nearest snap by position.
  *
- * Snap points that fall within 10px of each other are deduplicated so that
- * 'full' and 'expanded' merge when content fills the panel.
+ * Snap points within 10px of each other are merged, so 'full' and 'expanded'
+ * collapse into one when the content fills the panel.
  */
-function pickSnap(ty: number, velocity: number, expandedTY: number): SnapPoint {
+export function pickSnap(ty: number, velocity: number, geometry: SnapGeometry): SnapPoint {
   const snaps: [SnapPoint, number][] = [
-    ['full', 0],
-    ['expanded', expandedTY],
-    ['collapsed', getCollapsedTranslateY()],
+    ['full', geometry.full],
+    ['expanded', geometry.expanded],
+    ['collapsed', geometry.collapsed],
   ]
-
-  // Remove positions that are effectively identical to a higher-priority snap
-  const unique = snaps.filter(([, s], i) =>
-    !snaps.slice(0, i).some(([, prev]) => Math.abs(prev - s) < 10),
-  )
+  const unique = snaps.filter(([, s], i) => !snaps.slice(0, i).some(([, prev]) => Math.abs(prev - s) < 10))
 
   if (Math.abs(velocity) > VELOCITY_THRESHOLD) {
     if (velocity > 0) {
-      // Swiping down — step to next snap with higher translateY
+      // Swiping down — next snap with a larger translateY
       const next = unique.find(([, s]) => s > ty + 5)
       return next ? next[0] : unique[unique.length - 1][0]
-    } else {
-      // Swiping up — step to next snap with lower translateY
-      const next = [...unique].reverse().find(([, s]) => s < ty - 5)
-      return next ? next[0] : unique[0][0]
     }
+    // Swiping up — next snap with a smaller translateY
+    const next = [...unique].reverse().find(([, s]) => s < ty - 5)
+    return next ? next[0] : unique[0][0]
   }
 
-  // Slow drag — nearest snap by position
-  return unique.reduce((best, curr) =>
-    Math.abs(curr[1] - ty) < Math.abs(best[1] - ty) ? curr : best,
-  )[0]
+  return unique.reduce((best, curr) => (Math.abs(curr[1] - ty) < Math.abs(best[1] - ty) ? curr : best))[0]
 }
 
-export function useBottomSheet() {
+/**
+ * Height the content needs, measured from its last child rather than
+ * scrollHeight: the content box stretches to fill the panel, so its own
+ * scrollHeight never reports less than the panel. Needs `position: relative`
+ * on the content element so offsetTop is relative to it.
+ */
+function contentHeight(content: HTMLElement): number {
+  const last = content.lastElementChild as HTMLElement | null
+  const bottom = last ? last.offsetTop + last.offsetHeight : 0
+  return bottom + parseFloat(getComputedStyle(content).paddingBottom || '0')
+}
+
+type Options = {
+  /** False on wide screens, where the panel is a static side panel. */
+  enabled: boolean
+}
+
+/**
+ * A draggable bottom sheet with three snap points:
+ * - collapsed: shows content down to the bottom of `peekRef` (the trip planner)
+ * - expanded: shows all content, capped at the panel height
+ * - full: the whole panel
+ *
+ * The transform is written straight to the DOM during drags so React never
+ * re-renders per frame.
+ */
+export function useBottomSheet({ enabled }: Options) {
   const sheetRef = useRef<HTMLDivElement>(null)
   const handleRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
+  const peekRef = useRef<HTMLDivElement>(null)
 
+  const [viewportHeight, setViewportHeight] = useState(() => window.innerHeight)
   const [snapPoint, setSnapPoint] = useState<SnapPoint>('collapsed')
-  const [translateY, setTranslateY] = useState(() => getCollapsedTranslateY())
+  const [translateY, setTranslateY] = useState(() => window.innerHeight * PANEL_FRACTION * 0.6)
 
   const isDragging = useRef(false)
-  const dragStartY = useRef(0)
-  const dragStartTranslateY = useRef(0)
-  const prevY = useRef(0)
-  const prevTime = useRef(0)
-  const currentTranslateY = useRef(getCollapsedTranslateY())
+  const currentTranslateY = useRef(translateY)
   const isAnimating = useRef(false)
   const animationTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Last two pointer samples, for release velocity
+  const lastY = useRef(0)
+  const lastTime = useRef(0)
+  const velocity = useRef(0)
 
-  // Keep ref in sync with state
-  useEffect(() => {
-    currentTranslateY.current = translateY
-  }, [translateY])
+  const panelHeight = viewportHeight * PANEL_FRACTION
+
+  const geometry = useCallback((): SnapGeometry => {
+    const content = contentRef.current
+    const peek = peekRef.current
+    let collapsedVisible = viewportHeight * FALLBACK_COLLAPSED_FRACTION
+    if (content && peek) {
+      // offsetTop is relative to the (positioned) content box; add the handle above it
+      collapsedVisible = HANDLE_HEIGHT + peek.offsetTop + peek.offsetHeight + 12
+    }
+    collapsedVisible = Math.min(panelHeight, Math.max(MIN_COLLAPSED_PX, collapsedVisible))
+    const needed = content ? HANDLE_HEIGHT + contentHeight(content) : panelHeight
+    return {
+      full: 0,
+      expanded: needed >= panelHeight ? 0 : panelHeight - needed,
+      collapsed: panelHeight - collapsedVisible,
+    }
+  }, [panelHeight, viewportHeight])
 
   const finishAnimation = useCallback(() => {
     isAnimating.current = false
@@ -109,128 +126,108 @@ export function useBottomSheet() {
     if (sheet) sheet.style.transition = ''
   }, [])
 
-  const snapTo = useCallback((target: SnapPoint) => {
-    const newTY =
-      target === 'collapsed' ? getCollapsedTranslateY()
-      : target === 'full'   ? 0
-      :                        getExpandedTranslateY(contentRef.current)
-
-    // If already at target, skip animation entirely
-    if (Math.abs(currentTranslateY.current - newTY) < 1) {
-      currentTranslateY.current = newTY
-      setTranslateY(newTY)
-      setSnapPoint(target)
-      isAnimating.current = false
-      return
-    }
-
-    isAnimating.current = true
-    const sheet = sheetRef.current
-    if (sheet) {
-      sheet.style.transition = SNAP_TRANSITION
-      const onEnd = () => {
-        sheet.removeEventListener('transitionend', onEnd)
-        finishAnimation()
-      }
-      sheet.addEventListener('transitionend', onEnd)
-    }
-
-    // Safety timeout: clear isAnimating even if transitionend doesn't fire
-    if (animationTimer.current) clearTimeout(animationTimer.current)
-    animationTimer.current = setTimeout(finishAnimation, SNAP_DURATION)
-
-    // Apply transform directly to DOM so it's immediate
-    if (sheet) {
-      sheet.style.transform = `translateY(${newTY}px)`
-    }
-    currentTranslateY.current = newTY
-    setTranslateY(newTY)
-    setSnapPoint(target)
-  }, [finishAnimation])
-
   const applyTranslateY = useCallback((ty: number) => {
     const sheet = sheetRef.current
-    if (sheet) {
-      sheet.style.transform = `translateY(${ty}px)`
-    }
+    if (sheet) sheet.style.transform = `translateY(${ty}px)`
     currentTranslateY.current = ty
   }, [])
+
+  const snapTo = useCallback(
+    (target: SnapPoint) => {
+      if (!enabled) return
+      const newTY = geometry()[target]
+      setSnapPoint(target)
+      setTranslateY(newTY)
+
+      if (Math.abs(currentTranslateY.current - newTY) < 1) {
+        applyTranslateY(newTY)
+        isAnimating.current = false
+        return
+      }
+
+      isAnimating.current = true
+      const sheet = sheetRef.current
+      if (sheet) {
+        sheet.style.transition = SNAP_TRANSITION
+        const onEnd = () => {
+          sheet.removeEventListener('transitionend', onEnd)
+          finishAnimation()
+        }
+        sheet.addEventListener('transitionend', onEnd)
+      }
+      if (animationTimer.current) clearTimeout(animationTimer.current)
+      animationTimer.current = setTimeout(finishAnimation, SNAP_DURATION)
+      applyTranslateY(newTY)
+    },
+    [enabled, geometry, applyTranslateY, finishAnimation],
+  )
+
+  const trackPointer = (y: number) => {
+    const now = performance.now()
+    const dt = now - lastTime.current
+    if (dt > 0) velocity.current = (y - lastY.current) / dt
+    lastY.current = y
+    lastTime.current = now
+  }
+
+  const startPointer = (y: number) => {
+    lastY.current = y
+    lastTime.current = performance.now()
+    velocity.current = 0
+  }
+
+  /** Velocity at release; a pause before lifting the finger counts as a slow drag. */
+  const releaseVelocity = () => (performance.now() - lastTime.current > 80 ? 0 : velocity.current)
+
+  const clampTY = useCallback((ty: number) => Math.max(0, Math.min(geometry().collapsed, ty)), [geometry])
 
   // --- Handle drag (touch + mouse) ---
   useEffect(() => {
     const handle = handleRef.current
-    if (!handle) return
+    if (!handle || !enabled) return
 
-    const getClampRange = () => ({
-      minTY: 0,
-      maxTY: getCollapsedTranslateY(),
-    })
+    let startY = 0
+    let startTY = 0
 
-    const onTouchStart = (e: TouchEvent) => {
-      if (isAnimating.current) return
-      const touch = e.touches[0]
+    const begin = (y: number) => {
       isDragging.current = true
-      dragStartY.current = touch.clientY
-      dragStartTranslateY.current = currentTranslateY.current
-      prevY.current = touch.clientY
-      prevTime.current = Date.now()
+      startY = y
+      startTY = currentTranslateY.current
+      startPointer(y)
       const sheet = sheetRef.current
       if (sheet) sheet.style.transition = ''
     }
+    const move = (y: number) => {
+      applyTranslateY(clampTY(startTY + (y - startY)))
+      trackPointer(y)
+    }
+    const end = () => {
+      isDragging.current = false
+      snapTo(pickSnap(currentTranslateY.current, releaseVelocity(), geometry()))
+    }
 
+    const onTouchStart = (e: TouchEvent) => {
+      if (isAnimating.current) finishAnimation()
+      begin(e.touches[0].clientY)
+    }
     const onTouchMove = (e: TouchEvent) => {
       if (!isDragging.current) return
       e.preventDefault()
-      const touch = e.touches[0]
-      const delta = touch.clientY - dragStartY.current
-      const { minTY, maxTY } = getClampRange()
-      const newTY = Math.max(minTY, Math.min(maxTY, dragStartTranslateY.current + delta))
-      applyTranslateY(newTY)
-      prevY.current = touch.clientY
-      prevTime.current = Date.now()
+      move(e.touches[0].clientY)
     }
-
     const onTouchEnd = () => {
-      if (!isDragging.current) return
-      isDragging.current = false
-      const velocity = (prevY.current - dragStartY.current) / (Date.now() - prevTime.current + 1)
-      const expandedTY = getExpandedTranslateY(contentRef.current)
-      snapTo(pickSnap(currentTranslateY.current, velocity, expandedTY))
+      if (isDragging.current) end()
     }
-
-    // Mouse events for desktop
     const onMouseDown = (e: MouseEvent) => {
-      if (isAnimating.current) return
+      if (isAnimating.current) finishAnimation()
       e.preventDefault()
-      isDragging.current = true
-      dragStartY.current = e.clientY
-      dragStartTranslateY.current = currentTranslateY.current
-      prevY.current = e.clientY
-      prevTime.current = Date.now()
-      const sheet = sheetRef.current
-      if (sheet) sheet.style.transition = ''
-
-      const onMouseMove = (ev: MouseEvent) => {
-        if (!isDragging.current) return
-        const delta = ev.clientY - dragStartY.current
-        const { minTY, maxTY } = getClampRange()
-        const newTY = Math.max(minTY, Math.min(maxTY, dragStartTranslateY.current + delta))
-        applyTranslateY(newTY)
-        prevY.current = ev.clientY
-        prevTime.current = Date.now()
-      }
-
+      begin(e.clientY)
+      const onMouseMove = (ev: MouseEvent) => move(ev.clientY)
       const onMouseUp = () => {
-        if (!isDragging.current) return
-        isDragging.current = false
         window.removeEventListener('mousemove', onMouseMove)
         window.removeEventListener('mouseup', onMouseUp)
-
-        const velocity = (prevY.current - dragStartY.current) / (Date.now() - prevTime.current + 1)
-        const expandedTY = getExpandedTranslateY(contentRef.current)
-        snapTo(pickSnap(currentTranslateY.current, velocity, expandedTY))
+        end()
       }
-
       window.addEventListener('mousemove', onMouseMove)
       window.addEventListener('mouseup', onMouseUp)
     }
@@ -238,129 +235,108 @@ export function useBottomSheet() {
     handle.addEventListener('touchstart', onTouchStart, { passive: true })
     handle.addEventListener('touchmove', onTouchMove, { passive: false })
     handle.addEventListener('touchend', onTouchEnd, { passive: true })
+    handle.addEventListener('touchcancel', onTouchEnd, { passive: true })
     handle.addEventListener('mousedown', onMouseDown)
-
     return () => {
       handle.removeEventListener('touchstart', onTouchStart)
       handle.removeEventListener('touchmove', onTouchMove)
       handle.removeEventListener('touchend', onTouchEnd)
+      handle.removeEventListener('touchcancel', onTouchEnd)
       handle.removeEventListener('mousedown', onMouseDown)
     }
-  }, [applyTranslateY, snapTo])
+     
+  }, [enabled, applyTranslateY, clampTY, snapTo, geometry, finishAnimation])
 
-  // --- Content scroll-to-expand (touch) ---
+  // --- Content drag: moves the sheet until it is open, then scrolls natively ---
   useEffect(() => {
     const content = contentRef.current
-    if (!content) return
+    if (!content || !enabled) return
 
     let startY = 0
-    let isExpanding = false
+    let moving = false
 
     const onTouchStart = (e: TouchEvent) => {
       if (isAnimating.current || isDragging.current) return
       startY = e.touches[0].clientY
-      prevY.current = startY
-      prevTime.current = Date.now()
-      isExpanding = false
+      startPointer(startY)
+      moving = false
     }
 
     const onTouchMove = (e: TouchEvent) => {
       if (isDragging.current || isAnimating.current) return
-      const touch = e.touches[0]
-      const deltaFromStart = startY - touch.clientY // positive = finger up
-      const incrementalDelta = prevY.current - touch.clientY
-
+      const y = e.touches[0].clientY
+      const step = y - lastY.current // positive = finger down
       const ty = currentTranslateY.current
-      const expandedTY = getExpandedTranslateY(content)
-      const isFullyExpanded = ty <= expandedTY
+      const g = geometry()
+      const open = ty <= g.expanded + 1
 
-      if (!isFullyExpanded) {
-        // Panel not fully expanded — move the panel
-        if (Math.abs(deltaFromStart) < DEAD_ZONE && !isExpanding) return
-        isExpanding = true
+      if (!open) {
+        if (!moving && Math.abs(y - startY) < DEAD_ZONE) return
+        moving = true
         e.preventDefault()
-        const maxTY = getCollapsedTranslateY()
-        const newTY = Math.max(0, Math.min(maxTY, ty - incrementalDelta))
-        applyTranslateY(newTY)
-      } else {
-        // Panel is fully expanded (at expanded or full position)
-        if (content.scrollTop <= 0 && incrementalDelta < 0) {
-          // At top of scroll, pulling down — step down one snap level
-          e.preventDefault()
-          const maxTY = getCollapsedTranslateY()
-          const newTY = Math.max(0, Math.min(maxTY, ty - incrementalDelta))
-          applyTranslateY(newTY)
-          isExpanding = true
-        }
-        // Otherwise let browser handle native scroll
+        applyTranslateY(clampTY(ty + step))
+      } else if (moving || (content.scrollTop <= 0 && step > 0)) {
+        // At the top of the scroll and pulling down: move the sheet instead
+        moving = true
+        e.preventDefault()
+        applyTranslateY(clampTY(ty + step))
       }
-
-      prevY.current = touch.clientY
-      prevTime.current = Date.now()
+      trackPointer(y)
     }
 
     const onTouchEnd = () => {
-      if (isDragging.current) return
-      if (!isExpanding) return
-      isExpanding = false
-
-      const ty = currentTranslateY.current
-      const velocity = (prevY.current - startY) / (Date.now() - prevTime.current + 1)
-      const expandedTY = getExpandedTranslateY(content)
-      snapTo(pickSnap(ty, velocity, expandedTY))
+      if (isDragging.current || !moving) return
+      moving = false
+      snapTo(pickSnap(currentTranslateY.current, releaseVelocity(), geometry()))
     }
 
     content.addEventListener('touchstart', onTouchStart, { passive: true })
     content.addEventListener('touchmove', onTouchMove, { passive: false })
     content.addEventListener('touchend', onTouchEnd, { passive: true })
-
+    content.addEventListener('touchcancel', onTouchEnd, { passive: true })
     return () => {
       content.removeEventListener('touchstart', onTouchStart)
       content.removeEventListener('touchmove', onTouchMove)
       content.removeEventListener('touchend', onTouchEnd)
+      content.removeEventListener('touchcancel', onTouchEnd)
     }
-  }, [applyTranslateY, snapTo])
+     
+  }, [enabled, applyTranslateY, clampTY, snapTo, geometry])
 
   // --- Viewport resize ---
   useEffect(() => {
-    const handleResize = () => {
-      const newTY =
-        snapPoint === 'collapsed' ? getCollapsedTranslateY()
-        : snapPoint === 'full'   ? 0
-        :                           getExpandedTranslateY(contentRef.current)
-      setTranslateY(newTY)
-      applyTranslateY(newTY)
-    }
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [snapPoint, applyTranslateY])
+    const onResize = () => setViewportHeight(window.innerHeight)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
 
-  // Cleanup animation timer on unmount
+  // Re-apply the current snap when the viewport or enabled state changes;
+  // as a side panel the sheet has no transform at all
   useEffect(() => {
-    return () => {
+    if (enabled) snapTo(snapPoint)
+    else if (sheetRef.current) sheetRef.current.style.transform = ''
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewportHeight, enabled])
+
+  useEffect(
+    () => () => {
       if (animationTimer.current) clearTimeout(animationTimer.current)
-    }
-  }, [])
+    },
+    [],
+  )
 
-  const sheetStyle = useMemo<React.CSSProperties>(() => ({
-    transform: `translateY(${translateY}px)`,
-  }), [translateY])
+  const sheetStyle = useMemo<CSSProperties>(
+    () => (enabled ? { height: panelHeight, transform: `translateY(${translateY}px)` } : {}),
+    [enabled, panelHeight, translateY],
+  )
 
-  const contentStyle = useMemo<React.CSSProperties>(() => {
-    const vh = getViewportHeight()
-    const panelHeight = vh * MAX_EXPANDED_FRACTION
-    const maxHeight = panelHeight - HANDLE_HEIGHT
-    return {
-      maxHeight,
-      overflowY: 'auto' as const,
-    }
-  }, [])
+  const contentStyle = useMemo<CSSProperties>(
+    () => (enabled ? { maxHeight: panelHeight - HANDLE_HEIGHT } : {}),
+    [enabled, panelHeight],
+  )
 
-  return {
-    sheetRef,
-    handleRef,
-    contentRef,
-    sheetStyle,
-    contentStyle,
-  }
+  /** Height of the sheet currently covering the map, for map padding. */
+  const visibleHeight = enabled ? Math.max(0, panelHeight - translateY) : 0
+
+  return { sheetRef, handleRef, contentRef, peekRef, sheetStyle, contentStyle, snapTo, snapPoint, visibleHeight }
 }

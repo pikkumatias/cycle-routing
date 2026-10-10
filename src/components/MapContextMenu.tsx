@@ -1,159 +1,154 @@
-import { useState, useRef } from 'react'
-import { Popup, useMap, useMapEvents } from 'react-leaflet'
+import { useCallback, useEffect, useRef, useState, type ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
-import type L from 'leaflet'
-import {
-  Box,
-  ButtonBase,
-  CircularProgress,
-  Divider,
-  Typography,
-} from '@mui/material'
-import LocationOnIcon from '@mui/icons-material/LocationOn'
+import { Popup, useMap, type MapLayerMouseEvent } from 'react-map-gl/maplibre'
+import { Loader2 } from 'lucide-react'
 import { fetchReverseGeocode } from '../api/digitransit'
-import type { AddressOption } from './SearchDrawer'
+import { appLanguage } from '../i18n'
+import { useLongPress } from '../hooks/useLongPress'
+import { formatCoords, type AddressOption } from '../utils/address'
+import { cn } from '@/lib/utils'
 
 type MenuState =
   | { status: 'closed' }
-  | { status: 'loading'; latlng: L.LatLng }
-  | { status: 'ready'; latlng: L.LatLng; label: string; lat: number; lon: number }
-  | { status: 'error'; latlng: L.LatLng }
+  | { status: 'loading'; lat: number; lon: number }
+  | { status: 'ready'; lat: number; lon: number; label: string }
 
-type Props = {
+type MapContextMenuProps = {
   onSetOrigin: (option: AddressOption) => void
   onSetDestination: (option: AddressOption) => void
+  /** Register the desktop right-click handler on the parent map. */
+  bindContextMenu: (handler: (e: MapLayerMouseEvent) => void) => void
 }
 
-export function MapContextMenu({ onSetOrigin, onSetDestination }: Props) {
-  const { t } = useTranslation()
-  const map = useMap()
-  const [menuState, setMenuState] = useState<MenuState>({ status: 'closed' })
+/** Ignore a second trigger this soon after the first (Android fires both long-press and contextmenu). */
+const DUPLICATE_MS = 800
+/** How long a pick waits for the address before using coordinates. */
+const LOOKUP_WAIT_MS = 2500
+
+/**
+ * Long-press (touch) or right-click (mouse) on the map: look up the address
+ * and offer to use the point as the start or the destination.
+ */
+export function MapContextMenu({ onSetOrigin, onSetDestination, bindContextMenu }: MapContextMenuProps) {
+  const { t, i18n } = useTranslation()
+  const { current: map } = useMap()
+  const [menu, setMenu] = useState<MenuState>({ status: 'closed' })
   const abortRef = useRef<AbortController | null>(null)
+  const lookupRef = useRef<Promise<string> | null>(null)
+  const openedAt = useRef(0)
 
-  useMapEvents({
-    contextmenu(e) {
-      e.originalEvent.preventDefault()
+  const open = useCallback(
+    (lat: number, lon: number) => {
+      const now = Date.now()
+      if (now - openedAt.current < DUPLICATE_MS) return
+      openedAt.current = now
 
-      // Cancel any in-flight geocode
       abortRef.current?.abort()
       const controller = new AbortController()
       abortRef.current = controller
+      setMenu({ status: 'loading', lat, lon })
 
-      const { lat, lng } = e.latlng
-      setMenuState({ status: 'loading', latlng: e.latlng })
-      map.panBy([0, -120], { animate: true })
-
-      fetchReverseGeocode(lat, lng, controller.signal)
-        .then((result) => {
-          if (controller.signal.aborted) return
-          if (result) {
-            setMenuState({
-              status: 'ready',
-              latlng: e.latlng,
-              label: result.label,
-              lat: result.lat,
-              lon: result.lon,
-            })
-          } else {
-            setMenuState({ status: 'error', latlng: e.latlng })
-          }
-        })
+      const lookup = fetchReverseGeocode(lat, lon, controller.signal, appLanguage(i18n.language))
+        .then((result) => result?.label || formatCoords(lat, lon))
         .catch((err) => {
-          if (controller.signal.aborted) return
-          console.warn('[MapContextMenu] reverse geocode failed:', err)
-          setMenuState({ status: 'error', latlng: e.latlng })
+          if (!controller.signal.aborted) console.warn('[MapContextMenu] reverse geocode failed:', err)
+          return formatCoords(lat, lon)
         })
+      lookupRef.current = lookup
+      void lookup.then((label) => {
+        if (!controller.signal.aborted) setMenu((m) => (m.status === 'closed' ? m : { status: 'ready', lat, lon, label }))
+      })
     },
+    [i18n.language],
+  )
+
+  useEffect(() => {
+    bindContextMenu((e) => {
+      e.preventDefault()
+      open(e.lngLat.lat, e.lngLat.lng)
+    })
+  }, [bindContextMenu, open])
+
+  useEffect(() => () => abortRef.current?.abort(), [])
+
+  // Close on a map tap, but not the one produced by lifting the finger that
+  // opened the menu (MapLibre turns the end of a long press into a click).
+  useEffect(() => {
+    if (!map || menu.status === 'closed') return
+    const onClick = () => {
+      if (Date.now() - openedAt.current < DUPLICATE_MS) return
+      abortRef.current?.abort()
+      setMenu({ status: 'closed' })
+    }
+    map.on('click', onClick)
+    return () => {
+      map.off('click', onClick)
+    }
+  }, [map, menu.status])
+
+  useLongPress(map?.getContainer() ?? null, ({ x, y }) => {
+    if (!map) return
+    const rect = map.getContainer().getBoundingClientRect()
+    const at = map.unproject([x - rect.left, y - rect.top])
+    open(at.lat, at.lng)
   })
 
-  if (menuState.status === 'closed') return null
+  if (menu.status === 'closed') return null
 
-  const buildOption = (): AddressOption => {
-    if (menuState.status === 'ready') {
-      return { label: menuState.label, lat: menuState.lat, lon: menuState.lon, group: 'Map' }
-    }
-    const { lat, lng } = menuState.latlng
-    return {
-      label: `${lat.toFixed(5)}, ${lng.toFixed(5)}`,
-      lat,
-      lon: lng,
-      group: 'Map',
-    }
+  const close = () => {
+    abortRef.current?.abort()
+    setMenu({ status: 'closed' })
   }
 
-  const handleSelectOrigin = () => {
-    onSetOrigin(buildOption())
-    map.closePopup()
+  // Picking doesn't wait for the address: the menu closes at once and the
+  // field fills when the lookup lands, or with coordinates if it is slow.
+  // Coordinates stay those of the press, not the geocoder's address point.
+  const pick = (set: (option: AddressOption) => void) => {
+    const { lat, lon } = menu
+    const lookup = lookupRef.current ?? Promise.resolve(formatCoords(lat, lon))
+    setMenu({ status: 'closed' })
+    const fallback = new Promise<string>((resolve) => setTimeout(() => resolve(formatCoords(lat, lon)), LOOKUP_WAIT_MS))
+    void Promise.race([lookup, fallback]).then((label) => set({ label, lat, lon, group: 'Map' }))
   }
-
-  const handleSelectDestination = () => {
-    onSetDestination(buildOption())
-    map.closePopup()
-  }
-
-  const isLoading = menuState.status === 'loading'
-  const label =
-    menuState.status === 'ready'
-      ? menuState.label
-      : menuState.status === 'error'
-        ? `${menuState.latlng.lat.toFixed(5)}, ${menuState.latlng.lng.toFixed(5)}`
-        : ''
 
   return (
     <Popup
-      position={menuState.latlng}
+      longitude={menu.lon}
+      latitude={menu.lat}
+      offset={12}
       closeButton={false}
-      className="context-menu-popup"
-      eventHandlers={{
-        remove: () => setMenuState({ status: 'closed' }),
-      }}
+      closeOnClick={false}
+      onClose={close}
+      maxWidth="300px"
     >
-      <Box sx={{ minWidth: 230, bgcolor: 'background.paper', overflow: 'hidden' }}>
-        {/* Address row */}
-        <Box sx={{ px: 2, py: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
-          <LocationOnIcon sx={{ color: 'primary.main', fontSize: 20, flexShrink: 0 }} />
-          {isLoading ? (
-            <CircularProgress size={16} />
-          ) : (
-            <Typography variant="body2" fontWeight={600} sx={{ lineHeight: 1.3 }}>
-              {label}
-            </Typography>
-          )}
-        </Box>
-        <Divider />
-        {/* Buttons row */}
-        <Box sx={{ display: 'flex' }}>
-          <ButtonBase
-            sx={{
-              flex: 1,
-              py: 1.25,
-              color: 'success.main',
-              fontWeight: 700,
-              fontSize: '0.875rem',
-              fontFamily: 'inherit',
-            }}
-            onClick={handleSelectOrigin}
-            disabled={isLoading}
-          >
-            {t('contextMenu.origin')}
-          </ButtonBase>
-          <Divider orientation="vertical" flexItem />
-          <ButtonBase
-            sx={{
-              flex: 1,
-              py: 1.25,
-              color: 'error.main',
-              fontWeight: 700,
-              fontSize: '0.875rem',
-              fontFamily: 'inherit',
-            }}
-            onClick={handleSelectDestination}
-            disabled={isLoading}
-          >
-            {t('contextMenu.destination')}
-          </ButtonBase>
-        </Box>
-      </Box>
+      <div className="flex w-[260px] flex-col">
+        <div className="flex min-h-12 items-center px-4 py-3 text-sm font-medium">
+          {menu.status === 'loading' ? <Loader2 className="size-4 animate-spin text-ink-muted" /> : menu.label}
+        </div>
+        <div className="flex flex-col border-t border-line">
+          <MenuButton onClick={() => pick(onSetOrigin)}>
+            <span aria-hidden className="size-3 shrink-0 rounded-full border-[3px] border-ink" />
+            {t('map.setStart')}
+          </MenuButton>
+          <MenuButton onClick={() => pick(onSetDestination)} className="border-t border-line">
+            <span aria-hidden className="size-3 shrink-0 rounded-full bg-ink" />
+            {t('map.setDestination')}
+          </MenuButton>
+        </div>
+      </div>
     </Popup>
+  )
+}
+
+function MenuButton({ className, ...props }: ComponentProps<'button'>) {
+  return (
+    <button
+      type="button"
+      className={cn(
+        'flex min-h-12 items-center gap-3 px-4 text-left text-sm font-medium outline-none hover:bg-sunken focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:opacity-50',
+        className,
+      )}
+      {...props}
+    />
   )
 }

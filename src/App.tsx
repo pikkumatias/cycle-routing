@@ -1,42 +1,25 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
-import type { FormEvent } from 'react'
-import {
-  Alert,
-  Box,
-  Button,
-  ButtonBase,
-  CircularProgress,
-  FormControlLabel,
-  Stack,
-  Switch,
-  Typography,
-} from '@mui/material'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import i18n from './i18n'
-import './App.css'
-import { parseLatLon } from './api/digitransit'
+import { AlertCircle, Loader2 } from 'lucide-react'
 import { defaultCard, fetchRoutePlan, type RoutePlan } from './api/routePlan'
-import { RouteMap } from './components/RouteMap'
-import { RouteCards, RouteCardsSkeleton } from './components/RouteCards'
-import { SearchDrawer, type AddressOption } from './components/SearchDrawer'
-import { AddressTrigger } from './components/AddressTrigger'
-import { getBoundsFromLegsAndPoints, type LatLng } from './utils/routeGeometry'
-import {
-  fetchHazards,
-  filterHazardsNearRoute,
-  type Hazard,
-} from './services/hazards'
-import {
-  fetchCityBikeStations,
-  filterStationsNearEndpoints,
-  type CityBikeStation,
-} from './services/citybikes'
-import {
-  getRecentSearches,
-  addRecentSearch,
-} from './utils/recentSearches'
+import { RouteMap, type MapInsets } from './components/RouteMap'
+import { RouteOptions, RouteOptionsSkeleton } from './components/RouteOptions'
+import { SearchPanel } from './components/SearchPanel'
+import { TripPlanner, type TripField } from './components/TripPlanner'
+import { OptionsMenu } from './components/OptionsMenu'
 import { useBottomSheet } from './hooks/useBottomSheet'
+import { useCityBikes } from './hooks/useCityBikes'
 import { useGeolocation } from './hooks/useGeolocation'
+import { useMediaQuery } from './hooks/useMediaQuery'
+import { useRoadworks } from './hooks/useRoadworks'
+import type { AddressOption } from './utils/address'
+import { addRecentSearch, getRecentSearches } from './utils/recentSearches'
+import type { LatLng } from './utils/routeGeometry'
+import { Button } from '@/components/ui/button'
+import { Toaster } from '@/components/ui/sonner'
+import { cn } from '@/lib/utils'
+
+type Endpoints = { from: LatLng; to: LatLng }
 
 type PlanState = {
   loading: boolean
@@ -44,438 +27,275 @@ type PlanState = {
   plan: RoutePlan | null
   /** Route id of the selected card. */
   selectedId: string | null
+  /** Where the plan goes from and to; overlays are fetched around these. */
+  endpoints: Endpoints | null
 }
+
+const toLatLng = (o: AddressOption | null): LatLng | undefined => (o ? [o.lat, o.lon] : undefined)
+const tripKey = (from: AddressOption, to: AddressOption) => `${from.lat},${from.lon}>${to.lat},${to.lon}`
+
+/** Side panel width on wide screens, plus its 16px inset. */
+const SIDE_PANEL_PX = 400 + 16
 
 function App() {
   const { t } = useTranslation()
-  const [fromOption, setFromOption] = useState<AddressOption | null>(null)
-  const [toOption, setToOption] = useState<AddressOption | null>(null)
-  const [fromInput, setFromInput] = useState('')
-  const [toInput, setToInput] = useState('')
+  const wide = useMediaQuery('(min-width: 768px)')
+
+  const [from, setFrom] = useState<AddressOption | null>(null)
+  const [to, setTo] = useState<AddressOption | null>(null)
   const [recentSearches, setRecentSearches] = useState(() => getRecentSearches())
   const [planState, setPlanState] = useState<PlanState>({
     loading: false,
     error: null,
     plan: null,
     selectedId: null,
+    endpoints: null,
   })
-  const [lastCoords, setLastCoords] = useState<{
-    from: LatLng
-    to: LatLng
-  } | null>(null)
-  const [hazardsData, setHazardsData] = useState<{ loading: boolean; items: Hazard[] }>({ loading: false, items: [] })
-  const hazardCacheRef = useRef<Record<string, Hazard[]>>({})
-  // Raw hazards fetched once for the union bbox of all route variants; filtered
-  // client-side per selected route so switching tabs needs no network round-trip.
-  const rawHazardsRef = useRef<Hazard[] | null>(null)
-  const prevPlanRef = useRef(planState.plan)
-  const [showHazards, setShowHazards] = useState(false)
+  const [showRoadworks, setShowRoadworks] = useState(false)
   const [showCityBikes, setShowCityBikes] = useState(true)
-  const [cityBikesData, setCityBikesData] = useState<{ loading: boolean; items: CityBikeStation[] }>({ loading: false, items: [] })
+  const [search, setSearch] = useState<{ open: boolean; field: TripField }>({ open: false, field: 'origin' })
 
   const geolocation = useGeolocation()
-  const isCurrentLocationOriginRef = useRef(false)
+  const sheet = useBottomSheet({ enabled: !wide })
+  const { snapTo } = sheet
 
-  // Debug flag: set to true to show all active construction work across Helsinki regardless of route
-  const DEBUG_SHOW_ALL_HAZARDS = false
-  const [debugHazards, setDebugHazards] = useState<Hazard[]>([])
-  useEffect(() => {
-    if (!DEBUG_SHOW_ALL_HAZARDS) return
-    const HELSINKI_BOUNDS = { minLat: 60.05, minLon: 24.70, maxLat: 60.35, maxLon: 25.20 }
-    let cancelled = false
-    void (async () => {
-      try {
-        const hazards = await fetchHazards(HELSINKI_BOUNDS)
-        if (!cancelled) setDebugHazards(hazards)
-      } catch (err) {
-        console.warn('[App] debug hazard fetch failed:', err)
-      }
-    })()
-    return () => { cancelled = true }
-  }, [DEBUG_SHOW_ALL_HAZARDS])
+  const roadworks = useRoadworks(showRoadworks, planState.plan, planState.selectedId, planState.endpoints)
+  const cityBikes = useCityBikes(showCityBikes, planState.endpoints)
 
-  // Request location on mount
+  // Ask for the location once on start
   useEffect(() => {
     geolocation.request()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Auto-apply GPS coords as origin when location first arrives
+  // The first location fix becomes the start, unless one was already chosen
   useEffect(() => {
-    if (geolocation.coords && !fromOption && !fromInput) {
-      const label = t('location.currentLocation')
-      setFromOption({ label, lat: geolocation.coords.lat, lon: geolocation.coords.lon, group: 'Recent' })
-      setFromInput(label)
-      isCurrentLocationOriginRef.current = true
+    if (geolocation.coords && !from) {
+       
+      setFrom({ label: '', ...geolocation.coords, group: 'Location' })
     }
-  }, [geolocation.coords, fromOption, fromInput, t])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [geolocation.coords])
 
-  const [drawerOpen, setDrawerOpen] = useState(false)
-  const [activeField, setActiveField] = useState<'origin' | 'destination'>('origin')
+  // --- Planning: runs whenever both ends are set and differ from the last plan ---
 
-  const { sheetRef, handleRef, contentRef, sheetStyle, contentStyle } = useBottomSheet()
+  const requestRef = useRef(0)
+  const plannedKey = useRef<string | null>(null)
 
-  useEffect(() => {
-    // Clear caches whenever a new plan is loaded
-    if (planState.plan !== prevPlanRef.current) {
-      hazardCacheRef.current = {}
-      rawHazardsRef.current = null
-      prevPlanRef.current = planState.plan
-    }
-
-    if (!showHazards || !planState.plan || !planState.selectedId || !lastCoords) return
-    const routes = planState.plan.routes
-    const selectedId = planState.selectedId
-    const coords = lastCoords
-    const selected = routes.find((r) => r.id === selectedId)
-    if (!selected) return
-
-    // Serve from per-route cache if this route was already filtered
-    const cached = hazardCacheRef.current[selectedId]
-    if (cached) {
-      setHazardsData({ loading: false, items: cached })
-      return
-    }
-
-    const polyline = selected.legs.flat()
-    if (polyline.length === 0) return
-
-    let cancelled = false
-    void (async () => {
-      setHazardsData((prev) => ({ ...prev, loading: true }))
-      try {
-        // Fetch the raw hazard set once, covering the union bbox of every route
-        // variant. Subsequent tab switches reuse it and only re-filter locally.
-        let raw = rawHazardsRef.current
-        if (!raw) {
-          const allLegs = routes.flatMap((r) => r.legs.map((positions) => ({ positions })))
-          const bounds = getBoundsFromLegsAndPoints(allLegs, coords.from, coords.to)
-          if (bounds.length < 2) return
-          const BUFFER = 0.0003 // ~30m in degrees
-          const fetched = await fetchHazards({
-            minLat: bounds[0][0] - BUFFER,
-            minLon: bounds[0][1] - BUFFER,
-            maxLat: bounds[1][0] + BUFFER,
-            maxLon: bounds[1][1] + BUFFER,
-          })
-          if (cancelled) return
-          raw = fetched
-          rawHazardsRef.current = fetched
-        }
-        // Filter in chunks of 10, yielding between each so the map stays
-        // interactive and the route card paints before heavy work begins.
-        const filtered: Hazard[] = []
-        for (let i = 0; i < raw.length; i += 10) {
-          if (cancelled) return
-          filtered.push(...filterHazardsNearRoute(raw.slice(i, i + 10), polyline))
-          if (i + 10 < raw.length) {
-            await new Promise<void>((resolve) => setTimeout(resolve, 0))
-          }
-        }
-        if (!cancelled) {
-          hazardCacheRef.current[selectedId] = filtered
-          setHazardsData({ loading: false, items: filtered })
-        }
-      } catch (err) {
-        if (!cancelled) {
-          console.warn('[App] hazard fetch failed:', err)
-          setHazardsData((prev) => ({ ...prev, loading: false }))
-        }
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [showHazards, planState.selectedId, planState.plan, lastCoords])
-
-  useEffect(() => {
-    // Stations are filtered to a radius around the origin/destination, so the
-    // result is independent of which route variant is selected. The map already
-    // hides stations when the toggle is off (cityBikes={[]}), so we just skip
-    // fetching here rather than clearing state synchronously.
-    if (!showCityBikes || !lastCoords) return
-    const coords = lastCoords
-
-    let cancelled = false
-    void (async () => {
-      setCityBikesData((prev) => ({ ...prev, loading: true }))
-      try {
-        const raw = await fetchCityBikeStations()
-        if (cancelled) return
-        const filtered = filterStationsNearEndpoints(raw, coords.from, coords.to)
-        if (!cancelled) setCityBikesData({ loading: false, items: filtered })
-      } catch (err) {
-        if (!cancelled) {
-          console.warn('[App] city bike fetch failed:', err)
-          setCityBikesData((prev) => ({ ...prev, loading: false }))
-        }
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [showCityBikes, lastCoords])
-
-
-const resolveCoords = (option: AddressOption | null, input: string) => {
-    if (option) return { lat: option.lat, lon: option.lon }
-    return parseLatLon(input)
-  }
-
-  const openDrawer = (field: 'origin' | 'destination') => {
-    setActiveField(field)
-    setDrawerOpen(true)
-    if (field === 'origin' && isCurrentLocationOriginRef.current) {
-      geolocation.request()
-    }
-  }
-
-  const handleDrawerSelect = (option: AddressOption) => {
-    if (activeField === 'origin') {
-      setFromOption(option)
-      setFromInput(option.label)
-      isCurrentLocationOriginRef.current = option.label === t('location.currentLocation')
-    } else {
-      setToOption(option)
-      setToInput(option.label)
-    }
-    setDrawerOpen(false)
-  }
-
-  const handleDrawerClose = () => {
-    setDrawerOpen(false)
-  }
-
-  const handleSetOriginFromMap = (option: AddressOption) => {
-    setFromOption(option)
-    setFromInput(option.label)
-  }
-
-  const handleSetDestinationFromMap = (option: AddressOption) => {
-    setToOption(option)
-    setToInput(option.label)
-  }
-
-  const handleSubmit = async (event: FormEvent) => {
-    event.preventDefault()
-
+  const plan = useCallback(async (start: AddressOption, end: AddressOption) => {
+    const request = ++requestRef.current
+    plannedKey.current = tripKey(start, end)
+    setPlanState((prev) => ({ ...prev, loading: true, error: null }))
     try {
-      const from = resolveCoords(fromOption, fromInput)
-      const to = resolveCoords(toOption, toInput)
-      const fromLatLng: LatLng = [from.lat, from.lon]
-      const toLatLng: LatLng = [to.lat, to.lon]
-
-      setPlanState({ loading: true, error: null, plan: null, selectedId: null })
-
-      const plan = await fetchRoutePlan(from, to)
-
-      if (fromOption) {
-        addRecentSearch({ label: fromOption.label, lat: fromOption.lat, lon: fromOption.lon })
-      }
-      if (toOption) {
-        addRecentSearch({ label: toOption.label, lat: toOption.lat, lon: toOption.lon })
+      const result = await fetchRoutePlan({ lat: start.lat, lon: start.lon }, { lat: end.lat, lon: end.lon })
+      if (request !== requestRef.current) return
+      for (const o of [start, end]) {
+        if (o.group !== 'Location') addRecentSearch({ label: o.label, lat: o.lat, lon: o.lon })
       }
       setRecentSearches(getRecentSearches())
-
       setPlanState({
         loading: false,
         error: null,
-        plan,
-        selectedId: defaultCard(plan.cards)?.routeId ?? null,
+        plan: result,
+        selectedId: defaultCard(result.cards)?.routeId ?? null,
+        endpoints: { from: [start.lat, start.lon], to: [end.lat, end.lon] },
       })
-      setLastCoords({ from: fromLatLng, to: toLatLng })
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Unknown error'
-      setPlanState({ loading: false, error: message, plan: null, selectedId: null })
+      if (request !== requestRef.current) return
+      plannedKey.current = null
+      setPlanState({
+        loading: false,
+        error: error instanceof Error ? error.message : String(error),
+        plan: null,
+        selectedId: null,
+        endpoints: null,
+      })
     }
+  }, [])
+
+  useEffect(() => {
+    if (!from || !to) return
+    if (plannedKey.current === tripKey(from, to)) return
+    void plan(from, to)
+  }, [from, to, plan])
+
+  // Open the sheet to show what is happening and what came back
+  const hasPlan = planState.plan !== null
+  useEffect(() => {
+    if (planState.loading || hasPlan || planState.error) snapTo('expanded')
+  }, [planState.loading, hasPlan, planState.error, snapTo])
+
+  // --- Editing the trip ---
+
+  const openSearch = (field: TripField) => {
+    setSearch({ open: true, field })
+    if (field === 'origin') geolocation.request()
   }
 
-  const routesById = useMemo(
-    () => Object.fromEntries((planState.plan?.routes ?? []).map((r) => [r.id, r])),
-    [planState.plan],
-  )
-  const selectedRoute = planState.selectedId ? routesById[planState.selectedId] : undefined
-  const trafficLights = useMemo(
-    () => (selectedRoute?.signalStops ?? []).map((s) => s.at),
-    [selectedRoute],
-  )
-  const alternativeRoutes = useMemo(
+  const setField = (field: TripField, option: AddressOption) => {
+    if (field === 'origin') setFrom(option)
+    else setTo(option)
+  }
+
+  const handleSearchSelect = (option: AddressOption) => {
+    setField(search.field, option)
+    setSearch((s) => ({ ...s, open: false }))
+  }
+
+  const swap = () => {
+    setFrom(to)
+    setTo(from)
+  }
+
+  const findRoutes = () => {
+    if (from && to) void plan(from, to)
+  }
+
+  // --- Derived ---
+
+  const routes = useMemo(() => planState.plan?.routes ?? [], [planState.plan])
+  const routesById = useMemo(() => Object.fromEntries(routes.map((r) => [r.id, r])), [routes])
+  const onSelectRoute = useCallback((id: string) => setPlanState((prev) => ({ ...prev, selectedId: id })), [])
+
+  const insets = useMemo<MapInsets>(
     () =>
-      (planState.plan?.routes ?? [])
-        .filter((r) => r.id !== planState.selectedId)
-        .map((r) => ({ id: r.id, legs: r.legs })),
-    [planState.plan, planState.selectedId],
+      wide
+        ? { top: 0, right: 64, bottom: 0, left: SIDE_PANEL_PX }
+        : { top: 64, right: 0, bottom: sheet.visibleHeight, left: 0 },
+    [wide, sheet.visibleHeight],
   )
 
-  const onSelectRoute = (id: string) =>
-    setPlanState((prev) => ({ ...prev, selectedId: id }))
+  const userLocation = geolocation.coords ? ([geolocation.coords.lat, geolocation.coords.lon] as LatLng) : undefined
+  const showFindButton = !hasPlan
 
   return (
-    <div className="app-layout">
-      <div className="map-section">
+    <div className="relative h-dvh w-full overflow-hidden bg-background">
+      <div className="absolute inset-0">
         <RouteMap
-          route={selectedRoute?.legs ?? null}
-          from={lastCoords?.from}
-          to={lastCoords?.to}
-          height="100%"
-          alternativeRoutes={alternativeRoutes}
+          routes={routes}
+          selectedId={planState.selectedId}
           onSelectRoute={onSelectRoute}
-          hazards={showHazards && planState.plan ? (DEBUG_SHOW_ALL_HAZARDS ? debugHazards : hazardsData.items) : []}
-          hazardsLoading={hazardsData.loading}
-          trafficLights={trafficLights}
-          cityBikes={showCityBikes && planState.plan ? cityBikesData.items : []}
-          onSetOrigin={handleSetOriginFromMap}
-          onSetDestination={handleSetDestinationFromMap}
+          from={toLatLng(from)}
+          to={toLatLng(to)}
+          userLocation={userLocation}
+          fromIsUser={from?.group === 'Location'}
+          onLocate={geolocation.request}
+          hazards={showRoadworks && hasPlan ? roadworks.items : []}
+          cityBikes={showCityBikes && hasPlan ? cityBikes.items : []}
+          onSetOrigin={(o) => setField('origin', o)}
+          onSetDestination={(o) => setField('destination', o)}
+          insets={insets}
+          wide={wide}
         />
       </div>
 
-      <div className="bottom-panel-wrapper" ref={sheetRef} style={sheetStyle}>
-        {showHazards && hazardsData.loading && (
-          <Box
-            sx={{
-              position: 'absolute',
-              bottom: '100%',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              mb: 1,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1,
-              bgcolor: 'rgba(0,0,0,0.65)',
-              borderRadius: '20px',
-              px: 1.5,
-              py: 0.75,
-              whiteSpace: 'nowrap',
-              backdropFilter: 'blur(4px)',
-            }}
-          >
-            <CircularProgress size={14} thickness={5} sx={{ color: 'white' }} />
-            <Typography variant="caption" sx={{ color: 'white', fontWeight: 500 }}>
-              {t('routes.checkingHazards')}
-            </Typography>
-          </Box>
+      <OptionsMenu
+        showCityBikes={showCityBikes}
+        onShowCityBikes={setShowCityBikes}
+        showRoadworks={showRoadworks}
+        onShowRoadworks={setShowRoadworks}
+        className="absolute top-[max(16px,calc(env(safe-area-inset-top)+8px))] right-4 z-20"
+      />
+
+      <section
+        ref={sheet.sheetRef}
+        style={sheet.sheetStyle}
+        aria-label={t('app.title')}
+        className={cn(
+          'absolute z-10 flex flex-col bg-surface text-ink',
+          wide
+            ? 'top-4 bottom-4 left-4 w-[400px] rounded-[var(--radius-sheet)] shadow-xl'
+            : 'inset-x-0 bottom-0 rounded-t-[var(--radius-sheet)] shadow-[0_-4px_24px_rgb(0_0_0/0.12)] will-change-transform',
         )}
-        <div className="bottom-panel">
-        <div className="bottom-panel-handle" ref={handleRef} />
-        <div className="bottom-panel-content" ref={contentRef} style={contentStyle}>
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 0.5 }}>
-            <ButtonBase
-              onClick={() => i18n.changeLanguage(i18n.language.startsWith('fi') ? 'en' : 'fi')}
-              sx={{ fontSize: '0.75rem', fontWeight: 600, color: 'text.secondary', px: 1, py: 0.5, borderRadius: 1 }}
-            >
-              {i18n.language.startsWith('fi') ? 'EN' : 'FI'}
-            </ButtonBase>
-          </Box>
-          <form onSubmit={handleSubmit}>
-            <div className="address-fields">
-              <Stack spacing={1.5}>
-                <AddressTrigger
-                  icon="origin"
-                  placeholder={t('search.origin')}
-                  value={fromOption?.label ?? ''}
-                  onClick={() => openDrawer('origin')}
-                  isCurrentLocation={isCurrentLocationOriginRef.current}
-                  locationLoading={geolocation.loading && !fromOption}
-                />
-                {geolocation.denied && !fromOption && (
-                  <Typography variant="caption" color="text.secondary" sx={{ pl: 1 }}>
-                    {t('location.denied')}
-                  </Typography>
-                )}
-                <AddressTrigger
-                  icon="destination"
-                  placeholder={t('search.whereTo')}
-                  value={toOption?.label ?? ''}
-                  onClick={() => openDrawer('destination')}
-                />
-              </Stack>
-            </div>
-            <Button
-              type="submit"
-              variant="contained"
-              fullWidth
-              disabled={planState.loading}
-              sx={{ mt: 2 }}
-            >
-              {planState.loading ? t('routes.findingRoutes') : t('routes.findRoutes')}
-            </Button>
-          </form>
+      >
+        {!wide && (
+          <div
+            ref={sheet.handleRef}
+            aria-label={t('map.dragHandle')}
+            className="flex h-7 shrink-0 cursor-grab touch-none items-center justify-center active:cursor-grabbing"
+          >
+            <span className="h-1 w-10 rounded-full bg-line" />
+          </div>
+        )}
+
+        <div
+          ref={sheet.contentRef}
+          style={sheet.contentStyle}
+          className={cn(
+            'relative flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-4',
+            wide ? 'pt-5 pb-5' : 'pb-[max(16px,env(safe-area-inset-bottom))]',
+          )}
+        >
+          <div ref={sheet.peekRef} className="flex flex-col gap-3">
+            {wide && <h1 className="px-1 text-sm font-semibold text-ink-muted">{t('app.title')}</h1>}
+            <TripPlanner
+              from={from}
+              to={to}
+              onEdit={openSearch}
+              onSwap={swap}
+              locationLoading={geolocation.loading}
+              locationDenied={geolocation.denied}
+            />
+            {showFindButton && (
+              <Button
+                type="button"
+                onClick={findRoutes}
+                disabled={!from || !to || planState.loading}
+                className="h-12 rounded-xl text-base font-semibold"
+              >
+                {planState.loading && <Loader2 className="size-4 animate-spin" />}
+                {planState.loading ? t('routes.findingRoutes') : t('routes.findRoutes')}
+              </Button>
+            )}
+          </div>
 
           {planState.error && (
-            <Alert severity="error" sx={{ mt: 2 }}>
-              {planState.error}
-            </Alert>
+            <div role="alert" className="mt-3 flex gap-3 rounded-xl bg-danger-soft p-3.5 text-sm">
+              <AlertCircle className="mt-0.5 size-4 shrink-0 text-danger" />
+              <div className="flex flex-col gap-0.5">
+                <p className="font-medium">{t('routes.error')}</p>
+                <p className="text-ink-muted">{planState.error}</p>
+              </div>
+            </div>
           )}
 
-          {planState.loading && (
-            <Box sx={{ mt: 2 }}>
-              <RouteCardsSkeleton />
-            </Box>
+          {planState.loading && !hasPlan && (
+            <div className="mt-2">
+              <RouteOptionsSkeleton />
+            </div>
           )}
 
-          {planState.plan && selectedRoute && (
-            <Stack spacing={2} sx={{ mt: 2 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={showCityBikes}
-                      onChange={(e) => setShowCityBikes(e.target.checked)}
-                      size="small"
-                    />
-                  }
-                  label={t('routes.showCityBikes')}
-                  sx={{ m: 0 }}
-                />
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={showHazards}
-                      onChange={(e) => setShowHazards(e.target.checked)}
-                      size="small"
-                    />
-                  }
-                  label={t('routes.showHazards')}
-                  sx={{ m: 0 }}
-                />
-              </Box>
-              {showHazards && hazardsData.loading && (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <CircularProgress size={14} thickness={5} />
-                  <Typography variant="caption" color="text.secondary">
-                    {t('routes.checkingHazards')}
-                  </Typography>
-                </Box>
-              )}
-              <RouteCards
+          {planState.plan && (
+            <div className={cn('mt-2 transition-opacity', planState.loading && 'opacity-50')}>
+              <RouteOptions
                 cards={planState.plan.cards}
                 routesById={routesById}
                 selectedId={planState.selectedId}
                 onSelect={onSelectRoute}
-                hazardCount={hazardsData.items.length}
-                hazardsLoading={hazardsData.loading}
+                roadworks={{ enabled: showRoadworks, loading: roadworks.loading, count: roadworks.items.length }}
               />
-            </Stack>
+            </div>
           )}
         </div>
-        </div>
-      </div>
+      </section>
 
-      <SearchDrawer
-        open={drawerOpen}
-        onClose={handleDrawerClose}
-        onSelect={handleDrawerSelect}
-        fieldType={activeField}
-        initialInputValue={
-          activeField === 'origin' && isCurrentLocationOriginRef.current ? '' : activeField === 'origin' ? fromInput : toInput
-        }
+      <SearchPanel
+        open={search.open}
+        onClose={() => setSearch((s) => ({ ...s, open: false }))}
+        onSelect={handleSearchSelect}
+        field={search.field}
+        initialInputValue={(() => {
+          const current = search.field === 'origin' ? from : to
+          return current && current.group !== 'Location' ? current.label : ''
+        })()}
         recentSearches={recentSearches}
         locationCoords={geolocation.coords}
         locationLoading={geolocation.loading}
         locationDenied={geolocation.denied}
         onRequestLocation={geolocation.request}
       />
+
+      <Toaster position="top-center" />
     </div>
   )
 }

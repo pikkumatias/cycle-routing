@@ -3,8 +3,24 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>cycle-routing</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#f2f4f3" />
+    <meta name="description" content="Bike routes across Helsinki: fastest, fewest traffic lights, or calmest." />
+    <title>Helsinki bike routes</title>
+    <script>
+      // Apply the stored light/dark choice before first paint (see src/theme/colorScheme.ts)
+      ;(function () {
+        var pref = null
+        try {
+          pref = localStorage.getItem('cycle-routing:theme')
+        } catch (e) {}
+        var dark = pref === 'dark' || (pref !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+        if (dark) {
+          document.documentElement.classList.add('dark')
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#121a1c')
+        }
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

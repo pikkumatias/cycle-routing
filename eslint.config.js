@@ -25,4 +25,9 @@ export default defineConfig([
     files: ['scripts/**/*.ts', 'sandbox/**/*.ts'],
     languageOptions: { globals: globals.node },
   },
+  {
+    // Generated shadcn components export their variant helpers alongside them
+    files: ['src/components/ui/**/*.tsx'],
+    rules: { 'react-refresh/only-export-components': 'off' },
+  },
 ])

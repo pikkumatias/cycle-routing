@@ -1,0 +1,105 @@
+/*
+ * Palette — the one file to edit to reskin the app.
+ *
+ * Every colour the UI and the map use is defined here, once for light and once
+ * for dark. `src/index.css` maps these onto shadcn's semantic variables, and
+ * `src/map/palette.ts` reads the --map-* / --route-* / --calm-* tokens to build
+ * the MapLibre style, so the basemap follows the same values.
+ *
+ * Values must be plain hex or rgb(a): MapLibre parses them directly.
+ * Dark applies when <html> has the `dark` class (see src/theme/colorScheme.ts).
+ */
+
+:root {
+  /* Granite: ink */
+  --ink: #2b3134;
+  --ink-muted: #5c666a;
+  /* Birch: surfaces */
+  --bg: #f2f4f3;
+  --surface: #ffffff;
+  --surface-sunken: #e8ecea;
+  /* Fog: hairlines */
+  --line: #d9dfdd;
+  /* Baltic: accent, selected route, calm */
+  --accent: #0f6e69;
+  --accent-ink: #ffffff;
+  --accent-soft: #dcecea;
+  /* Lingonberry: traffic lights (and nothing else) */
+  --signal: #c4122f;
+  /* Errors read as ink on a tinted surface, not as lingonberry */
+  --danger: #a3261f;
+  --danger-soft: #f7e4e1;
+  /* City bikes: the colour of the actual bikes */
+  --bike: #fcbb00;
+  --bike-ink: #2b3134;
+  /* Roadworks */
+  --works: #d96c00;
+
+  /* Calm bands, from cycle path to traffic: sea, shallows, gravel, asphalt */
+  --calm-very-calm: #0f6e69;
+  --calm-calm: #58a196;
+  --calm-mixed: #b8a57a;
+  --calm-busy: #7a8488;
+
+  /* Map */
+  --map-land: #eef1ef;
+  --map-water: #b7d0d8;
+  --map-park: #d6e4d2;
+  --map-wood: #cadcc6;
+  --map-building: #e1e5e3;
+  --map-road: #ffffff;
+  --map-road-major: #ffffff;
+  --map-road-casing: #d0d7d4;
+  --map-path: #c9d0cd;
+  --map-cycleway: #3f978d;
+  --map-rail: #b3bbb8;
+  --map-label: #586266;
+  --map-label-halo: #ffffff;
+  --route-selected: #0f6e69;
+  --route-casing: #ffffff;
+  --route-alt: #7f8c90;
+  --pin: #2b3134;
+  --pin-ring: #ffffff;
+}
+
+.dark {
+  --ink: #e4e9e8;
+  --ink-muted: #9aa6a8;
+  --bg: #121a1c;
+  --surface: #1b2427;
+  --surface-sunken: #243033;
+  --line: #2d393c;
+  --accent: #4bb8ad;
+  --accent-ink: #0b1a19;
+  --accent-soft: #1b3836;
+  --signal: #ff5c70;
+  --danger: #ff8a7a;
+  --danger-soft: #3a2220;
+  --bike: #fcbb00;
+  --bike-ink: #1b2427;
+  --works: #ff9a3d;
+
+  --calm-very-calm: #4bb8ad;
+  --calm-calm: #2f8279;
+  --calm-mixed: #8e8264;
+  --calm-busy: #5d696d;
+
+  --map-land: #172023;
+  --map-water: #0d2830;
+  --map-park: #1a2a25;
+  --map-wood: #1c2e27;
+  --map-building: #20292c;
+  --map-road: #2a3538;
+  --map-road-major: #34403f;
+  --map-road-casing: #151d20;
+  --map-path: #2b3639;
+  --map-cycleway: #2f8a81;
+  --map-rail: #3a4649;
+  --map-label: #8f9b9e;
+  --map-label-halo: #121a1c;
+  --route-selected: #4bb8ad;
+  --route-casing: #0b1214;
+  --route-alt: #6a787c;
+  --pin: #e4e9e8;
+  --pin-ring: #121a1c;
+}
