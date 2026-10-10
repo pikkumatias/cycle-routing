@@ -15,6 +15,7 @@ import { useRoadworks } from './hooks/useRoadworks'
 import type { AddressOption } from './utils/address'
 import { addRecentSearch, getRecentSearches } from './utils/recentSearches'
 import type { LatLng } from './utils/routeGeometry'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Toaster } from '@/components/ui/sonner'
 import { cn } from '@/lib/utils'
@@ -202,10 +203,10 @@ function App() {
         style={sheet.sheetStyle}
         aria-label={t('app.title')}
         className={cn(
-          'absolute z-10 flex flex-col bg-surface text-ink',
+          'absolute z-10 flex flex-col bg-background',
           wide
-            ? 'top-4 bottom-4 left-4 w-[400px] rounded-[var(--radius-sheet)] shadow-xl'
-            : 'inset-x-0 bottom-0 rounded-t-[var(--radius-sheet)] shadow-[0_-4px_24px_rgb(0_0_0/0.12)] will-change-transform',
+            ? 'top-4 bottom-4 left-4 w-[400px] rounded-xl border shadow-lg'
+            : 'inset-x-0 bottom-0 rounded-t-xl border-t shadow-[0_-4px_16px_rgb(0_0_0/0.08)] will-change-transform',
         )}
       >
         {!wide && (
@@ -214,7 +215,7 @@ function App() {
             aria-label={t('map.dragHandle')}
             className="flex h-7 shrink-0 cursor-grab touch-none items-center justify-center active:cursor-grabbing"
           >
-            <span className="h-1 w-10 rounded-full bg-line" />
+            <span className="h-1.5 w-12 rounded-full bg-muted" />
           </div>
         )}
 
@@ -227,7 +228,7 @@ function App() {
           )}
         >
           <div ref={sheet.peekRef} className="flex flex-col gap-3">
-            {wide && <h1 className="px-1 text-sm font-semibold text-ink-muted">{t('app.title')}</h1>}
+            {wide && <h1 className="px-1 text-sm font-medium text-muted-foreground">{t('app.title')}</h1>}
             <TripPlanner
               from={from}
               to={to}
@@ -241,7 +242,8 @@ function App() {
                 type="button"
                 onClick={findRoutes}
                 disabled={!from || !to || planState.loading}
-                className="h-12 rounded-xl text-base font-semibold"
+                size="lg"
+                className="h-11 w-full"
               >
                 {planState.loading && <Loader2 className="size-4 animate-spin" />}
                 {planState.loading ? t('routes.findingRoutes') : t('routes.findRoutes')}
@@ -250,13 +252,11 @@ function App() {
           </div>
 
           {planState.error && (
-            <div role="alert" className="mt-3 flex gap-3 rounded-xl bg-danger-soft p-3.5 text-sm">
-              <AlertCircle className="mt-0.5 size-4 shrink-0 text-danger" />
-              <div className="flex flex-col gap-0.5">
-                <p className="font-medium">{t('routes.error')}</p>
-                <p className="text-ink-muted">{planState.error}</p>
-              </div>
-            </div>
+            <Alert variant="destructive" className="mt-3">
+              <AlertCircle />
+              <AlertTitle>{t('routes.error')}</AlertTitle>
+              <AlertDescription>{planState.error}</AlertDescription>
+            </Alert>
           )}
 
           {planState.loading && !hasPlan && (

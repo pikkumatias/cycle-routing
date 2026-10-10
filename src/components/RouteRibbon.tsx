@@ -36,7 +36,7 @@ export function RouteRibbon({ route, maxDurationSec, selected }: RouteRibbonProp
         {fractions.map((f, i) => (
           <span
             key={i}
-            className="absolute top-1/2 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-signal ring-2 ring-surface"
+            className="absolute top-1/2 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-signal ring-2 ring-background"
             style={{ left: `${f * 100}%` }}
           />
         ))}

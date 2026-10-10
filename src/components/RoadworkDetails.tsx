@@ -25,9 +25,9 @@ function Details({ hazard }: { hazard: Hazard }) {
   return (
     <div className="flex flex-col gap-1 text-sm">
       {hazard.address && <p>{hazard.address}</p>}
-      {hazard.purpose && <p className="text-ink-muted">{hazard.purpose}</p>}
+      {hazard.purpose && <p className="text-muted-foreground">{hazard.purpose}</p>}
       {(start || end) && (
-        <p className="tabular text-ink-muted">{t('roadworks.dates', { start: start ?? '…', end: end ?? '…' })}</p>
+        <p className="tabular text-muted-foreground">{t('roadworks.dates', { start: start ?? '…', end: end ?? '…' })}</p>
       )}
     </div>
   )
@@ -43,7 +43,7 @@ export function RoadworkDetails({ hazard, wide, onClose }: RoadworkDetailsProps)
     return (
       <Popup longitude={at[1]} latitude={at[0]} anchor="bottom" offset={12} closeButton={false} onClose={onClose} maxWidth="320px">
         <div className="flex flex-col gap-2 px-4 py-3">
-          <p className="flex items-center gap-2 font-semibold">
+          <p className="flex items-center gap-2 text-sm font-medium">
             <Construction className="size-4 text-works" />
             {t(`hazardTypes.${hazard.type}`)}
           </p>
@@ -57,12 +57,12 @@ export function RoadworkDetails({ hazard, wide, onClose }: RoadworkDetailsProps)
     <Sheet open={hazard !== null} onOpenChange={(open) => !open && onClose()}>
       <SheetContent
         side="bottom"
-        className="gap-3 rounded-t-[var(--radius-sheet)] border-0 bg-surface px-5 pt-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]"
+        className="gap-3 rounded-t-xl px-5 pt-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]"
       >
         {hazard && (
           <>
             <SheetHeader className="p-0">
-              <SheetTitle className="flex items-center gap-2 text-lg">
+              <SheetTitle className="flex items-center gap-2">
                 <Construction className="size-5 text-works" />
                 {t(`hazardTypes.${hazard.type}`)}
               </SheetTitle>

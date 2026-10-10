@@ -27,6 +27,7 @@ import type { AddressOption } from '../utils/address'
 import { getBoundsFromLegsAndPoints, toDisplayLegs, type LatLng } from '../utils/routeGeometry'
 import { MapContextMenu } from './MapContextMenu'
 import { RoadworkDetails } from './RoadworkDetails'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 const HELSINKI: LatLng = [60.1699, 24.9384]
@@ -450,12 +451,14 @@ export function RouteMap({
                   }}
                   aria-pressed={isSelected}
                   className={cn(
-                    'tabular mb-1.5 flex h-8 items-center gap-1.5 rounded-full px-3 text-sm font-semibold shadow-md outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
-                    isSelected ? 'bg-baltic text-primary-foreground' : 'bg-surface text-ink',
+                    'tabular mb-1.5 flex h-7 items-center gap-1.5 rounded-md border px-2.5 text-sm font-medium shadow-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
+                    isSelected
+                      ? 'border-primary bg-primary text-primary-foreground'
+                      : 'bg-background text-foreground',
                   )}
                 >
                   {t('routes.minutes', { count: minutes(r.durationSec) })}
-                  <span aria-hidden className="size-2 rounded-full bg-signal ring-2 ring-surface" />
+                  <span aria-hidden className="size-2 rounded-full bg-signal" />
                   <span className="sr-only">{t('routes.lights', { count: r.lights })}</span>
                   <span aria-hidden>{r.lights}</span>
                 </button>
@@ -465,7 +468,7 @@ export function RouteMap({
 
         {userLocation && !fromIsUser && (
           <Marker longitude={userLocation[1]} latitude={userLocation[0]} anchor="center">
-            <span aria-hidden className="block size-4 rounded-full bg-baltic ring-[3px] ring-surface shadow-[0_0_0_8px_color-mix(in_srgb,var(--accent)_20%,transparent)]" />
+            <span aria-hidden className="block size-4 rounded-full bg-primary ring-[3px] ring-background shadow-[0_0_0_8px_color-mix(in_oklab,var(--primary)_15%,transparent)]" />
           </Marker>
         )}
         {from && (
@@ -497,8 +500,8 @@ export function RouteMap({
             onClose={() => setBikePopup(null)}
           >
             <div className="flex flex-col px-4 py-3">
-              <span className="text-sm font-semibold">{bikePopup.name}</span>
-              <span className="text-xs text-ink-muted">
+              <span className="text-sm font-medium">{bikePopup.name}</span>
+              <span className="text-xs text-muted-foreground">
                 {t('cityBikes.bikesAvailable', { count: bikePopup.bikesAvailable })}
               </span>
             </div>
@@ -514,21 +517,23 @@ export function RouteMap({
         />
       </Map>
 
-      <button
+      <Button
         type="button"
+        variant="outline"
+        size="icon"
         onClick={locate}
         aria-label={t('map.locate')}
         // Hidden while the sheet covers most of the screen
         tabIndex={sheetCoversMap ? -1 : 0}
         aria-hidden={sheetCoversMap}
         className={cn(
-          'absolute right-4 z-10 flex size-12 items-center justify-center rounded-full bg-surface text-ink shadow-lg outline-none transition-[bottom,opacity] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] focus-visible:ring-[3px] focus-visible:ring-ring/50',
+          'absolute right-4 z-10 size-11 shadow-md transition-[bottom,opacity] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] dark:bg-background dark:hover:bg-accent',
           sheetCoversMap && 'pointer-events-none opacity-0',
         )}
         style={{ bottom: insets.bottom + 16 }}
       >
-        <LocateFixed className={cn('size-5', userLocation && 'text-baltic')} />
-      </button>
+        <LocateFixed className="size-5" />
+      </Button>
     </div>
   )
 }

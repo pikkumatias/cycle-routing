@@ -1,6 +1,7 @@
 import type { CalmBand } from '../api/routePlan'
+import { toRgba } from '@/lib/color'
 
-/** Colours the map draws with. Read from the CSS tokens in `src/styles/theme.css`. */
+/** Colours the map draws with, read from the CSS tokens in `src/styles/theme.css`. */
 export type MapPalette = {
   land: string
   water: string
@@ -46,7 +47,7 @@ const TOKENS: Record<Exclude<keyof MapPalette, 'calm'>, string> = {
   routeAlt: '--route-alt',
   signal: '--signal',
   bike: '--bike',
-  bikeInk: '--bike-ink',
+  bikeInk: '--bike-foreground',
   works: '--works',
   pin: '--pin',
   pinRing: '--pin-ring',
@@ -62,8 +63,8 @@ const CALM_TOKENS: Record<CalmBand, string> = {
 /** Read the palette from the current document. Call after the theme class is applied. */
 export function readMapPalette(root: Element = document.documentElement): MapPalette {
   const style = getComputedStyle(root)
-  // Grey fallback keeps the map legible if a token is missing.
-  const read = (name: string) => style.getPropertyValue(name).trim() || '#888888'
+  // MapLibre parses only sRGB notations; grey keeps the map legible if a token is missing.
+  const read = (name: string) => toRgba(style.getPropertyValue(name).trim()) || '#888888'
   const palette = Object.fromEntries(
     Object.entries(TOKENS).map(([key, token]) => [key, read(token)]),
   ) as Omit<MapPalette, 'calm'>

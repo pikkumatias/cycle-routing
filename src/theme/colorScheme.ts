@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react'
+import { toRgba } from '@/lib/color'
 
 /**
  * Light/dark theme. The preference is `system` (default), `light` or `dark`,
@@ -47,8 +48,8 @@ function apply() {
   root.classList.toggle('dark', scheme === 'dark')
   root.style.colorScheme = scheme
   const meta = document.querySelector('meta[name="theme-color"]')
-  const bg = getComputedStyle(root).getPropertyValue('--bg').trim()
-  if (meta && bg) meta.setAttribute('content', bg)
+  const bg = getComputedStyle(root).getPropertyValue('--background').trim()
+  if (meta && bg) meta.setAttribute('content', toRgba(bg))
 }
 
 function emit() {
