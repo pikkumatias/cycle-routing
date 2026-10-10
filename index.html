@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#f2f4f3" />
+    <meta name="theme-color" content="#ffffff" />
     <meta name="description" content="Bike routes across Helsinki: fastest, fewest traffic lights, or calmest." />
     <title>Helsinki bike routes</title>
     <script>
@@ -17,7 +17,7 @@
         var dark = pref === 'dark' || (pref !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches)
         if (dark) {
           document.documentElement.classList.add('dark')
-          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#121a1c')
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0a0a0a')
         }
       })()
     </script>

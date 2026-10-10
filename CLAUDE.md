@@ -72,4 +72,4 @@ Every file in `api/` deploys as a function; `.vercelignore` keeps `*.test.ts` ou
 
 ### UI
 
-Tailwind CSS v4 + shadcn/ui (Radix, `src/components/ui/`, generated) + lucide icons, font Schibsted Grotesk. **All colours are tokens in `src/styles/theme.css`** (light and dark); `src/index.css` maps them to shadcn/Tailwind and the map reads them too, so reskinning means editing that one file. Light/dark follows the system unless set in the options menu (`src/theme/colorScheme.ts`). `@/` aliases `src/`. Copy is in `src/locales/{en,fi}.json`.
+Tailwind CSS v4 + shadcn/ui (Radix, `src/components/ui/`, generated) + lucide icons, font Geist: the stock shadcn neutral (black and white) look. **All colours are tokens in `src/styles/theme.css`**: shadcn's standard variables (paste a theme from ui.shadcn.com/themes over them), plus the data colours (traffic lights, calm bands, city bikes, roadworks) and the greyscale map. The map reads the same tokens (any CSS colour, converted by `src/lib/color.ts`). Light/dark follows the system unless set in the options menu (`src/theme/colorScheme.ts`). `@/` aliases `src/`. Copy is in `src/locales/{en,fi}.json`.

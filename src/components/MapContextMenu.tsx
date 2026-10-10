@@ -123,15 +123,15 @@ export function MapContextMenu({ onSetOrigin, onSetDestination, bindContextMenu 
     >
       <div className="flex w-[260px] flex-col">
         <div className="flex min-h-12 items-center px-4 py-3 text-sm font-medium">
-          {menu.status === 'loading' ? <Loader2 className="size-4 animate-spin text-ink-muted" /> : menu.label}
+          {menu.status === 'loading' ? <Loader2 className="size-4 animate-spin text-muted-foreground" /> : menu.label}
         </div>
-        <div className="flex flex-col border-t border-line">
+        <div className="flex flex-col border-t p-1">
           <MenuButton onClick={() => pick(onSetOrigin)}>
-            <span aria-hidden className="size-3 shrink-0 rounded-full border-[3px] border-ink" />
+            <span aria-hidden className="size-3 shrink-0 rounded-full border-2 border-foreground" />
             {t('map.setStart')}
           </MenuButton>
-          <MenuButton onClick={() => pick(onSetDestination)} className="border-t border-line">
-            <span aria-hidden className="size-3 shrink-0 rounded-full bg-ink" />
+          <MenuButton onClick={() => pick(onSetDestination)}>
+            <span aria-hidden className="size-3 shrink-0 rounded-full bg-foreground" />
             {t('map.setDestination')}
           </MenuButton>
         </div>
@@ -145,7 +145,7 @@ function MenuButton({ className, ...props }: ComponentProps<'button'>) {
     <button
       type="button"
       className={cn(
-        'flex min-h-12 items-center gap-3 px-4 text-left text-sm font-medium outline-none hover:bg-sunken focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:opacity-50',
+        'flex min-h-11 items-center gap-3 rounded-sm px-3 text-left text-sm outline-none hover:bg-accent hover:text-accent-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:opacity-50',
         className,
       )}
       {...props}

@@ -4,6 +4,7 @@ import { Construction, Loader2 } from 'lucide-react'
 import type { PlannedRoute, RouteCard } from '../api/routePlan'
 import { CALM_BAND_CLASS } from './calmBand'
 import { RouteRibbon } from './RouteRibbon'
+import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 
@@ -21,7 +22,7 @@ const minutes = (sec: number) => Math.round(sec / 60)
 
 /**
  * The route choices as a radio group: one row per card, the selected one
- * marked with the accent bar. Arrow keys move the selection.
+ * marked with a bar. Arrow keys move the selection.
  */
 export function RouteOptions({ cards, routesById, selectedId, onSelect, roadworks }: RouteOptionsProps) {
   const { t } = useTranslation()
@@ -58,7 +59,7 @@ export function RouteOptions({ cards, routesById, selectedId, onSelect, roadwork
             onClick={() => onSelect(card.routeId)}
             className={cn(
               'relative flex w-full flex-col gap-2 py-3.5 pr-1 pl-4 text-left outline-none',
-              'border-t border-line first:border-t-0',
+              'border-t first:border-t-0',
               'focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:rounded-lg',
             )}
           >
@@ -66,32 +67,29 @@ export function RouteOptions({ cards, routesById, selectedId, onSelect, roadwork
               aria-hidden
               className={cn(
                 'absolute top-3.5 bottom-3.5 left-0 w-1 rounded-full transition-colors',
-                selected ? 'bg-baltic' : 'bg-transparent',
+                selected ? 'bg-primary' : 'bg-transparent',
               )}
             />
             <span className="flex items-start justify-between gap-3">
               <span className="flex min-w-0 flex-col gap-1">
-                <span className={cn('text-base leading-tight font-semibold', !selected && 'text-ink-muted')}>
+                <span className={cn('text-base leading-tight font-medium', !selected && 'text-muted-foreground')}>
                   {t(`routes.${card.primary}`)}
                 </span>
                 {card.badges.length > 0 && (
                   <span className="flex flex-wrap gap-1">
                     {card.badges.map((b) => (
-                      <span
-                        key={b}
-                        className="rounded-full bg-baltic-soft px-2 py-0.5 text-xs font-medium text-ink"
-                      >
+                      <Badge key={b} variant="secondary">
                         {t(`routes.badge_${b}`)}
-                      </span>
+                      </Badge>
                     ))}
                   </span>
                 )}
               </span>
               <span className="flex shrink-0 flex-col items-end">
-                <span className="tabular text-xl font-semibold tracking-tight">
+                <span className="tabular text-2xl font-semibold tracking-tight">
                   {t('routes.minutes', { count: minutes(route.durationSec) })}
                 </span>
-                <span className="flex gap-2 text-xs text-ink-muted">
+                <span className="flex gap-2 text-xs text-muted-foreground">
                   <span>{t('routes.distance', { km: (route.distanceM / 1000).toFixed(1) })}</span>
                   {extra > 0 && <span>{t('routes.extraTime', { minutes: extra })}</span>}
                 </span>
@@ -100,7 +98,7 @@ export function RouteOptions({ cards, routesById, selectedId, onSelect, roadwork
 
             <RouteRibbon route={route} maxDurationSec={maxDuration} selected={selected} />
 
-            <span className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-muted">
+            <span className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
               <span className="inline-flex items-center gap-1.5">
                 <span aria-hidden className="size-2 rounded-full bg-signal" />
                 {t('routes.lights', { count: route.lights })}
@@ -115,9 +113,9 @@ export function RouteOptions({ cards, routesById, selectedId, onSelect, roadwork
             </span>
 
             {selected && roadworks?.enabled && (roadworks.loading || roadworks.count > 0) && (
-              <span className="inline-flex items-center gap-1.5 text-xs text-ink">
+              <span className="inline-flex items-center gap-1.5 text-xs">
                 {roadworks.loading ? (
-                  <Loader2 className="size-3.5 animate-spin text-ink-muted" />
+                  <Loader2 className="size-3.5 animate-spin text-muted-foreground" />
                 ) : (
                   <Construction className="size-3.5 text-works" />
                 )}
@@ -135,7 +133,7 @@ export function RouteOptionsSkeleton() {
   return (
     <div className="flex flex-col" data-testid="route-options-skeleton">
       {[0, 1, 2].map((i) => (
-        <div key={i} className="flex flex-col gap-2.5 border-t border-line py-3.5 pl-4 first:border-t-0">
+        <div key={i} className="flex flex-col gap-2.5 border-t py-3.5 pl-4 first:border-t-0">
           <div className="flex justify-between">
             <Skeleton className="h-5 w-28" />
             <Skeleton className="h-6 w-16" />

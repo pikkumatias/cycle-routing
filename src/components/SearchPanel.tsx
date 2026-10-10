@@ -8,6 +8,7 @@ import { appLanguage } from '../i18n'
 import type { RecentSearch } from '../utils/recentSearches'
 import { COORD_PATTERN, coordinateOption, type AddressOption } from '../utils/address'
 import type { TripField } from './TripPlanner'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 type SearchPanelProps = {
@@ -114,7 +115,7 @@ export function SearchPanel({
   return (
     <DialogPrimitive.Root open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/20 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0 max-md:hidden" />
+        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0 max-md:hidden" />
         <DialogPrimitive.Content
           aria-describedby={undefined}
           onOpenAutoFocus={(e) => {
@@ -123,11 +124,11 @@ export function SearchPanel({
             inputRef.current?.select()
           }}
           className={cn(
-            'fixed inset-0 z-50 flex flex-col bg-surface text-ink outline-none',
+            'fixed inset-0 z-50 flex flex-col bg-background outline-none',
             'pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]',
             'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-bottom-6',
             'data-[state=closed]:animate-out data-[state=closed]:fade-out-0',
-            'md:inset-auto md:top-4 md:bottom-4 md:left-4 md:w-[400px] md:rounded-[var(--radius-sheet)] md:pt-0 md:pb-0 md:shadow-xl',
+            'md:inset-auto md:top-4 md:bottom-4 md:left-4 md:w-[400px] md:rounded-xl md:border md:pt-0 md:pb-0 md:shadow-lg',
           )}
         >
           <DialogPrimitive.Title className="sr-only">
@@ -135,16 +136,15 @@ export function SearchPanel({
           </DialogPrimitive.Title>
           <CommandPrimitive shouldFilter={false} loop className="flex min-h-0 flex-1 flex-col">
             <div className="flex items-center gap-1 px-2 pt-2 pb-3">
-              <DialogPrimitive.Close
-                aria-label={t('search.back')}
-                className="flex size-11 shrink-0 items-center justify-center rounded-full outline-none hover:bg-sunken focus-visible:ring-[3px] focus-visible:ring-ring/50"
-              >
-                <ArrowLeft className="size-5" />
+              <DialogPrimitive.Close asChild>
+                <Button variant="ghost" size="icon" aria-label={t('search.back')} className="size-10 shrink-0">
+                  <ArrowLeft className="size-5" />
+                </Button>
               </DialogPrimitive.Close>
-              <div className="relative flex h-12 flex-1 items-center rounded-xl bg-sunken focus-within:ring-2 focus-within:ring-baltic">
-                <span aria-hidden className="pl-3.5 text-ink-muted">
+              <div className="relative flex h-11 flex-1 items-center rounded-md border border-input bg-transparent shadow-xs transition-[color,box-shadow] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50 dark:bg-input/30">
+                <span aria-hidden className="pl-3 text-muted-foreground">
                   {field === 'origin' ? (
-                    <span className="block size-3 rounded-full border-[3px] border-current" />
+                    <span className="block size-3 rounded-full border-2 border-current" />
                   ) : (
                     <span className="block size-3 rounded-full bg-current" />
                   )}
@@ -157,29 +157,31 @@ export function SearchPanel({
                   aria-label={field === 'origin' ? t('search.origin') : t('search.destination')}
                   enterKeyHint="search"
                   autoComplete="off"
-                  className="h-full min-w-0 flex-1 bg-transparent px-3 text-base outline-none placeholder:text-ink-muted"
+                  className="h-full min-w-0 flex-1 bg-transparent px-2.5 text-base outline-none placeholder:text-muted-foreground"
                 />
                 {loading ? (
-                  <Loader2 className="mr-3.5 size-4 shrink-0 animate-spin text-ink-muted" />
+                  <Loader2 className="mr-3 size-4 shrink-0 animate-spin text-muted-foreground" />
                 ) : (
                   inputValue && (
-                    <button
+                    <Button
                       type="button"
+                      variant="ghost"
+                      size="icon"
                       onClick={() => {
                         handleInputChange('')
                         inputRef.current?.focus()
                       }}
                       aria-label={t('search.clear')}
-                      className="mr-1 flex size-10 shrink-0 items-center justify-center rounded-full text-ink-muted outline-none hover:text-ink focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                      className="mr-0.5 size-9 shrink-0 text-muted-foreground"
                     >
-                      <X className="size-4" />
-                    </button>
+                      <X />
+                    </Button>
                   )
                 )}
               </div>
             </div>
 
-            <CommandPrimitive.List className="min-h-0 flex-1 overflow-y-auto overscroll-contain border-t border-line pb-6">
+            <CommandPrimitive.List className="min-h-0 flex-1 overflow-y-auto overscroll-contain border-t p-1 pb-6">
               {showLocation && (
                 <ResultItem
                   value="__location"
@@ -187,9 +189,9 @@ export function SearchPanel({
                   disabled={locationLoading}
                   icon={
                     locationLoading ? (
-                      <Loader2 className="size-5 animate-spin text-ink-muted" />
+                      <Loader2 className="size-4 animate-spin" />
                     ) : (
-                      <LocateFixed className="size-5 text-baltic" />
+                      <LocateFixed className="size-4" />
                     )
                   }
                   primary={
@@ -206,7 +208,7 @@ export function SearchPanel({
                 <ResultItem
                   value="__coords"
                   onSelect={() => onSelect(coords)}
-                  icon={<Crosshair className="size-5 text-baltic" />}
+                  icon={<Crosshair className="size-4" />}
                   primary={t('search.useCoordinates', { coords: coords.label })}
                 />
               )}
@@ -218,7 +220,7 @@ export function SearchPanel({
                       key={`s-${i}-${s.lat}-${s.lon}`}
                       value={`s-${i}-${s.label}`}
                       onSelect={() => onSelect(s)}
-                      icon={<MapPin className="size-5 text-ink-muted" />}
+                      icon={<MapPin className="size-4" />}
                       {...splitLabel(s.label)}
                     />
                   ))}
@@ -232,14 +234,14 @@ export function SearchPanel({
                       key={`r-${i}-${r.label}`}
                       value={`r-${i}-${r.label}`}
                       onSelect={() => onSelect(r)}
-                      icon={<Clock className="size-5 text-ink-muted" />}
+                      icon={<Clock className="size-4" />}
                       {...splitLabel(r.label)}
                     />
                   ))}
                 </CommandPrimitive.Group>
               )}
 
-              {nothingFound && <p className="px-5 py-8 text-sm text-ink-muted">{t('search.noResults')}</p>}
+              {nothingFound && <p className="px-4 py-6 text-center text-sm text-muted-foreground">{t('search.noResults')}</p>}
             </CommandPrimitive.List>
           </CommandPrimitive>
         </DialogPrimitive.Content>
@@ -249,7 +251,7 @@ export function SearchPanel({
 }
 
 const GROUP_CLASS =
-  '[&_[cmdk-group-heading]]:px-5 [&_[cmdk-group-heading]]:pt-4 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-ink-muted'
+  '[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pt-3 [&_[cmdk-group-heading]]:pb-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground'
 
 /** "Mannerheimintie 1, Helsinki" → name on top, area underneath. */
 function splitLabel(label: string): { primary: string; secondary?: string } {
@@ -273,12 +275,12 @@ function ResultItem({ value, onSelect, icon, primary, secondary, disabled }: Res
       value={value}
       onSelect={onSelect}
       disabled={disabled}
-      className="flex min-h-14 cursor-pointer items-center gap-4 px-5 py-2.5 outline-none select-none data-[disabled=true]:cursor-default data-[selected=true]:bg-sunken"
+      className="flex min-h-12 cursor-pointer items-center gap-3 rounded-sm px-3 py-2 outline-none select-none data-[disabled=true]:cursor-default data-[disabled=true]:opacity-50 data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground"
     >
-      <span className="flex size-5 shrink-0 items-center justify-center">{icon}</span>
+      <span className="flex size-4 shrink-0 items-center justify-center text-muted-foreground">{icon}</span>
       <span className="flex min-w-0 flex-col">
-        <span className="truncate text-base">{primary}</span>
-        {secondary && <span className="truncate text-sm text-ink-muted">{secondary}</span>}
+        <span className="truncate text-sm">{primary}</span>
+        {secondary && <span className="truncate text-sm text-muted-foreground">{secondary}</span>}
       </span>
     </CommandPrimitive.Item>
   )

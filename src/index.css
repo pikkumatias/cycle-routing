@@ -1,55 +1,18 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "@fontsource-variable/schibsted-grotesk";
+@import "@fontsource-variable/geist";
 @import "./styles/theme.css";
 
 @custom-variant dark (&:is(.dark *));
 
-/*
- * shadcn semantic variables, mapped onto the palette in styles/theme.css.
- * Edit colours there, not here.
- */
-:root {
-  --radius: 14px;
-  --background: var(--bg);
-  --foreground: var(--ink);
-  --card: var(--surface);
-  --card-foreground: var(--ink);
-  --popover: var(--surface);
-  --popover-foreground: var(--ink);
-  --primary: var(--accent);
-  --primary-foreground: var(--accent-ink);
-  --secondary: var(--surface-sunken);
-  --secondary-foreground: var(--ink);
-  --muted: var(--surface-sunken);
-  --muted-foreground: var(--ink-muted);
-  --accent-surface: var(--accent-soft);
-  --destructive: var(--danger);
-  --border: var(--line);
-  --input: var(--line);
-  --ring: var(--accent);
-}
-
+/* shadcn's standard mapping; colours live in styles/theme.css */
 @theme inline {
-  --font-sans: "Schibsted Grotesk Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
 
-  /* Type scale: 13 / 15 / 17 / 22 / 28 */
-  --text-xs: 0.8125rem;
-  --text-xs--line-height: 1.35;
-  --text-sm: 0.9375rem;
-  --text-sm--line-height: 1.4;
-  --text-base: 1.0625rem;
-  --text-base--line-height: 1.45;
-  --text-lg: 1.375rem;
-  --text-lg--line-height: 1.25;
-  --text-xl: 1.75rem;
-  --text-xl--line-height: 1.1;
-
-  --radius-sm: calc(var(--radius) - 6px);
-  --radius-md: calc(var(--radius) - 4px);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  --radius-sheet: 24px;
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -63,27 +26,17 @@
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
-  /* shadcn's "accent" is a hover surface; ours is the soft Baltic tint */
-  --color-accent: var(--accent-surface);
-  --color-accent-foreground: var(--ink);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
 
-  /* Palette names, for app components */
-  --color-ink: var(--ink);
-  --color-ink-muted: var(--ink-muted);
-  --color-surface: var(--surface);
-  --color-sunken: var(--surface-sunken);
-  --color-line: var(--line);
-  --color-baltic: var(--accent);
-  --color-baltic-soft: var(--accent-soft);
+  /* App data colours */
   --color-signal: var(--signal);
-  --color-danger: var(--danger);
-  --color-danger-soft: var(--danger-soft);
   --color-bike: var(--bike);
-  --color-bike-ink: var(--bike-ink);
+  --color-bike-foreground: var(--bike-foreground);
   --color-works: var(--works);
   --color-calm-very-calm: var(--calm-very-calm);
   --color-calm-calm: var(--calm-calm);
@@ -113,14 +66,14 @@
   }
 }
 
-/* MapLibre controls and popups, restyled to the palette */
+/* MapLibre controls and popups, in the theme */
 .maplibregl-ctrl-attrib {
-  background: color-mix(in srgb, var(--surface) 80%, transparent) !important;
-  color: var(--ink-muted);
+  background: color-mix(in oklab, var(--background) 80%, transparent) !important;
+  color: var(--muted-foreground);
   font-size: 11px;
 }
 .maplibregl-ctrl-attrib a {
-  color: var(--ink-muted) !important;
+  color: var(--muted-foreground) !important;
 }
 /* The compact (i) button: present, not prominent */
 .maplibregl-ctrl-attrib-button {
@@ -130,16 +83,17 @@
   filter: invert(1);
 }
 .maplibregl-popup-content {
-  background: var(--surface) !important;
-  color: var(--ink);
+  background: var(--popover) !important;
+  color: var(--popover-foreground);
+  border: 1px solid var(--border);
   border-radius: var(--radius) !important;
   padding: 0 !important;
-  box-shadow: 0 8px 24px rgb(0 0 0 / 0.16) !important;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.1) !important;
   font-family: inherit;
 }
 .maplibregl-popup-tip {
-  border-top-color: var(--surface) !important;
-  border-bottom-color: var(--surface) !important;
+  border-top-color: var(--popover) !important;
+  border-bottom-color: var(--popover) !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
