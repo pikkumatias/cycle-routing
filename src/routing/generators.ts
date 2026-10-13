@@ -2,7 +2,7 @@ import type { RoutingConfig } from './config.js'
 import { bearingDeg, cumulativeLengths, haversineDistance, minDistanceToPolyline, offsetPoint } from './geo.js'
 import type { Layers } from './layers.js'
 import { routePolyline } from './profile.js'
-import type { CyclingOptimization, LatLng, LatLon, ProfiledCandidate } from './types.js'
+import type { Candidate, CyclingOptimization, LatLng, LatLon, ProfiledCandidate } from './types.js'
 
 export type GeneratorRequest = { name: string; via?: LatLon; optimization: CyclingOptimization }
 
@@ -121,7 +121,7 @@ function lateralTargets(from: LatLng, to: LatLng): LatLng[] {
 export function calmVias(
   from: LatLng,
   to: LatLng,
-  fastest: ProfiledCandidate,
+  fastest: Pick<Candidate, 'legs'>,
   layers: Layers,
   cfg: RoutingConfig,
 ): GeneratorRequest[] {

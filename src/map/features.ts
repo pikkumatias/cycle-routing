@@ -7,24 +7,29 @@ import { toDisplayLegs, type LatLng } from '../utils/routeGeometry'
 /** GeoJSON is [lon, lat]; the app uses [lat, lon]. */
 const toLngLat = ([lat, lng]: LatLng): [number, number] => [lng, lat]
 
-export type RouteFeatureProps = { id: string; selected: boolean }
+export type RouteFeatureProps = { id: string }
 
-/** Every route as one feature; the selected one last so it draws on top. */
-export function routeFeatures(
-  routes: Pick<PlannedRoute, 'id' | 'legs'>[],
-  selectedId: string | null,
-): FeatureCollection<MultiLineString, RouteFeatureProps> {
-  const features = routes
-    .map((r): Feature<MultiLineString, RouteFeatureProps> => ({
+/**
+ * Every route as one smoothed feature. Built once per plan: the map switches the selection
+ * with layer filters on `id` (`isRoute`), so tapping a card sends no new geometry.
+ */
+export function routeFeatures(routes: Pick<PlannedRoute, 'id' | 'legs'>[]): FeatureCollection<MultiLineString, RouteFeatureProps> {
+  return {
+    type: 'FeatureCollection',
+    features: routes.map((r): Feature<MultiLineString, RouteFeatureProps> => ({
       type: 'Feature',
-      properties: { id: r.id, selected: r.id === selectedId },
+      properties: { id: r.id },
       geometry: {
         type: 'MultiLineString',
         coordinates: toDisplayLegs(r.legs).map((leg) => leg.map(toLngLat)),
       },
-    }))
-    .sort((a, b) => Number(a.properties.selected) - Number(b.properties.selected))
-  return { type: 'FeatureCollection', features }
+    })),
+  }
+}
+
+/** Layer filter matching one route (or, negated, every other one). */
+export function isRoute(id: string | null, negate = false): ['==' | '!=', ['get', 'id'], string] {
+  return [negate ? '!=' : '==', ['get', 'id'], id ?? '']
 }
 
 export function pointFeatures(points: LatLng[]): FeatureCollection<Point> {

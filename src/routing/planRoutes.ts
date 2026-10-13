@@ -27,78 +27,125 @@ export type PlanDeps = {
   now?: () => number
 }
 
-/** Run `fn` over `items` with at most `limit` in flight; results keep input order. */
-async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
-  const results: R[] = new Array(items.length)
-  let next = 0
-  const worker = async () => {
-    while (next < items.length) {
-      const i = next++
-      results[i] = await fn(items[i])
+/** One OTP answer, tagged with the order its request was made in. */
+type Answer = { seq: number; request: GeneratorRequest; candidate: Candidate }
+
+/** A gate that lets at most `limit` tasks run at once. */
+function limiter(limit: number) {
+  let active = 0
+  const queue: (() => void)[] = []
+  return async <T>(task: () => Promise<T>): Promise<T> => {
+    if (active >= limit) await new Promise<void>((resolve) => queue.push(resolve))
+    active++
+    try {
+      return await task()
+    } finally {
+      active--
+      queue.shift()?.()
     }
   }
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker))
-  return results
 }
 
 /**
  * Plan bicycle routes from `from` to `to` and pick the cards to show.
  *
  * Round 1 runs the preset generators in parallel. Round 2 adds via-waypoint routes aimed at
- * avoiding the fastest route's signal clusters and at nearby car-free paths; it is skipped
- * (and the plan marked partial) when round 1 used more than half of the deadline. Via routes
- * have out-and-back stubs trimmed; identical geometries from different generators merge.
+ * avoiding the fastest route's signal clusters and at nearby car-free paths; it starts as soon
+ * as the fastest preset is back, without waiting for the other presets. Round 2 is optional: it is skipped when round 1 used more than half of the deadline, and
+ * calls still running at the deadline are aborted; either way the plan is marked partial.
+ * Via routes have out-and-back stubs trimmed; identical geometries from different generators
+ * merge, listed in request order whatever order OTP answers in.
  */
 export async function planRoutes(from: LatLon, to: LatLon, deps: PlanDeps): Promise<RoutePlan> {
   const cfg = deps.cfg ?? DEFAULT_CONFIG
   const now = deps.now ?? (() => Date.now())
   const start = now()
-  const pool = new Map<string, ProfiledCandidate>()
+  const withinHalfDeadline = () => now() - start <= cfg.otp.deadlineMs / 2
+  const gate = limiter(cfg.otp.concurrency)
+  const fromLL: LatLng = [from.lat, from.lon]
+  const toLL: LatLng = [to.lat, to.lon]
+
+  let seq = 0
   let calls = 0
   let failed = 0
   let timedOut = 0
+  let partial = false
+  const answers: Answer[] = []
+  const round2 = new AbortController()
 
-  const run = async (requests: GeneratorRequest[]) => {
-    const results = await mapLimit(requests, cfg.otp.concurrency, async (r) => {
+  /** Ask OTP for one generator's route; resolves to its candidate, or null on no route or failure. */
+  const ask = (request: GeneratorRequest, signal?: AbortSignal): Promise<Candidate | null> => {
+    const order = seq++
+    return gate(async () => {
+      if (signal?.aborted) return null
       calls++
       try {
-        return { request: r, candidate: await deps.otp({ from, to, via: r.via, optimization: r.optimization }) }
+        const answer = await deps.otp({ from, to, via: request.via, optimization: request.optimization }, signal)
+        const candidate = answer && request.via ? applySpurTrim(answer, cfg) : answer
+        if (candidate) answers.push({ seq: order, request, candidate })
+        return candidate
       } catch (error) {
+        // A deadline abort isn't a failure of the service
+        if (signal?.aborted) return null
         failed++
         if (isTimeout(error)) timedOut++
-        return { request: r, candidate: null }
+        return null
       }
     })
-    for (const { request, candidate } of results) {
-      if (!candidate) continue
-      const route = request.via ? applySpurTrim(candidate, cfg) : candidate
-      if (!route) continue
-      const existing = pool.get(route.id)
-      if (existing) {
-        if (!existing.generators.includes(request.name)) existing.generators.push(request.name)
-        continue
-      }
-      pool.set(route.id, { ...route, generators: [request.name], profile: profileRoute(route, deps.layers, cfg) })
-    }
   }
 
-  await run(cfg.generators.round1)
+  // Round 2 works from the fastest route, so it goes out as soon as the fastest preset is back
+  // rather than waiting for the slower presets
+  let round2Started: Promise<unknown> | null = null
+  const startRound2 = (fastest: ProfiledCandidate): Promise<unknown> => {
+    if (round2Started) return round2Started
+    if (!withinHalfDeadline()) {
+      partial = true
+      round2Started = Promise.resolve()
+    } else {
+      const requests = [...lightsVias(fastest, deps.layers, cfg), ...calmVias(fromLL, toLL, fastest, deps.layers, cfg)]
+      round2Started = Promise.all(requests.map((r) => ask(r, round2.signal)))
+    }
+    return round2Started
+  }
+
+  const round1 = cfg.generators.round1.map((r) => ask(r))
+  const fastestIndex = cfg.generators.round1.findIndex((r) => r.name === 'preset:fastest')
+  if (fastestIndex >= 0) {
+    void round1[fastestIndex].then((c) => {
+      if (c) startRound2({ ...c, generators: [], profile: profileRoute(c, deps.layers, cfg) })
+    })
+  }
+
+  await Promise.all(round1)
+  // Round 1 is scored on its own; round-2 answers that are already in wait for the end
+  const pool = new Map<string, ProfiledCandidate>()
+  const presetCount = round1.length
+  addToPool(pool, answers.filter((a) => a.seq < presetCount), deps.layers, cfg)
+  const early = answers.filter((a) => a.seq >= presetCount)
+  answers.length = 0
+  answers.push(...early)
   if (pool.size === 0) {
+    round2.abort()
     // OTP answered at least once and found nothing: a real "no route". Every call failing is an outage.
     if (failed < calls) throw new PlanError('NO_ROUTE', 'No route found')
     if (timedOut === failed) throw new PlanError('TIMEOUT', 'Route planning timed out')
     throw new PlanError('UPSTREAM_UNAVAILABLE', 'Route planning service unavailable')
   }
 
-  let partial = false
-  if (now() - start <= cfg.otp.deadlineMs / 2) {
-    const fastest = [...pool.values()].reduce((best, c) => (c.durationSec < best.durationSec ? c : best))
-    const fromLL: LatLng = [from.lat, from.lon]
-    const toLL: LatLng = [to.lat, to.lon]
-    await run([...lightsVias(fastest, deps.layers, cfg), ...calmVias(fromLL, toLL, fastest, deps.layers, cfg)])
-  } else {
+  // Without the fastest preset's answer, round 2 starts from the fastest of round 1
+  const round2Done = startRound2([...pool.values()].reduce((best, c) => (c.durationSec < best.durationSec ? c : best)))
+
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const deadline = new Promise<'deadline'>((resolve) => {
+    timer = setTimeout(() => resolve('deadline'), Math.max(0, start + cfg.otp.deadlineMs - now()))
+  })
+  if ((await Promise.race([round2Done, deadline])) === 'deadline') {
     partial = true
+    round2.abort()
   }
+  clearTimeout(timer)
+  addToPool(pool, answers.splice(0), deps.layers, cfg)
 
   const routes = [...pool.values()]
   return {
@@ -108,8 +155,20 @@ export async function planRoutes(from: LatLon, to: LatLon, deps: PlanDeps): Prom
   }
 }
 
+/** Profile new answers into the pool in request order; a known geometry only gains a generator. */
+function addToPool(pool: Map<string, ProfiledCandidate>, answers: Answer[], layers: Layers, cfg: RoutingConfig) {
+  for (const { request, candidate } of answers.sort((a, b) => a.seq - b.seq)) {
+    const existing = pool.get(candidate.id)
+    if (existing) {
+      if (!existing.generators.includes(request.name)) existing.generators.push(request.name)
+      continue
+    }
+    pool.set(candidate.id, { ...candidate, generators: [request.name], profile: profileRoute(candidate, layers, cfg) })
+  }
+}
+
 /** Trim a via route's out-and-back stub and scale its duration; null if the stub is too long. */
-function applySpurTrim(candidate: Candidate, cfg: RoutingConfig): Candidate | null {
+export function applySpurTrim(candidate: Candidate, cfg: RoutingConfig): Candidate | null {
   const trimmed = trimSpur(candidate.legs, candidate.legSteps, cfg)
   if (!trimmed) return null
   if (trimmed.trimmedM === 0) return candidate

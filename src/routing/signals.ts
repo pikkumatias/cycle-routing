@@ -1,5 +1,5 @@
 import type { RoutingConfig } from './config.js'
-import { nearestOnPolyline, resample } from './geo.js'
+import { GridIndex, resample, segmentDistance } from './geo.js'
 import type { Layers } from './layers.js'
 import type { MajorCrossing, RouteSegment } from './stress.js'
 import type { LatLng, SignalRule, SignalStop } from './types.js'
@@ -36,14 +36,28 @@ export function findSignalStops(
     for (const s of layers.signals.near(p, SAMPLE_M + searchM)) candidates.add(s)
   }
 
+  // Route segments by place, so each signal is measured against the few segments near it
+  // instead of the whole route. A signal further than `searchM` from the route is never a hit.
+  const routeSegments = new GridIndex<number>(SAMPLE_M)
+  for (let i = 0; i < poly.length - 1; i++) routeSegments.insert(i, [poly[i], poly[i + 1]])
+  const nearest = (p: LatLng) => {
+    let best = { distanceM: Infinity, alongM: 0 }
+    // In route order, so ties go to the earlier segment
+    for (const i of routeSegments.near(p, searchM + 5).sort((x, y) => x - y)) {
+      const { distanceM, t } = segmentDistance(p, poly[i], poly[i + 1])
+      if (distanceM < best.distanceM) best = { distanceM, alongM: cum[i] + t * (cum[i + 1] - cum[i]) }
+    }
+    return best
+  }
+
   const covering = (alongM: number, padM: number) =>
     segments.filter((s) => alongM >= s.startM - padM && alongM <= s.startM + s.lengthM + padM)
   const inArea = (alongM: number) => covering(alongM, nearM).some((s) => s.step?.area)
   const aboveGround = (alongM: number) => covering(alongM, 0).some((s) => s.gradeSeparated)
 
   for (const s of candidates) {
-    const hit = nearestOnPolyline(s, poly, cum)
-    if (aboveGround(hit.alongM)) continue
+    const hit = nearest(s)
+    if (hit.distanceM > searchM || aboveGround(hit.alongM)) continue
     if (hit.distanceM <= onM) hits.push({ at: s, alongM: hit.alongM, rule: 'on' })
     else if (hit.distanceM <= nearM && inArea(hit.alongM)) hits.push({ at: s, alongM: hit.alongM, rule: 'near' })
   }

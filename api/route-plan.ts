@@ -10,7 +10,8 @@ import type { LatLon, RoutePlanErrorCode } from '../src/routing/types.js'
 
 interface VercelReq {
   method?: string
-  body: unknown
+  body?: unknown
+  query?: Record<string, string | string[] | undefined>
 }
 interface VercelRes {
   setHeader(name: string, value: string): void
@@ -20,6 +21,8 @@ interface VercelRes {
 
 const MIN_TRIP_M = 50
 const MAX_TRIP_M = 40_000
+/** Plans of a GET trip are shared by the edge for this long (and served stale for a day while refreshing). */
+const EDGE_CACHE = 'public, max-age=0, s-maxage=21600, stale-while-revalidate=86400'
 
 const STATUS: Record<RoutePlanErrorCode, number> = {
   BAD_REQUEST: 400,
@@ -32,7 +35,10 @@ const STATUS: Record<RoutePlanErrorCode, number> = {
   TIMEOUT: 504,
 }
 
-const fail = (res: VercelRes, code: RoutePlanErrorCode, error: string) => res.status(STATUS[code]).json({ error, code })
+const fail = (res: VercelRes, code: RoutePlanErrorCode, error: string) => {
+  res.setHeader('Cache-Control', 'no-store')
+  return res.status(STATUS[code]).json({ error, code })
+}
 
 // Parsed once per function instance; the file ships with the deployment (vercel.json includeFiles).
 // A failed load is forgotten so the next request retries instead of failing for the instance's lifetime.
@@ -57,37 +63,46 @@ function parsePoint(value: unknown): LatLon | null {
   return { lat: p.lat, lon: p.lon }
 }
 
-/** The request body as an object, or null; Vercel's lazy `req.body` getter throws on malformed JSON. */
-function readBody(req: VercelReq): { from?: unknown; to?: unknown } | null {
+/** "60.1921,24.9458" → a point, or null. */
+function parseQueryPoint(value: string | string[] | undefined): LatLon | null {
+  const parts = (Array.isArray(value) ? value[0] : value)?.split(',')
+  if (parts?.length !== 2 || parts.some((p) => !p.trim())) return null
+  return parsePoint({ lat: Number(parts[0]), lon: Number(parts[1]) })
+}
+
+/** The trip from a GET query or a POST body; Vercel's lazy `req.body` getter throws on malformed JSON. */
+function readTrip(req: VercelReq): { from: LatLon | null; to: LatLon | null } {
+  if (req.method === 'GET') return { from: parseQueryPoint(req.query?.from), to: parseQueryPoint(req.query?.to) }
   try {
-    const body = typeof req.body === 'string' ? (JSON.parse(req.body) as unknown) : req.body
-    return body && typeof body === 'object' ? body : null
+    const body = (typeof req.body === 'string' ? JSON.parse(req.body) : req.body) as { from?: unknown; to?: unknown } | null
+    return { from: parsePoint(body?.from), to: parsePoint(body?.to) }
   } catch {
-    return null
+    return { from: null, to: null }
   }
 }
 
 /**
- * POST { from: {lat, lon}, to: {lat, lon} } → planned routes and the cards to show.
+ * GET ?from=lat,lon&to=lat,lon → planned routes and the cards to show. GET answers are cached
+ * at the edge, so the client rounds coordinates to share them; a deployment clears the cache.
+ * POST { from: {lat, lon}, to: {lat, lon} } plans the same, uncached (clients from before GET).
+ *
  * Runs the whole routing engine server-side: OTP calls, scoring against the prebuilt OSM
  * layers and card selection. Only routes that appear on a card are returned.
  * Errors are `{ error, code }`; the client shows a localized message per `code`.
  */
 export default async function handler(req: VercelReq, res: VercelRes) {
   try {
-    if (req.method !== 'POST') {
-      res.setHeader('Allow', 'POST')
+    if (req.method !== 'GET' && req.method !== 'POST') {
+      res.setHeader('Allow', 'GET, POST')
       return res.status(405).json({ error: 'Method Not Allowed', code: 'BAD_REQUEST' })
     }
 
     const apiKey = process.env.DIGITRANSIT_API_KEY
     if (!apiKey) return fail(res, 'SERVER_ERROR', 'DIGITRANSIT_API_KEY is not configured on the server.')
 
-    const body = readBody(req)
-    const from = parsePoint(body?.from)
-    const to = parsePoint(body?.to)
+    const { from, to } = readTrip(req)
     if (!from || !to) {
-      return fail(res, 'BAD_REQUEST', 'Body must be JSON with "from" and "to" as { lat: number, lon: number }.')
+      return fail(res, 'BAD_REQUEST', 'Give "from" and "to" as ?from=lat,lon&to=lat,lon, or POST them as { lat, lon }.')
     }
 
     const { layers, bbox } = await loadLayers()
@@ -113,6 +128,8 @@ export default async function handler(req: VercelReq, res: VercelRes) {
     }
 
     const shown = new Set(plan.selection.cards.map((c) => c.routeId))
+    // A partial plan (deadline hit) is worth showing but not worth keeping
+    res.setHeader('Cache-Control', req.method === 'GET' && !plan.meta.partial ? EDGE_CACHE : 'no-store')
     return res.status(200).json({
       routes: plan.routes
         .filter((r) => shown.has(r.id))

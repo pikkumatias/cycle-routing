@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { bikeFeatures, hazardFeatures, routeFeatures } from './features'
+import { bikeFeatures, hazardFeatures, isRoute, routeFeatures } from './features'
 import type { Hazard } from '../services/hazards'
 
 describe('routeFeatures', () => {
@@ -8,17 +8,19 @@ describe('routeFeatures', () => {
     { id: 'b', legs: [[[60, 24], [60.02, 24.02]]] as [number, number][][] },
   ]
 
-  it('flags the selected route and draws it last', () => {
-    const fc = routeFeatures(routes, 'a')
-    expect(fc.features.map((f) => [f.properties.id, f.properties.selected])).toEqual([
-      ['b', false],
-      ['a', true],
-    ])
+  it('makes one feature per route, keyed by id', () => {
+    expect(routeFeatures(routes).features.map((f) => f.properties.id)).toEqual(['a', 'b'])
   })
 
   it('converts [lat, lon] to GeoJSON [lon, lat]', () => {
-    const [first] = routeFeatures(routes, null).features[0].geometry.coordinates[0]
+    const [first] = routeFeatures(routes).features[0].geometry.coordinates[0]
     expect(first).toEqual([24, 60])
+  })
+
+  it('filters layers to the selected route or the others', () => {
+    expect(isRoute('a')).toEqual(['==', ['get', 'id'], 'a'])
+    expect(isRoute('a', true)).toEqual(['!=', ['get', 'id'], 'a'])
+    expect(isRoute(null)).toEqual(['==', ['get', 'id'], ''])
   })
 })
 

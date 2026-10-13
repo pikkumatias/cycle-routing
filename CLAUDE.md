@@ -25,7 +25,7 @@ The app is a bicycle route planner for the Helsinki region. The user picks a sta
 
 **Routing flow** (`src/App.tsx`):
 1. User picks places via geocoding autocomplete (`SearchPanel` → `/api/digitransit-geocode`), typed coordinates, their location, or a long-press/right-click on the map (`MapContextMenu`)
-2. Once both ends are set, `fetchRoutePlan` (`src/api/routePlan.ts`) POSTs `{from, to}` to `/api/route-plan`
+2. Once both ends are set, `fetchRoutePlan` (`src/api/routePlan.ts`) GETs `/api/route-plan?from=lat,lon&to=lat,lon` (coordinates rounded to 4 decimals so repeat trips hit Vercel's edge cache)
 3. The server runs the routing engine (`src/routing/planRoutes.ts`): OTP candidates (presets, then via-waypoint detours), measured against the prebuilt OSM layers, and `selectCards` picks the cards
 4. The client draws the shown routes, selects the card holding Fewest lights, and fetches roadworks (`useRoadworks`, from `src/services/hazards.ts`) and city bikes for display
 
@@ -45,7 +45,7 @@ Pure TypeScript — no DOM or Node APIs — so the endpoint, the calibration san
 ### Backend (`api/`)
 
 Vercel functions (pinned to `arn1` in `vercel.json`):
-- `api/route-plan.ts` — POST, validates the trip, runs `planRoutes()` with layers from `data/osm-layers.json` (shipped via `includeFiles`), returns only the routes shown on cards. Errors are `{ error, code }` (`RoutePlanErrorCode` in `src/routing/types.ts`); the client shows `planErrors.<code>` from the locales
+- `api/route-plan.ts` — GET (edge-cached 6 h unless partial; a deployment clears it) or POST, validates the trip, runs `planRoutes()` with layers from `data/osm-layers.json` (shipped via `includeFiles`), returns only the routes shown on cards. Errors are `{ error, code }` (`RoutePlanErrorCode` in `src/routing/types.ts`); the client shows `planErrors.<code>` from the locales
 - `api/digitransit-geocode.ts`, `api/digitransit-reverse-geocode.ts` — GET geocoding proxies (validated, allow-listed params; autocomplete bounded to the data bbox)
 - `api/citybike-stations.ts` — GET city bike stations
 - `api/_lib/upstream.ts` — shared proxy helpers: Digitransit fetch with timeout, upstream failures → 502/504 without leaking the upstream body
@@ -63,7 +63,7 @@ Every file in `api/` deploys as a function except `_`-prefixed paths; `.vercelig
 - `src/api/digitransit.ts` — `parseLatLon`, geocoding autocomplete and reverse geocoding
 - `src/utils/routeGeometry.ts` — polyline decoding, display smoothing, bounds
 - `src/utils/recentSearches.ts` — localStorage-backed recent search history (max 10 entries)
-- `src/components/RouteMap.tsx` — MapLibre map (`react-map-gl/maplibre`): routes, tappable route-time labels, signal stops, city bikes, roadworks, pins, locate button; the sheet/panel footprint is the map's persistent padding
+- `src/components/RouteMap.tsx` — MapLibre map (`react-map-gl/maplibre`): routes, tappable route-time labels, signal stops, city bikes, roadworks, pins, locate button; the sheet/panel footprint is the map's persistent padding. Lazy-loaded (with `SearchPanel`) so the panel works before MapLibre arrives; route geometry is built once per plan and the selection switches by layer filter
 - `src/map/` — `mapStyle.ts` (OpenFreeMap basemap, cycleways emphasised, labels in the app language), `palette.ts` (reads colours from CSS tokens), `features.ts` (GeoJSON builders), `routeProgress.ts`, `worker.ts` (MapLibre worker URL for Vite)
 - `src/components/RouteOptions.tsx`, `RouteRibbon.tsx` — route rows as a radio group; the ribbon's length is the ride time, its colour the calm band, and its pips the traffic lights along the route
 - `src/components/TripPlanner.tsx`, `SearchPanel.tsx` — start/destination with swap; full-screen cmdk search with recents, coordinates and your location

@@ -111,4 +111,58 @@ describe('planRoutes', () => {
     }
     await expect(planRoutes(from, to, { otp: slow, layers })).rejects.toMatchObject({ code: 'TIMEOUT' })
   })
+
+  it('starts calm via routes as soon as the fastest preset is back, before the rest of round 1', async () => {
+    const otp = fakeOtp()
+    let releaseSafety!: () => void
+    const safetyGate = new Promise<void>((r) => (releaseSafety = r))
+    let calmBeforeSafety = false
+    let safetyDone = false
+    const gated: OtpCall = async (req) => {
+      const o = req.optimization
+      if ('triangle' in o && o.triangle.safety === 1) {
+        await safetyGate
+        safetyDone = true
+      }
+      if (req.via && !safetyDone) calmBeforeSafety = true
+      return otp(req)
+    }
+    const pending = planRoutes(from, to, { otp: gated, layers })
+    await new Promise((r) => setTimeout(r, 10))
+    releaseSafety()
+    const plan = await pending
+    expect(calmBeforeSafety).toBe(true)
+    expect(plan.routes.some((r) => r.generators.includes('via:calm'))).toBe(true)
+  })
+
+  it('aborts round-2 calls still running at the deadline and marks the plan partial', async () => {
+    const otp = fakeOtp()
+    const signals: AbortSignal[] = []
+    const hanging: OtpCall = async (req, signal) => {
+      if (!req.via) return otp(req)
+      signals.push(signal!)
+      return new Promise((_resolve, reject) => signal!.addEventListener('abort', () => reject(signal!.reason)))
+    }
+    const cfg = { ...DEFAULT_CONFIG, otp: { ...DEFAULT_CONFIG.otp, deadlineMs: 150 } }
+    const started = Date.now()
+    const plan = await planRoutes(from, to, { otp: hanging, layers, cfg })
+    expect(Date.now() - started).toBeLessThan(1000)
+    expect(plan.meta.partial).toBe(true)
+    expect(signals.length).toBeGreaterThan(0)
+    expect(signals.every((s) => s.aborted)).toBe(true)
+    expect(plan.routes.length).toBeGreaterThan(0)
+  })
+
+  it('lists generators in request order whatever order the answers arrive in', async () => {
+    const otp = fakeOtp()
+    // The fastest preset answers last
+    const reversed: OtpCall = async (req) => {
+      const o = req.optimization
+      if ('triangle' in o && o.triangle.time === 1) await new Promise((r) => setTimeout(r, 20))
+      return otp(req)
+    }
+    const plan = await planRoutes(from, to, { otp: reversed, layers })
+    expect(plan.routes.find((r) => r.id === STRAIGHT.id)!.generators).toEqual(['preset:fastest', 'preset:balanced'])
+    expect(plan.routes[0].id).toBe(STRAIGHT.id)
+  })
 })

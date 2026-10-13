@@ -142,8 +142,17 @@ export function findMajorCrossings(
   layers: Layers,
   cfg: RoutingConfig,
 ): MajorCrossing[] {
-  const nearby = new Set<RoadSegment>()
-  for (const p of poly) for (const seg of layers.roadSegments.near(p, CROSS_SEARCH_M)) nearby.add(seg)
+  // Per nearby road segment, the route vertices that may lie in its range. Only those are walked:
+  // walking every vertex for every segment made long routes cost seconds. The margin covers
+  // the ±2 m `along` slack, so every in-range vertex is listed.
+  const nearby = new Map<RoadSegment, number[]>()
+  for (let i = 0; i < poly.length; i++) {
+    for (const seg of layers.roadSegments.near(poly[i], CROSS_SEARCH_M + 3)) {
+      const indices = nearby.get(seg)
+      if (indices) indices.push(i)
+      else nearby.set(seg, [i])
+    }
+  }
 
   const overlapping = (fromM: number, toM: number) =>
     segments.filter((s) => s.startM + s.lengthM >= fromM - 5 && s.startM <= toM + 5)
@@ -151,7 +160,7 @@ export function findMajorCrossings(
     overlapping(fromM, toM).some((s) => s.onRoad === road || s.gradeSeparated)
 
   const found: MajorCrossing[] = []
-  for (const seg of nearby) {
+  for (const [seg, indices] of nearby) {
     if (seg.road.grade) continue
     const [ex, ey] = toLocal(seg.b, seg.a)
     const segLen = Math.hypot(ex, ey)
@@ -159,7 +168,11 @@ export function findMajorCrossings(
     let lastSide = 0
     let lastIdx = -1
     let lastDist = 0
-    for (let i = 0; i < poly.length; i++) {
+    let prev = -1
+    for (const i of indices) {
+      // Skipped vertices are out of this segment's range
+      if (i !== prev + 1) lastSide = 0
+      prev = i
       const [px, py] = toLocal(poly[i], seg.a)
       const along = (px * ex + py * ey) / segLen // position along the road segment, metres
       const offset = (ex * py - ey * px) / segLen // signed distance from the road line
