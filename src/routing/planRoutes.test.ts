@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest'
 import { DEFAULT_CONFIG } from './config'
 import { hashGeometry } from './geo'
 import type { OtpCall } from './otpClient'
-import { planRoutes } from './planRoutes'
+import { PlanError, planRoutes } from './planRoutes'
 import { at, line, makeLayers, pathStep } from './testHelpers'
 import type { Candidate, LatLng, OtpRequest } from './types'
 
@@ -82,8 +82,33 @@ describe('planRoutes', () => {
     expect(otp.requests.every((r) => !r.via)).toBe(true)
   })
 
-  it('throws when no preset finds a route', async () => {
+  it('fails with NO_ROUTE when OTP answers but finds no route', async () => {
     const none: OtpCall = async () => null
-    await expect(planRoutes(from, to, { otp: none, layers })).rejects.toThrow('No route found')
+    await expect(planRoutes(from, to, { otp: none, layers })).rejects.toMatchObject({ code: 'NO_ROUTE' })
+  })
+
+  it('fails with NO_ROUTE when some calls fail and the rest find nothing', async () => {
+    let n = 0
+    const mixed: OtpCall = async () => {
+      if (n++ === 0) throw new Error('OTP HTTP 500')
+      return null
+    }
+    await expect(planRoutes(from, to, { otp: mixed, layers })).rejects.toMatchObject({ code: 'NO_ROUTE' })
+  })
+
+  it('fails with UPSTREAM_UNAVAILABLE when every call errors', async () => {
+    const down: OtpCall = async () => {
+      throw new Error('OTP HTTP 503')
+    }
+    const error = await planRoutes(from, to, { otp: down, layers }).catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(PlanError)
+    expect(error).toMatchObject({ code: 'UPSTREAM_UNAVAILABLE' })
+  })
+
+  it('fails with TIMEOUT when every call times out', async () => {
+    const slow: OtpCall = async () => {
+      throw new DOMException('The operation timed out.', 'TimeoutError')
+    }
+    await expect(planRoutes(from, to, { otp: slow, layers })).rejects.toMatchObject({ code: 'TIMEOUT' })
   })
 })

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AlertCircle, Loader2 } from 'lucide-react'
-import { defaultCard, fetchRoutePlan, type RoutePlan } from './api/routePlan'
+import { defaultCard, fetchRoutePlan, RETRYABLE, RoutePlanError, type PlanFailure, type RoutePlan } from './api/routePlan'
 import { RouteMap, type MapInsets } from './components/RouteMap'
 import { RouteOptions, RouteOptionsSkeleton } from './components/RouteOptions'
 import { SearchPanel } from './components/SearchPanel'
@@ -24,7 +24,7 @@ type Endpoints = { from: LatLng; to: LatLng }
 
 type PlanState = {
   loading: boolean
-  error: string | null
+  error: PlanFailure | null
   plan: RoutePlan | null
   /** Route id of the selected card. */
   selectedId: string | null
@@ -80,15 +80,22 @@ function App() {
 
   // --- Planning: runs whenever both ends are set and differ from the last plan ---
 
-  const requestRef = useRef(0)
+  const requestRef = useRef<AbortController | null>(null)
   const plannedKey = useRef<string | null>(null)
 
   const plan = useCallback(async (start: AddressOption, end: AddressOption) => {
-    const request = ++requestRef.current
+    // A newer trip supersedes the one in flight
+    requestRef.current?.abort()
+    const request = new AbortController()
+    requestRef.current = request
     plannedKey.current = tripKey(start, end)
     setPlanState((prev) => ({ ...prev, loading: true, error: null }))
     try {
-      const result = await fetchRoutePlan({ lat: start.lat, lon: start.lon }, { lat: end.lat, lon: end.lon })
+      const result = await fetchRoutePlan(
+        { lat: start.lat, lon: start.lon },
+        { lat: end.lat, lon: end.lon },
+        request.signal,
+      )
       if (request !== requestRef.current) return
       for (const o of [start, end]) {
         if (o.group !== 'Location') addRecentSearch({ label: o.label, lat: o.lat, lon: o.lon })
@@ -106,7 +113,7 @@ function App() {
       plannedKey.current = null
       setPlanState({
         loading: false,
-        error: error instanceof Error ? error.message : String(error),
+        error: error instanceof RoutePlanError ? error.code : 'SERVER_ERROR',
         plan: null,
         selectedId: null,
         endpoints: null,
@@ -168,6 +175,7 @@ function App() {
 
   const userLocation = geolocation.coords ? ([geolocation.coords.lat, geolocation.coords.lon] as LatLng) : undefined
   const showFindButton = !hasPlan
+  const canRetry = planState.error !== null && RETRYABLE.has(planState.error)
 
   return (
     <div className="relative h-dvh w-full overflow-hidden bg-background">
@@ -246,7 +254,7 @@ function App() {
                 className="h-11 w-full"
               >
                 {planState.loading && <Loader2 className="size-4 animate-spin" />}
-                {planState.loading ? t('routes.findingRoutes') : t('routes.findRoutes')}
+                {planState.loading ? t('routes.findingRoutes') : canRetry ? t('routes.retry') : t('routes.findRoutes')}
               </Button>
             )}
           </div>
@@ -255,7 +263,7 @@ function App() {
             <Alert variant="destructive" className="mt-3">
               <AlertCircle />
               <AlertTitle>{t('routes.error')}</AlertTitle>
-              <AlertDescription>{planState.error}</AlertDescription>
+              <AlertDescription>{t(`planErrors.${planState.error}`)}</AlertDescription>
             </Alert>
           )}
 

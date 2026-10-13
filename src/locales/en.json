@@ -40,8 +40,20 @@
     "calmBand_busy": "Busy",
     "calmScore": "Calm score {{index}} of 100",
     "ribbonLabel": "{{minutes}} min ride, {{lights}}",
-    "error": "Couldn't find routes. Check both addresses and try again.",
-    "noRoutes": "No bike routes between these places. Try addresses closer to the Helsinki region."
+    "error": "Couldn't find routes",
+    "retry": "Try again"
+  },
+  "planErrors": {
+    "NO_ROUTE": "There's no bike route between these places. Try moving the start or destination closer to a street or path.",
+    "OUT_OF_AREA": "Routes are only available in Helsinki, Espoo, Vantaa and Kauniainen.",
+    "TOO_SHORT": "The start and destination are too close together.",
+    "TOO_LONG": "The start and destination are more than 40 km apart. Pick places closer together.",
+    "UPSTREAM_UNAVAILABLE": "The route service isn't responding right now. Try again in a moment.",
+    "TIMEOUT": "Finding routes took too long. Try again.",
+    "SERVER_ERROR": "Something went wrong on our side. Try again.",
+    "BAD_REQUEST": "Something went wrong with this trip. Choose the start and destination again.",
+    "NETWORK": "Couldn't reach the server. Check your connection and try again.",
+    "OFFLINE": "You're offline. Connect to the internet and try again."
   },
   "roadworks": {
     "checking": "Checking roadworks…",

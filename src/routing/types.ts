@@ -104,3 +104,15 @@ export type RoutePlan = {
     configVersion: string
   }
 }
+
+/** Why the engine could not plan: OTP found nothing, or OTP could not be reached in time. */
+export type PlanErrorCode = 'NO_ROUTE' | 'UPSTREAM_UNAVAILABLE' | 'TIMEOUT'
+
+/** Error codes `/api/route-plan` answers with; the client shows a message for each. */
+export type RoutePlanErrorCode =
+  | PlanErrorCode
+  | 'BAD_REQUEST'
+  | 'OUT_OF_AREA'
+  | 'TOO_SHORT'
+  | 'TOO_LONG'
+  | 'SERVER_ERROR'

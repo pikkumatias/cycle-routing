@@ -30,7 +30,7 @@ Create a local environment file (not committed to git) with your Digitransit API
 ```bash
 # .env.local
 DIGITRANSIT_API_KEY=your-key-here          # used by serverless functions in api/
-VITE_DIGITRANSIT_API_KEY=your-key-here     # exposed to browser for HSL map tiles
+VITE_DIGITRANSIT_API_KEY=your-key-here     # optional: only the dev-only sandbox review page (HSL raster tiles)
 ```
 
 ---
@@ -102,3 +102,16 @@ DEBUG_DIGITRANSIT=1 npm run route
 ## Deployment
 
 Deployed on **Vercel** (functions pinned to `arn1`, Stockholm, via `vercel.json`). The `api/` directory contains the serverless functions: `route-plan` runs the routing engine (`src/routing/`) server-side, the others proxy Digitransit geocoding and city bike data, keeping the API key out of the browser bundle.
+
+Shared helpers live in `api/_lib/`; Vercel doesn't deploy `_`-prefixed paths as functions.
+
+### Rate limiting
+
+Each `/api/route-plan` request makes 3–7 Digitransit calls on the project's key, so the API is rate-limited per IP with two Vercel Firewall rules (Project → Firewall → Configure → New Rule). They live in the dashboard, not in this repo:
+
+| Rule | If | Then |
+|---|---|---|
+| Route planning | Request Path **equals** `/api/route-plan` | Rate Limit: Fixed Window, **20 requests / 60 s**, key **IP Address**, action **Too Many Requests (429)** |
+| Other API | Request Path **starts with** `/api/` | Rate Limit: Fixed Window, **120 requests / 60 s**, key **IP Address**, action **Too Many Requests (429)** |
+
+Autocomplete fires one request per pause in typing, so the general limit is generous; a normal session plans a handful of trips. The app shows a 429 as "the route service isn't responding, try again in a moment".

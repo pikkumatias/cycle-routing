@@ -65,6 +65,18 @@ describe('parsePlanResponse', () => {
   it('throws on GraphQL errors even with HTTP 200', () => {
     expect(() => parsePlanResponse({ errors: [{ message: 'bad input' }] })).toThrow(/bad input/)
   })
+
+  it('keeps a plan that arrives alongside non-fatal GraphQL errors', () => {
+    const json = { ...planJson([[[60.19, 24.94], [60.18, 24.94]]]), errors: [{ message: 'deprecated field' }] }
+    expect(parsePlanResponse(json)?.durationSec).toBe(900)
+  })
+
+  it('returns null when OTP reports a routing error such as no connection', () => {
+    const json = {
+      data: { planConnection: { edges: [], routingErrors: [{ code: 'NO_DIRECT_MODE_CONNECTION', description: '…' }] } },
+    }
+    expect(parsePlanResponse(json)).toBeNull()
+  })
 })
 
 describe('createOtpClient', () => {

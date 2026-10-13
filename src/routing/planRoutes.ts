@@ -6,7 +6,18 @@ import type { OtpCall } from './otpClient.js'
 import { profileRoute } from './profile.js'
 import { selectCards } from './select.js'
 import { trimSpur } from './spur.js'
-import type { Candidate, LatLng, LatLon, ProfiledCandidate, RoutePlan } from './types.js'
+import type { Candidate, LatLng, LatLon, PlanErrorCode, ProfiledCandidate, RoutePlan } from './types.js'
+
+export class PlanError extends Error {
+  readonly code: PlanErrorCode
+  constructor(code: PlanErrorCode, message: string) {
+    super(message)
+    this.name = 'PlanError'
+    this.code = code
+  }
+}
+
+const isTimeout = (error: unknown) => error instanceof Error && error.name === 'TimeoutError'
 
 export type PlanDeps = {
   otp: OtpCall
@@ -45,14 +56,16 @@ export async function planRoutes(from: LatLon, to: LatLon, deps: PlanDeps): Prom
   const pool = new Map<string, ProfiledCandidate>()
   let calls = 0
   let failed = 0
+  let timedOut = 0
 
   const run = async (requests: GeneratorRequest[]) => {
     const results = await mapLimit(requests, cfg.otp.concurrency, async (r) => {
       calls++
       try {
         return { request: r, candidate: await deps.otp({ from, to, via: r.via, optimization: r.optimization }) }
-      } catch {
+      } catch (error) {
         failed++
+        if (isTimeout(error)) timedOut++
         return { request: r, candidate: null }
       }
     })
@@ -70,7 +83,12 @@ export async function planRoutes(from: LatLon, to: LatLon, deps: PlanDeps): Prom
   }
 
   await run(cfg.generators.round1)
-  if (pool.size === 0) throw new Error('No route found')
+  if (pool.size === 0) {
+    // OTP answered at least once and found nothing: a real "no route". Every call failing is an outage.
+    if (failed < calls) throw new PlanError('NO_ROUTE', 'No route found')
+    if (timedOut === failed) throw new PlanError('TIMEOUT', 'Route planning timed out')
+    throw new PlanError('UPSTREAM_UNAVAILABLE', 'Route planning service unavailable')
+  }
 
   let partial = false
   if (now() - start <= cfg.otp.deadlineMs / 2) {

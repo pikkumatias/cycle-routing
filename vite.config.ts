@@ -22,7 +22,8 @@ function vercelApiDevPlugin(): Plugin {
         const pathPart = qIdx === -1 ? url : url.slice(0, qIdx)
         const queryStr = qIdx === -1 ? '' : url.slice(qIdx + 1)
         const handlerName = pathPart.slice('/api/'.length)
-        if (!handlerName) return next()
+        // Like Vercel, `_`-prefixed paths (shared helpers in api/_lib) are not functions
+        if (!handlerName || handlerName.startsWith('_')) return next()
 
         try {
           const mod = await server.ssrLoadModule(`/api/${handlerName}.ts`)

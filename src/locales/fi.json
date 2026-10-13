@@ -40,8 +40,20 @@
     "calmBand_busy": "Vilkas",
     "calmScore": "Rauhallisuus {{index}}/100",
     "ribbonLabel": "{{minutes}} min ajo, {{lights}}",
-    "error": "Reittejä ei löytynyt. Tarkista osoitteet ja yritä uudelleen.",
-    "noRoutes": "Paikkojen välille ei löytynyt pyöräreittiä. Kokeile osoitteita lähempää pääkaupunkiseutua."
+    "error": "Reittejä ei löytynyt",
+    "retry": "Yritä uudelleen"
+  },
+  "planErrors": {
+    "NO_ROUTE": "Paikkojen välille ei löydy pyöräreittiä. Siirrä lähtöpaikkaa tai määränpäätä lähemmäs katua tai polkua.",
+    "OUT_OF_AREA": "Reittejä voi hakea vain Helsingissä, Espoossa, Vantaalla ja Kauniaisissa.",
+    "TOO_SHORT": "Lähtöpaikka ja määränpää ovat liian lähellä toisiaan.",
+    "TOO_LONG": "Lähtöpaikan ja määränpään välillä on yli 40 km. Valitse lähempänä olevat paikat.",
+    "UPSTREAM_UNAVAILABLE": "Reittipalvelu ei vastaa juuri nyt. Yritä hetken päästä uudelleen.",
+    "TIMEOUT": "Reittien haku kesti liian kauan. Yritä uudelleen.",
+    "SERVER_ERROR": "Jotain meni vikaan meidän päässämme. Yritä uudelleen.",
+    "BAD_REQUEST": "Matkan tiedoissa oli jotain vikaa. Valitse lähtöpaikka ja määränpää uudelleen.",
+    "NETWORK": "Palvelimeen ei saatu yhteyttä. Tarkista yhteys ja yritä uudelleen.",
+    "OFFLINE": "Laite on offline-tilassa. Yhdistä verkkoon ja yritä uudelleen."
   },
   "roadworks": {
     "checking": "Tarkistetaan tietöitä…",
