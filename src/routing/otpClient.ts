@@ -53,8 +53,10 @@ type RawPlan = {
 /** Turn a planConnection response into a candidate (no generators yet), or null. */
 export function parsePlanResponse(json: unknown): Candidate | null {
   const raw = json as RawPlan
-  if (raw.errors?.length) throw new Error(`OTP error: ${raw.errors.map((e) => e.message).join('; ')}`)
   const node = raw.data?.planConnection?.edges?.[0]?.node
+  // GraphQL errors only matter when they cost us the plan; OTP's own `routingErrors`
+  // (e.g. NO_DIRECT_MODE_CONNECTION) arrive with empty edges and mean "no route".
+  if (!node && raw.errors?.length) throw new Error(`OTP error: ${raw.errors.map((e) => e.message).join('; ')}`)
   if (!node?.legs?.length || typeof node.duration !== 'number') return null
 
   const legs = node.legs.map((l) => polyline.decode(l.legGeometry?.points ?? ''))

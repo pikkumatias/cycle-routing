@@ -1,7 +1,9 @@
 // @vitest-environment node
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { readFile } from 'node:fs/promises'
 import polyline from '@mapbox/polyline'
 import type { OsmLayersFile } from '../src/routing/layers'
+import { mockRes } from './_lib/testing'
 
 const layerFile: OsmLayersFile = {
   version: 1,
@@ -44,31 +46,19 @@ function otpResponse(points: Array<[number, number]>, duration: number) {
   }
 }
 
-function mockRes() {
-  const res = {
-    statusCode: 200,
-    body: undefined as unknown,
-    headers: {} as Record<string, string>,
-    setHeader(name: string, value: string) {
-      res.headers[name] = value
-    },
-    status(code: number) {
-      res.statusCode = code
-      return res
-    },
-    json(data: unknown) {
-      res.body = data
-      return res
-    },
-  }
+async function call(method: string, body?: unknown) {
+  return callWith({ method, body })
+}
+
+async function callWith(req: { method: string; body: unknown }) {
+  const { default: handler } = await import('./route-plan')
+  const res = mockRes()
+  await handler(req, res)
   return res
 }
 
-async function call(method: string, body?: unknown) {
-  const { default: handler } = await import('./route-plan')
-  const res = mockRes()
-  await handler({ method, body }, res)
-  return res
+const noRouteResponse = {
+  data: { planConnection: { edges: [], routingErrors: [{ code: 'NO_DIRECT_MODE_CONNECTION', description: 'none' }] } },
 }
 
 beforeEach(() => {
@@ -85,24 +75,82 @@ describe('POST /api/route-plan', () => {
 
   it('requires the API key', async () => {
     vi.stubEnv('DIGITRANSIT_API_KEY', '')
-    expect((await call('POST', { from, to })).statusCode).toBe(500)
+    const res = await call('POST', { from, to })
+    expect(res.statusCode).toBe(500)
+    expect(res.body).toMatchObject({ code: 'SERVER_ERROR' })
   })
 
   it.each([
-    ['missing points', {}],
-    ['non-numeric coordinates', { from: { lat: '60.1', lon: 24.9 }, to }],
-    ['non-finite coordinates', { from: { lat: Infinity, lon: 24.9 }, to }],
-    ['a point outside the region', { from: { lat: 61.5, lon: 23.8 }, to }],
-    ['points closer than 50 m', { from, to: { lat: from.lat + 0.0001, lon: from.lon } }],
-  ])('returns 400 for %s', async (_label, body) => {
-    expect((await call('POST', body)).statusCode).toBe(400)
+    ['missing points', {}, 'BAD_REQUEST'],
+    ['no body', undefined, 'BAD_REQUEST'],
+    ['non-numeric coordinates', { from: { lat: '60.1', lon: 24.9 }, to }, 'BAD_REQUEST'],
+    ['non-finite coordinates', { from: { lat: Infinity, lon: 24.9 }, to }, 'BAD_REQUEST'],
+    ['a point outside the region', { from: { lat: 61.5, lon: 23.8 }, to }, 'OUT_OF_AREA'],
+    ['points closer than 50 m', { from, to: { lat: from.lat + 0.0001, lon: from.lon } }, 'TOO_SHORT'],
+    ['points more than 40 km apart', { from: { lat: 60.1, lon: 24.5 }, to: { lat: 60.4, lon: 25.25 } }, 'TOO_LONG'],
+  ])('returns 400 for %s', async (_label, body, code) => {
+    const res = await call('POST', body)
+    expect(res.statusCode).toBe(400)
+    expect(res.body).toMatchObject({ code })
   })
 
-  it('returns 502 when no route can be planned', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => new Response('down', { status: 503 })))
+  it('returns 400 when the JSON body cannot be parsed', async () => {
+    const req = {
+      method: 'POST',
+      get body(): unknown {
+        throw new SyntaxError('Unexpected token')
+      },
+    }
+    const res = await callWith(req)
+    expect(res.statusCode).toBe(400)
+    expect(res.body).toMatchObject({ code: 'BAD_REQUEST' })
+  })
+
+  it('accepts a body that arrives as a JSON string', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify(noRouteResponse))))
+    const res = await call('POST', JSON.stringify({ from, to }))
+    expect(res.body).toMatchObject({ code: 'NO_ROUTE' })
+  })
+
+  it('returns 422 NO_ROUTE when OTP finds no route', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify(noRouteResponse))))
     const res = await call('POST', { from, to })
-    expect(res.statusCode).toBe(502)
-    expect(res.body).toMatchObject({ error: 'No route could be planned.' })
+    expect(res.statusCode).toBe(422)
+    expect(res.body).toMatchObject({ code: 'NO_ROUTE' })
+  })
+
+  it('returns 503 UPSTREAM_UNAVAILABLE when Digitransit is down, without leaking its response', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('secret upstream body', { status: 503 })))
+    const res = await call('POST', { from, to })
+    expect(res.statusCode).toBe(503)
+    expect(res.body).toMatchObject({ code: 'UPSTREAM_UNAVAILABLE' })
+    expect(JSON.stringify(res.body)).not.toContain('secret upstream body')
+  })
+
+  it('returns 504 TIMEOUT when every OTP call times out', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new DOMException('The operation timed out.', 'TimeoutError')
+      }),
+    )
+    const res = await call('POST', { from, to })
+    expect(res.statusCode).toBe(504)
+    expect(res.body).toMatchObject({ code: 'TIMEOUT' })
+  })
+
+  it('recovers after the layer file fails to load once', async () => {
+    vi.resetModules()
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.mocked(readFile).mockRejectedValueOnce(new Error('EIO'))
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify(noRouteResponse))))
+    const first = await call('POST', { from, to })
+    expect(first.statusCode).toBe(500)
+    expect(first.body).toMatchObject({ code: 'SERVER_ERROR' })
+    const second = await call('POST', { from, to })
+    expect(second.body).toMatchObject({ code: 'NO_ROUTE' })
   })
 
   it('returns cards and only the routes shown on them, with encoded legs', async () => {

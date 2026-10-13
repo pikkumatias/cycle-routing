@@ -45,11 +45,12 @@ Pure TypeScript — no DOM or Node APIs — so the endpoint, the calibration san
 ### Backend (`api/`)
 
 Vercel functions (pinned to `arn1` in `vercel.json`):
-- `api/route-plan.ts` — POST, validates the trip, runs `planRoutes()` with layers from `data/osm-layers.json` (shipped via `includeFiles`), returns only the routes shown on cards
-- `api/digitransit-geocode.ts`, `api/digitransit-reverse-geocode.ts` — GET geocoding proxies
+- `api/route-plan.ts` — POST, validates the trip, runs `planRoutes()` with layers from `data/osm-layers.json` (shipped via `includeFiles`), returns only the routes shown on cards. Errors are `{ error, code }` (`RoutePlanErrorCode` in `src/routing/types.ts`); the client shows `planErrors.<code>` from the locales
+- `api/digitransit-geocode.ts`, `api/digitransit-reverse-geocode.ts` — GET geocoding proxies (validated, allow-listed params; autocomplete bounded to the data bbox)
 - `api/citybike-stations.ts` — GET city bike stations
+- `api/_lib/upstream.ts` — shared proxy helpers: Digitransit fetch with timeout, upstream failures → 502/504 without leaking the upstream body
 
-Every file in `api/` deploys as a function; `.vercelignore` keeps `*.test.ts` out.
+Every file in `api/` deploys as a function except `_`-prefixed paths; `.vercelignore` keeps `*.test.ts` and `api/_lib/testing.ts` out. Rate limiting is two Vercel Firewall rules set in the dashboard (README, Deployment).
 
 ### Offline tooling
 
