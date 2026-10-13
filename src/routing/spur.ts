@@ -6,7 +6,8 @@ import type { LatLng, OtpStep } from './types.js'
  * Remove the out-and-back stub a via point can cause: when the waypoint sits off the
  * natural path, the route rides to it and returns the same way. The stub shows up as the
  * end of leg 1 matching the start of leg 2 in reverse. Returns the trimmed legs and steps
- * (the steps either side of the via point lose the stub's length) and the removed length
+ * (the stub's length comes off the steps next to the via point, across as many steps as it
+ * spans, so later steps stay aligned with the geometry) and the removed length
  * (one direction), or null when the stub is longer than `spur.maxM`, since such a route is
  * just a detour to an arbitrary point.
  */
@@ -34,13 +35,20 @@ export function trimSpur(
   if (trimmedM > maxM) return null
   return {
     legs: [first.slice(0, first.length - matched), second.slice(matched), ...rest],
-    legSteps: legSteps.map((steps, i) => shortenStep(steps, i === 0 ? steps.length - 1 : i === 1 ? 0 : -1, trimmedM)),
+    legSteps: legSteps.map((steps, i) => (i === 0 ? shorten(steps, trimmedM, 'end') : i === 1 ? shorten(steps, trimmedM, 'start') : steps)),
     trimmedM,
   }
 }
 
-/** Copy of `steps` with step `index` shortened by `byM` (no-op for index −1). */
-function shortenStep(steps: OtpStep[], index: number, byM: number): OtpStep[] {
-  if (index < 0 || index >= steps.length) return steps
-  return steps.map((s, i) => (i === index ? { ...s, distance: Math.max(0, s.distance - byM) } : s))
+/** Copy of `steps` with `byM` metres removed from its `end` or `start`, step by step. */
+function shorten(steps: OtpStep[], byM: number, from: 'start' | 'end'): OtpStep[] {
+  const out = steps.map((s) => ({ ...s }))
+  let left = byM
+  for (let k = 0; k < out.length && left > 0; k++) {
+    const s = out[from === 'end' ? out.length - 1 - k : k]
+    const cut = Math.min(s.distance, left)
+    s.distance -= cut
+    left -= cut
+  }
+  return out
 }

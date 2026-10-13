@@ -2,7 +2,7 @@
 import { describe, it, expect } from 'vitest'
 import { DEFAULT_CONFIG } from './config'
 import { trimSpur } from './spur'
-import { line, pathStep } from './testHelpers'
+import { line, pathStep, step } from './testHelpers'
 
 const steps = [[pathStep(500), pathStep(100)], [pathStep(100), pathStep(500)]]
 
@@ -31,5 +31,20 @@ describe('trimSpur', () => {
   it('rejects routes whose stub is longer than the limit', () => {
     const legs = [line([[0, 0], [500, 0], [500, 200]]), line([[500, 200], [500, 0], [1000, 0]])]
     expect(trimSpur(legs, steps, DEFAULT_CONFIG)).toBeNull()
+  })
+
+  it('takes a stub spanning several steps off all of them, so later steps stay aligned', () => {
+    // The 60 m stub is two short steps on each side of the via point (30 m + 40 m)
+    const legs = [line([[0, 0], [500, 0], [500, 60]]), line([[500, 60], [500, 0], [1000, 0]])]
+    const multi = [
+      [pathStep(500), step(40, 'Umpikuja'), step(30, 'Pätkä')],
+      [step(30, 'Pätkä'), step(40, 'Umpikuja'), pathStep(500)],
+    ]
+    const result = trimSpur(legs, multi, DEFAULT_CONFIG)!
+    expect(result.legSteps[0].map((s) => Math.round(s.distance))).toEqual([500, 10, 0])
+    expect(result.legSteps[1].map((s) => Math.round(s.distance))).toEqual([0, 10, 500])
+    // Steps add up to the trimmed geometry again
+    const total = result.legSteps.flat().reduce((sum, s) => sum + s.distance, 0)
+    expect(total).toBeCloseTo(500 + 10 + 10 + 500, 0)
   })
 })

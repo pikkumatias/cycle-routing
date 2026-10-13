@@ -19,7 +19,8 @@ Bike-only OTP returns one itinerary per request, so variety comes from the reque
 
 Round-2 waypoints are snapped onto the calm network (nodes of car-free paths away from major
 roads) — raw offsets land in bays and water. A via route that rides out to the waypoint and
-back has the stub trimmed; stubs over 150 m discard the route. Identical geometries from
+back has the stub trimmed (its length comes off as many OTP steps as it spans, so the steps
+stay aligned with the geometry); stubs over 150 m discard the route. Identical geometries from
 different generators merge. Round 2 starts as soon as `preset:fastest` is back (it only needs
 that route), without waiting for the other presets. It is skipped when the fastest route took
 over half of the 8 s deadline, and round-2 calls still running at the deadline are aborted;
@@ -78,6 +79,10 @@ Clamped to 0–100 and **absolute**: the same route always gets the same number.
 4. Roles are reassigned over the shown cards by metric, so a card never claims a category
    another shown card beats; a card left with no role is dropped. Categories a card also
    wins become badges.
+5. **Outside the data** — a route that rides more than 100 m outside the OSM data area
+   (`profile.outsideM`) can't take part in Fewest lights or Calm: nothing is known there, so
+   it would look better than it is. Gains are measured against routes inside the area only;
+   if Fastest itself leaves it, no lights or calm claims are made at all.
 
 **Distinct** (`similarity.ts`): at least max(400 m, 20 % of its length) of a route lies more
 than 25 m from every shown route. A near-duplicate can still get a card when it clears
@@ -89,7 +94,9 @@ than 25 m from every shown route. A near-duplicate can still get a card when it 
 extract (lat 60.11–60.35, lon 24.59–25.24): stopping signals, major roads (class,
 name, maxspeed, lanes, painted lane, tram, bridge/tunnel, signals on the road), calm-network
 nodes every 150 m, and non-major bridges/tunnels. `data/meta.json` records the OSM
-timestamp. The API rejects trips outside the file's bbox.
+timestamp. The API rejects trips outside the file's bbox (autocomplete doesn't offer places
+outside it either); routes between two points inside can still leave it (see Selection, 5).
+Covering more of north Vantaa and west Espoo needs a larger source than the BBBike extract.
 
 ## File map
 
