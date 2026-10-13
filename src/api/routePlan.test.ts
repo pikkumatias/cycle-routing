@@ -43,6 +43,17 @@ afterEach(() => {
 })
 
 describe('fetchRoutePlan', () => {
+  it('asks with a GET whose coordinates are rounded to ~10 m, so repeat trips share a URL', async () => {
+    const fetchMock = vi.fn(async () => json(planBody))
+    vi.stubGlobal('fetch', fetchMock)
+    await fetchRoutePlan({ lat: 60.192059, lon: 24.945831 }, { lat: 60.1698571, lon: 24.9383 + ++n * 0.001 })
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
+    expect(init.method ?? 'GET').toBe('GET')
+    const params = new URL(url, 'http://localhost').searchParams
+    expect(params.get('from')).toBe('60.1921,24.9458')
+    expect(params.get('to')).toMatch(/^60\.1699,24\.\d{4}$/)
+  })
+
   it('decodes route legs and caches the plan', async () => {
     const fetchMock = vi.fn(async () => json(planBody))
     vi.stubGlobal('fetch', fetchMock)

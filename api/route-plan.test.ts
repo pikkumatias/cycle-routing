@@ -50,7 +50,7 @@ async function call(method: string, body?: unknown) {
   return callWith({ method, body })
 }
 
-async function callWith(req: { method: string; body: unknown }) {
+async function callWith(req: { method: string; body?: unknown; query?: Record<string, string | string[] | undefined> }) {
   const { default: handler } = await import('./route-plan')
   const res = mockRes()
   await handler(req, res)
@@ -66,11 +66,36 @@ beforeEach(() => {
   vi.unstubAllGlobals()
 })
 
-describe('POST /api/route-plan', () => {
+describe('/api/route-plan', () => {
   it('rejects other methods', async () => {
-    const res = await call('GET')
+    const res = await call('PUT')
     expect(res.statusCode).toBe(405)
-    expect(res.headers.Allow).toBe('POST')
+    expect(res.headers.Allow).toBe('GET, POST')
+  })
+
+  it('plans a GET trip from query coordinates and lets the edge cache the answer', async () => {
+    const straight: Array<[number, number]> = [[from.lat, from.lon], [to.lat, to.lon]]
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify(otpResponse(straight, 900)))))
+    const res = await callWith({ method: 'GET', query: { from: `${from.lat},${from.lon}`, to: `${to.lat},${to.lon}` } })
+    expect(res.statusCode).toBe(200)
+    expect(res.headers['Cache-Control']).toMatch(/s-maxage=\d+/)
+  })
+
+  it.each([
+    ['missing to', { from: '60.19,24.94' }],
+    ['one number', { from: '60.19', to: '60.17,24.93' }],
+    ['text', { from: 'home', to: '60.17,24.93' }],
+  ])('returns 400 for a GET with %s', async (_label, query) => {
+    const res = await callWith({ method: 'GET', query })
+    expect(res.statusCode).toBe(400)
+    expect(res.body).toMatchObject({ code: 'BAD_REQUEST' })
+  })
+
+  it('never caches an error', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify(noRouteResponse))))
+    const res = await callWith({ method: 'GET', query: { from: `${from.lat},${from.lon}`, to: `${to.lat},${to.lon}` } })
+    expect(res.statusCode).toBe(422)
+    expect(res.headers['Cache-Control']).toBe('no-store')
   })
 
   it('requires the API key', async () => {

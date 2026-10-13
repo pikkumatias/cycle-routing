@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AlertCircle, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -11,9 +11,8 @@ import {
   type PlanFailure,
   type RoutePlan,
 } from './api/routePlan'
-import { RouteMap, type MapInsets } from './components/RouteMap'
+import type { MapInsets } from './components/RouteMap'
 import { RouteOptions, RouteOptionsSkeleton } from './components/RouteOptions'
-import { SearchPanel } from './components/SearchPanel'
 import { TripPlanner, type TripField } from './components/TripPlanner'
 import { OptionsMenu } from './components/OptionsMenu'
 import { useBottomSheet } from './hooks/useBottomSheet'
@@ -42,6 +41,12 @@ type PlanState = {
 
 const toLatLng = (o: AddressOption | null): LatLng | undefined => (o ? [o.lat, o.lon] : undefined)
 const tripKey = (from: AddressOption, to: AddressOption) => `${from.lat},${from.lon}>${to.lat},${to.lon}`
+
+// The map (MapLibre, ~1 MB) and the place search load after the panel, so the trip planner is
+// usable first. The search is fetched right after the first paint, before anyone taps a field.
+const RouteMap = lazy(() => import('./components/RouteMap').then((m) => ({ default: m.RouteMap })))
+const loadSearchPanel = () => import('./components/SearchPanel')
+const SearchPanel = lazy(() => loadSearchPanel().then((m) => ({ default: m.SearchPanel })))
 
 /** A "Your location" start follows a new fix only past this distance, so jitter doesn't re-plan. */
 const LOCATION_MOVED_M = 30
@@ -73,6 +78,10 @@ function App() {
 
   const roadworks = useRoadworks(showRoadworks, planState.plan, planState.selectedId, planState.endpoints)
   const cityBikes = useCityBikes(showCityBikes, planState.endpoints)
+
+  useEffect(() => {
+    void loadSearchPanel()
+  }, [])
 
   // Locate on start only if already allowed; otherwise the browser asks when the person
   // first reaches for their location (the start field or the locate button)
@@ -300,37 +309,40 @@ function App() {
 
       {/* After the panel in the DOM so keyboard focus reaches the panel first; z-0 keeps it underneath */}
       <div className="absolute inset-0 z-0">
-        <RouteMap
-          routes={routes}
-          selectedId={planState.selectedId}
-          onSelectRoute={onSelectRoute}
-          from={toLatLng(from)}
-          to={toLatLng(to)}
-          userLocation={userLocation}
-          fromIsUser={from?.group === 'Location'}
-          onLocate={() => geolocation.request()}
-          hazards={showRoadworks && hasPlan ? roadworks.items : []}
-          cityBikes={showCityBikes && hasPlan ? cityBikes.items : []}
-          onSetOrigin={(o) => setField('origin', o)}
-          onSetDestination={(o) => setField('destination', o)}
-          insets={insets}
-          wide={wide}
-        />
+        <Suspense fallback={null}>
+          <RouteMap
+            routes={routes}
+            selectedId={planState.selectedId}
+            onSelectRoute={onSelectRoute}
+            from={toLatLng(from)}
+            to={toLatLng(to)}
+            userLocation={userLocation}
+            fromIsUser={from?.group === 'Location'}
+            onLocate={() => geolocation.request()}
+            hazards={showRoadworks && hasPlan ? roadworks.items : []}
+            cityBikes={showCityBikes && hasPlan ? cityBikes.items : []}
+            onSetOrigin={(o) => setField('origin', o)}
+            onSetDestination={(o) => setField('destination', o)}
+            insets={insets}
+            wide={wide}
+          />
+        </Suspense>
       </div>
 
-
-      <SearchPanel
-        open={search.open}
-        onClose={() => setSearch((s) => ({ ...s, open: false }))}
-        onSelect={handleSearchSelect}
-        field={search.field}
-        initialInputValue={searchField && searchField.group !== 'Location' ? searchField.label : ''}
-        recentSearches={recentSearches}
-        locationCoords={geolocation.coords}
-        locationLoading={geolocation.loading}
-        locationDenied={geolocation.denied}
-        onRequestLocation={() => geolocation.request()}
-      />
+      <Suspense fallback={null}>
+        <SearchPanel
+          open={search.open}
+          onClose={() => setSearch((s) => ({ ...s, open: false }))}
+          onSelect={handleSearchSelect}
+          field={search.field}
+          initialInputValue={searchField && searchField.group !== 'Location' ? searchField.label : ''}
+          recentSearches={recentSearches}
+          locationCoords={geolocation.coords}
+          locationLoading={geolocation.loading}
+          locationDenied={geolocation.denied}
+          onRequestLocation={() => geolocation.request()}
+        />
+      </Suspense>
 
       <Toaster position="top-center" />
     </div>

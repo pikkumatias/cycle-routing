@@ -107,6 +107,9 @@ export default defineConfig({
         // react + react-dom + scheduler must stay in one chunk to avoid load-order
         // bugs where react-dom initializes before React's runtime.
         manualChunks(id) {
+          // Bundler helpers go with the always-loaded React chunk; left alone, Rollup can put them
+          // in the map chunk, which then loads eagerly even though the map itself is lazy
+          if (id.includes('vite/preload-helper') || id.includes('commonjsHelpers')) return 'react'
           if (!id.includes('node_modules')) return
           // MapLibre is the largest vendor by far and changes least often
           if (id.includes('maplibre') || id.includes('/@vis.gl/')) return 'map'
@@ -115,7 +118,8 @@ export default defineConfig({
             id.includes('/react/') ||
             id.includes('/scheduler/')
           ) return 'react'
-          if (id.includes('/radix-ui/') || id.includes('/@radix-ui/') || id.includes('/cmdk/')) return 'ui'
+          // cmdk stays with the lazily loaded place search
+          if (id.includes('/radix-ui/') || id.includes('/@radix-ui/')) return 'ui'
           if (id.includes('i18next')) return 'i18n'
         },
       },

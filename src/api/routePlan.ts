@@ -54,10 +54,8 @@ type WireRoute = Omit<PlannedRoute, 'legs'> & { legs: string[] }
 const MAX_PLAN_CACHE = 20
 const planCache = new Map<string, RoutePlan>()
 
-function cacheKey(from: LatLonPair, to: LatLonPair): string {
-  const q = (n: number) => Math.round(n / 0.0001) * 0.0001
-  return `${q(from.lat)},${q(from.lon)}->${q(to.lat)},${q(to.lon)}`
-}
+/** A point rounded to 4 decimals (~10 m): the same trip asks the same URL, which the edge caches. */
+const point = ({ lat, lon }: LatLonPair) => `${lat.toFixed(4)},${lon.toFixed(4)}`
 
 /** Code for a non-OK response: the server's own code, else one inferred from the status (e.g. a platform 504 page). */
 async function failureFor(res: Response): Promise<PlanFailure> {
@@ -71,13 +69,14 @@ async function failureFor(res: Response): Promise<PlanFailure> {
 
 /**
  * Plan routes between two points via `/api/route-plan`. Plans are cached per
- * origin/destination (rounded to ~10 m) for the session.
+ * origin/destination (rounded to ~10 m) for the session, and at the edge.
  *
  * Fails with a `RoutePlanError` carrying a `PlanFailure` code, or with the caller's
  * `AbortError` when `signal` aborts.
  */
 export async function fetchRoutePlan(from: LatLonPair, to: LatLonPair, signal?: AbortSignal): Promise<RoutePlan> {
-  const key = cacheKey(from, to)
+  const query = new URLSearchParams({ from: point(from), to: point(to) })
+  const key = query.toString()
   const cached = planCache.get(key)
   if (cached) {
     // Least recently used goes first
@@ -97,12 +96,7 @@ export async function fetchRoutePlan(from: LatLonPair, to: LatLonPair, signal?: 
 
   let data: Omit<RoutePlan, 'routes'> & { routes: WireRoute[] }
   try {
-    const res = await fetch('/api/route-plan', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from, to }),
-      signal: controller.signal,
-    })
+    const res = await fetch(`/api/route-plan?${query}`, { signal: controller.signal })
     if (!res.ok) throw new RoutePlanError(await failureFor(res))
     if (!res.headers.get('Content-Type')?.includes('application/json')) throw new RoutePlanError('SERVER_ERROR')
     data = (await res.json()) as typeof data

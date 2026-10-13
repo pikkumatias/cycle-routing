@@ -4,8 +4,11 @@ import type { Candidate, CyclingOptimization, LatLon, OtpRequest, OtpStep } from
 
 export const DIGITRANSIT_ROUTING_ENDPOINT = 'https://api.digitransit.fi/routing/v2/hsl/gtfs/v1'
 
-/** One OTP call. Resolves null when OTP finds no route; rejects on transport/API errors. */
-export type OtpCall = (req: OtpRequest) => Promise<Candidate | null>
+/**
+ * One OTP call. Resolves null when OTP finds no route; rejects on transport/API errors,
+ * on its own timeout, or when `signal` aborts.
+ */
+export type OtpCall = (req: OtpRequest, signal?: AbortSignal) => Promise<Candidate | null>
 
 function num(n: number): string {
   if (!Number.isFinite(n)) throw new Error(`Invalid number in OTP request: ${n}`)
@@ -87,12 +90,13 @@ export function createOtpClient(options: {
   fetchFn?: typeof fetch
 }): OtpCall {
   const { apiKey, timeoutMs, endpoint = DIGITRANSIT_ROUTING_ENDPOINT, fetchFn = fetch } = options
-  return async (req) => {
+  return async (req, signal) => {
+    const timeout = AbortSignal.timeout(timeoutMs)
     const res = await fetchFn(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'digitransit-subscription-key': apiKey },
       body: JSON.stringify({ query: buildPlanQuery(req) }),
-      signal: AbortSignal.timeout(timeoutMs),
+      signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
     })
     if (!res.ok) throw new Error(`OTP HTTP ${res.status}`)
     return parsePlanResponse(await res.json())

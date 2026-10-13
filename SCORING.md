@@ -20,8 +20,10 @@ Bike-only OTP returns one itinerary per request, so variety comes from the reque
 Round-2 waypoints are snapped onto the calm network (nodes of car-free paths away from major
 roads) — raw offsets land in bays and water. A via route that rides out to the waypoint and
 back has the stub trimmed; stubs over 150 m discard the route. Identical geometries from
-different generators merge. Round 2 is skipped when round 1 used over half of the 8 s
-deadline.
+different generators merge. Round 2 starts as soon as `preset:fastest` is back (it only needs
+that route), without waiting for the other presets. It is skipped when the fastest route took
+over half of the 8 s deadline, and round-2 calls still running at the deadline are aborted;
+either way the plan is marked `partial` (and not cached at the edge).
 
 ## Measurements (`profile.ts`)
 

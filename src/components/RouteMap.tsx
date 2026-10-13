@@ -16,7 +16,7 @@ import { toast } from 'sonner'
 import { LocateFixed } from 'lucide-react'
 import type { PlannedRoute } from '../api/routePlan'
 import { appLanguage } from '../i18n'
-import { bikeFeatures, hazardFeatures, pointFeatures, routeFeatures } from '../map/features'
+import { bikeFeatures, hazardFeatures, isRoute, pointFeatures, routeFeatures } from '../map/features'
 import { buildMapStyle } from '../map/mapStyle'
 import { readMapPalette } from '../map/palette'
 import { mostDistinctPoint } from '../map/routeProgress'
@@ -25,7 +25,7 @@ import type { Hazard } from '../services/hazards'
 import { useColorScheme } from '../theme/colorScheme'
 import type { AddressOption } from '../utils/address'
 import { minutes } from '../utils/format'
-import { getBoundsFromLegsAndPoints, toDisplayLegs, type LatLng } from '../utils/routeGeometry'
+import { getBoundsFromLegsAndPoints, type LatLng } from '../utils/routeGeometry'
 import { MapContextMenu } from './MapContextMenu'
 import { RoadworkDetails } from './RoadworkDetails'
 import { Button } from '@/components/ui/button'
@@ -104,7 +104,7 @@ export function RouteMap({
   const mapStyle = useMemo(() => buildMapStyle(palette, lang), [palette, lang])
 
   const selected = routes.find((r) => r.id === selectedId)
-  const routeData = useMemo(() => routeFeatures(routes, selectedId), [routes, selectedId])
+  const routeData = useMemo(() => routeFeatures(routes), [routes])
   const signalData = useMemo(() => pointFeatures((selected?.signalStops ?? []).map((s) => s.at)), [selected])
   const bikeData = useMemo(() => bikeFeatures(cityBikes), [cityBikes])
   const hazardData = useMemo(() => hazardFeatures(hazards), [hazards])
@@ -147,7 +147,8 @@ export function RouteMap({
     (animate: boolean, withRoutes = true) => {
       const map = mapRef.current
       if (!map) return
-      const legs = withRoutes ? routes.flatMap((r) => toDisplayLegs(r.legs)) : []
+      // Raw legs: smoothing never leaves their bounding box
+      const legs = withRoutes ? routes.flatMap((r) => r.legs) : []
       const bounds = getBoundsFromLegsAndPoints(legs, from, to)
       if (bounds.length < 2) return
       const [[s, w], [n, e]] = bounds
@@ -354,7 +355,7 @@ export function RouteMap({
             id="route-alt-casing"
             type="line"
             beforeId={BELOW_LABELS}
-            filter={['==', ['get', 'selected'], false]}
+            filter={isRoute(selectedId, true)}
             layout={{ 'line-cap': 'round', 'line-join': 'round' }}
             paint={{ 'line-color': palette.routeCasing, 'line-width': 7 }}
           />
@@ -362,21 +363,21 @@ export function RouteMap({
             id="route-alt"
             type="line"
             beforeId={BELOW_LABELS}
-            filter={['==', ['get', 'selected'], false]}
+            filter={isRoute(selectedId, true)}
             layout={{ 'line-cap': 'round', 'line-join': 'round' }}
             paint={{ 'line-color': palette.routeAlt, 'line-width': 4 }}
           />
           <Layer
             id={ROUTE_HIT}
             type="line"
-            filter={['==', ['get', 'selected'], false]}
+            filter={isRoute(selectedId, true)}
             paint={{ 'line-color': '#000000', 'line-opacity': 0.01, 'line-width': 24 }}
           />
           <Layer
             id="route-selected-casing"
             type="line"
             beforeId={BELOW_LABELS}
-            filter={['==', ['get', 'selected'], true]}
+            filter={isRoute(selectedId)}
             layout={{ 'line-cap': 'round', 'line-join': 'round' }}
             paint={{ 'line-color': palette.routeCasing, 'line-width': 10 }}
           />
@@ -384,7 +385,7 @@ export function RouteMap({
             id="route-selected"
             type="line"
             beforeId={BELOW_LABELS}
-            filter={['==', ['get', 'selected'], true]}
+            filter={isRoute(selectedId)}
             layout={{ 'line-cap': 'round', 'line-join': 'round' }}
             paint={{ 'line-color': palette.routeSelected, 'line-width': 6 }}
           />
