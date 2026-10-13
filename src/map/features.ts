@@ -20,7 +20,7 @@ export function routeFeatures(
       properties: { id: r.id, selected: r.id === selectedId },
       geometry: {
         type: 'MultiLineString',
-        coordinates: toDisplayLegs(r.legs).map((leg) => leg.positions.map(toLngLat)),
+        coordinates: toDisplayLegs(r.legs).map((leg) => leg.map(toLngLat)),
       },
     }))
     .sort((a, b) => Number(a.properties.selected) - Number(b.properties.selected))

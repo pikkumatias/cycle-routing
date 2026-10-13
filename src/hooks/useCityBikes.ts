@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { fetchCityBikeStations, filterStationsNearEndpoints, type CityBikeStation } from '../services/citybikes'
-import type { LatLng } from '../utils/routeGeometry'
+import type { Endpoints } from '../api/routePlan'
 
 /**
  * City bike stations near the trip's start and destination. Independent of
@@ -9,7 +9,7 @@ import type { LatLng } from '../utils/routeGeometry'
  */
 export function useCityBikes(
   enabled: boolean,
-  endpoints: { from: LatLng; to: LatLng } | null,
+  endpoints: Endpoints | null,
 ): { loading: boolean; items: CityBikeStation[] } {
   const [state, setState] = useState<{ loading: boolean; items: CityBikeStation[] }>({ loading: false, items: [] })
 

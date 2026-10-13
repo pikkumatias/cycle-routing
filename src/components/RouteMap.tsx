@@ -24,6 +24,7 @@ import type { CityBikeStation } from '../services/citybikes'
 import type { Hazard } from '../services/hazards'
 import { useColorScheme } from '../theme/colorScheme'
 import type { AddressOption } from '../utils/address'
+import { minutes } from '../utils/format'
 import { getBoundsFromLegsAndPoints, toDisplayLegs, type LatLng } from '../utils/routeGeometry'
 import { MapContextMenu } from './MapContextMenu'
 import { RoadworkDetails } from './RoadworkDetails'
@@ -65,7 +66,6 @@ const INTERACTIVE = [WORKS_POINTS, WORKS_CLUSTERS, BIKE_POINTS, BIKE_CLUSTERS, R
 /** Route lines sit under all basemap labels. */
 const BELOW_LABELS = 'label-water'
 
-const minutes = (sec: number) => Math.round(sec / 60)
 /** Space kept around the trip when framing it, inside the free map area. */
 const FIT_MARGIN = 40
 
@@ -126,6 +126,8 @@ export function RouteMap({
 
   // The panels' footprint is the map's persistent padding: the camera centres
   // in the free area, and MapLibre adds any per-call padding on top of it.
+  // Re-measured when the map container resizes (window resize, rotation).
+  const [mapSize, setMapSize] = useState('')
   const padding = useMemo(() => {
     const map = mapRef.current
     const h = map?.getContainer().clientHeight ?? window.innerHeight
@@ -138,13 +140,14 @@ export function RouteMap({
       bottom: Math.max(0, Math.min(insets.bottom, h - insets.top - room)),
       left: Math.max(0, Math.min(insets.left, w - insets.right - room)),
     }
-  }, [insets])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [insets, mapSize])
 
   const frame = useCallback(
-    (animate: boolean) => {
+    (animate: boolean, withRoutes = true) => {
       const map = mapRef.current
       if (!map) return
-      const legs = routes.flatMap((r) => toDisplayLegs(r.legs))
+      const legs = withRoutes ? routes.flatMap((r) => toDisplayLegs(r.legs)) : []
       const bounds = getBoundsFromLegsAndPoints(legs, from, to)
       if (bounds.length < 2) return
       const [[s, w], [n, e]] = bounds
@@ -164,11 +167,15 @@ export function RouteMap({
     [routes, from, to],
   )
 
-  // New trip or new endpoints: frame them
+  // New trip or new endpoints: frame them. New endpoints while the old routes are still shown
+  // frame just the endpoints; the routes for them get framed when they arrive.
   const routesKey = routes.map((r) => r.id).join('|')
   const endpointsKey = `${from?.join(',')}>${to?.join(',')}`
+  const framedRoutesKey = useRef(routesKey)
   useEffect(() => {
-    if (loaded.current) frame(true)
+    const routesChanged = framedRoutesKey.current !== routesKey
+    framedRoutesKey.current = routesKey
+    if (loaded.current) frame(true, routesChanged)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routesKey, endpointsKey])
 
@@ -192,13 +199,22 @@ export function RouteMap({
     map.easeTo({ center: [userLocation[1], userLocation[0]], zoom: 14, duration: 600 })
   }, [userLocation, from, to, routes.length])
 
-  const locate = () => {
-    onLocate()
+  // The locate button centres on what we know now, then on the fix it asked for
+  const centreOnNextFix = useRef(false)
+  const centreOn = (at: LatLng) => {
     const map = mapRef.current
-    if (map && userLocation) {
-      map.easeTo({ center: [userLocation[1], userLocation[0]], zoom: Math.max(map.getZoom(), 15), duration: 600 })
-    }
+    map?.easeTo({ center: [at[1], at[0]], zoom: Math.max(map.getZoom(), 15), duration: 600 })
   }
+  const locate = () => {
+    centreOnNextFix.current = true
+    if (userLocation) centreOn(userLocation)
+    onLocate()
+  }
+  useEffect(() => {
+    if (!userLocation || !centreOnNextFix.current) return
+    centreOnNextFix.current = false
+    centreOn(userLocation)
+  }, [userLocation])
 
   // --- Interaction -----------------------------------------------------------
 
@@ -214,9 +230,11 @@ export function RouteMap({
     } else if ((layer === BIKE_CLUSTERS || layer === WORKS_CLUSTERS) && map && feature.geometry.type === 'Point') {
       const source = map.getSource(feature.source) as GeoJSONSource | undefined
       const center = feature.geometry.coordinates as [number, number]
-      void source
+      source
         ?.getClusterExpansionZoom(Number(feature.properties.cluster_id))
         .then((zoom) => map.easeTo({ center, zoom, duration: 400 }))
+        // The source can change under a tap (new plan); then there is nothing to expand
+        .catch(() => {})
     } else if (layer === ROUTE_HIT) {
       onSelectRoute(String(feature.properties.id))
     }
@@ -271,6 +289,10 @@ export function RouteMap({
           if (routes.length || from || to) frame(false)
         }}
         onError={onError}
+        onResize={(e) => {
+          const c = e.target.getContainer()
+          setMapSize(`${c.clientWidth}x${c.clientHeight}`)
+        }}
         style={{ width: '100%', height: '100%' }}
       >
         <AttributionControl
@@ -413,7 +435,7 @@ export function RouteMap({
             type="symbol"
             filter={['has', 'point_count']}
             layout={{ 'text-field': ['get', 'point_count'], 'text-font': ['Noto Sans Bold'], 'text-size': 12 }}
-            paint={{ 'text-color': '#ffffff' }}
+            paint={{ 'text-color': palette.worksInk }}
           />
           <Layer
             id={WORKS_POINTS}
@@ -431,7 +453,7 @@ export function RouteMap({
             type="symbol"
             filter={['!', ['has', 'point_count']]}
             layout={{ 'text-field': '!', 'text-font': ['Noto Sans Bold'], 'text-size': 12 }}
-            paint={{ 'text-color': '#ffffff' }}
+            paint={{ 'text-color': palette.worksInk }}
           />
         </Source>
 

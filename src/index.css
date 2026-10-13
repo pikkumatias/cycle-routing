@@ -38,6 +38,7 @@
   --color-bike: var(--bike);
   --color-bike-foreground: var(--bike-foreground);
   --color-works: var(--works);
+  --color-works-foreground: var(--works-foreground);
   --color-calm-very-calm: var(--calm-very-calm);
   --color-calm-calm: var(--calm-calm);
   --color-calm-mixed: var(--calm-mixed);

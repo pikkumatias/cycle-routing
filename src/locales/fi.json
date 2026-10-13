@@ -6,17 +6,16 @@
     "origin": "Lähtö",
     "destination": "Määränpää",
     "whereTo": "Minne?",
-    "placeholder": "Osoite, paikka tai yritys",
     "back": "Takaisin",
     "clear": "Tyhjennä",
     "noResults": "Ei osumia. Kokeile kadun tai paikan nimeä.",
     "useCoordinates": "Käytä koordinaatteja {{coords}}",
     "recent": "Viimeisimmät",
-    "results": "Paikat"
+    "results": "Paikat",
+    "failed": "Haku epäonnistui. Tarkista yhteys ja yritä uudelleen."
   },
   "trip": {
-    "swap": "Vaihda lähtö ja määränpää",
-    "editTrip": "Muokkaa matkaa"
+    "swap": "Vaihda lähtö ja määränpää"
   },
   "routes": {
     "findRoutes": "Hae reitit",
@@ -29,7 +28,7 @@
     "badge_fewestLights": "Vähiten valoja",
     "badge_calm": "Rauhallisin",
     "minutes": "{{count}} min",
-    "distance": "{{km}} km",
+    "distance": "{{km, number(minimumFractionDigits: 1; maximumFractionDigits: 1)}} km",
     "extraTime": "+{{minutes}} min",
     "lights_zero": "Ei valoja",
     "lights_one": "{{count}} valo",
@@ -39,7 +38,6 @@
     "calmBand_mixed": "Jonkin verran liikennettä",
     "calmBand_busy": "Vilkas",
     "calmScore": "Rauhallisuus {{index}}/100",
-    "ribbonLabel": "{{minutes}} min ajo, {{lights}}",
     "error": "Reittejä ei löytynyt",
     "retry": "Yritä uudelleen"
   },
@@ -60,7 +58,8 @@
     "count_zero": "Ei tietöitä reitillä",
     "count_one": "{{count}} tietyö reitillä",
     "count_other": "{{count}} tietyötä reitillä",
-    "dates": "{{start}}–{{end}}"
+    "dates": "{{start}}–{{end}}",
+    "failed": "Tietöitä ei saatu ladattua"
   },
   "options": {
     "open": "Kartta ja asetukset",
@@ -81,8 +80,7 @@
     "retry": "Yritä uudelleen",
     "setStart": "Aseta lähdöksi",
     "setDestination": "Aseta määränpääksi",
-    "close": "Sulje",
-    "dragHandle": "Muuta paneelin kokoa vetämällä"
+    "dragHandle": "Paneelin koko. Vedä tai käytä nuolinäppäimiä."
   },
   "hazardTypes": {
     "excavation": "Kaivutyö",
@@ -97,6 +95,9 @@
     "currentLocation": "Sijaintisi",
     "useCurrentLocation": "Käytä sijaintiasi",
     "locating": "Haetaan sijaintiasi…",
-    "denied": "Sijainti ei ole käytössä. Valitse lähtöosoite."
+    "denied": "Sijainti ei ole käytössä. Valitse lähtöosoite.",
+    "error_denied": "Sijainnin käyttö on estetty. Salli se selaimen asetuksista.",
+    "error_unavailable": "Sijaintiasi ei löytynyt.",
+    "error_timeout": "Sijainnin haku kesti liian kauan. Yritä uudelleen."
   }
 }

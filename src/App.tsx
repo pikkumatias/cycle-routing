@@ -1,7 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AlertCircle, Loader2 } from 'lucide-react'
-import { defaultCard, fetchRoutePlan, RETRYABLE, RoutePlanError, type PlanFailure, type RoutePlan } from './api/routePlan'
+import { toast } from 'sonner'
+import {
+  defaultCard,
+  fetchRoutePlan,
+  RETRYABLE,
+  RoutePlanError,
+  type Endpoints,
+  type PlanFailure,
+  type RoutePlan,
+} from './api/routePlan'
 import { RouteMap, type MapInsets } from './components/RouteMap'
 import { RouteOptions, RouteOptionsSkeleton } from './components/RouteOptions'
 import { SearchPanel } from './components/SearchPanel'
@@ -15,12 +24,11 @@ import { useRoadworks } from './hooks/useRoadworks'
 import type { AddressOption } from './utils/address'
 import { addRecentSearch, getRecentSearches } from './utils/recentSearches'
 import type { LatLng } from './utils/routeGeometry'
+import { haversineDistance } from './routing/geo'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Toaster } from '@/components/ui/sonner'
 import { cn } from '@/lib/utils'
-
-type Endpoints = { from: LatLng; to: LatLng }
 
 type PlanState = {
   loading: boolean
@@ -34,6 +42,9 @@ type PlanState = {
 
 const toLatLng = (o: AddressOption | null): LatLng | undefined => (o ? [o.lat, o.lon] : undefined)
 const tripKey = (from: AddressOption, to: AddressOption) => `${from.lat},${from.lon}>${to.lat},${to.lon}`
+
+/** A "Your location" start follows a new fix only past this distance, so jitter doesn't re-plan. */
+const LOCATION_MOVED_M = 30
 
 /** Side panel width on wide screens, plus its 16px inset. */
 const SIDE_PANEL_PX = 400 + 16
@@ -57,26 +68,38 @@ function App() {
   const [search, setSearch] = useState<{ open: boolean; field: TripField }>({ open: false, field: 'origin' })
 
   const geolocation = useGeolocation()
-  const sheet = useBottomSheet({ enabled: !wide })
-  const { snapTo } = sheet
+  const { sheetRef, handleRef, contentRef, peekRef, sheetStyle, contentStyle, snapTo, snapPoint, visibleHeight } =
+    useBottomSheet({ enabled: !wide })
 
   const roadworks = useRoadworks(showRoadworks, planState.plan, planState.selectedId, planState.endpoints)
   const cityBikes = useCityBikes(showCityBikes, planState.endpoints)
 
-  // Ask for the location once on start
+  // Locate on start only if already allowed; otherwise the browser asks when the person
+  // first reaches for their location (the start field or the locate button)
+  const { request: requestLocation } = geolocation
   useEffect(() => {
-    geolocation.request()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    navigator.permissions
+      ?.query({ name: 'geolocation' })
+      .then((status) => status.state === 'granted' && requestLocation({ quiet: true }))
+      .catch(() => {})
+  }, [requestLocation])
 
-  // The first location fix becomes the start, unless one was already chosen
+  // A location fix becomes the start unless one was chosen, and moves a "Your location" start
+  // that it has left behind
   useEffect(() => {
-    if (geolocation.coords && !from) {
-       
-      setFrom({ label: '', ...geolocation.coords, group: 'Location' })
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const coords = geolocation.coords
+    if (!coords) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- follows the device position, an external source
+    setFrom((prev) => {
+      const moved = prev ? haversineDistance([prev.lat, prev.lon], [coords.lat, coords.lon]) : Infinity
+      if (prev && (prev.group !== 'Location' || moved < LOCATION_MOVED_M)) return prev
+      return { label: '', ...coords, group: 'Location' }
+    })
   }, [geolocation.coords])
+
+  useEffect(() => {
+    if (geolocation.error) toast.error(t(`location.error_${geolocation.error.kind}`))
+  }, [geolocation.error, t])
 
   // --- Planning: runs whenever both ends are set and differ from the last plan ---
 
@@ -124,6 +147,7 @@ function App() {
   useEffect(() => {
     if (!from || !to) return
     if (plannedKey.current === tripKey(from, to)) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- planning starts when both ends are set
     void plan(from, to)
   }, [from, to, plan])
 
@@ -137,7 +161,7 @@ function App() {
 
   const openSearch = (field: TripField) => {
     setSearch({ open: true, field })
-    if (field === 'origin') geolocation.request()
+    if (field === 'origin') geolocation.refresh()
   }
 
   const setField = (field: TripField, option: AddressOption) => {
@@ -169,46 +193,20 @@ function App() {
     () =>
       wide
         ? { top: 0, right: 64, bottom: 0, left: SIDE_PANEL_PX }
-        : { top: 64, right: 0, bottom: sheet.visibleHeight, left: 0 },
-    [wide, sheet.visibleHeight],
+        : { top: 64, right: 0, bottom: visibleHeight, left: 0 },
+    [wide, visibleHeight],
   )
 
   const userLocation = geolocation.coords ? ([geolocation.coords.lat, geolocation.coords.lon] as LatLng) : undefined
   const showFindButton = !hasPlan
   const canRetry = planState.error !== null && RETRYABLE.has(planState.error)
+  const searchField = search.field === 'origin' ? from : to
 
   return (
     <div className="relative h-dvh w-full overflow-hidden bg-background">
-      <div className="absolute inset-0">
-        <RouteMap
-          routes={routes}
-          selectedId={planState.selectedId}
-          onSelectRoute={onSelectRoute}
-          from={toLatLng(from)}
-          to={toLatLng(to)}
-          userLocation={userLocation}
-          fromIsUser={from?.group === 'Location'}
-          onLocate={geolocation.request}
-          hazards={showRoadworks && hasPlan ? roadworks.items : []}
-          cityBikes={showCityBikes && hasPlan ? cityBikes.items : []}
-          onSetOrigin={(o) => setField('origin', o)}
-          onSetDestination={(o) => setField('destination', o)}
-          insets={insets}
-          wide={wide}
-        />
-      </div>
-
-      <OptionsMenu
-        showCityBikes={showCityBikes}
-        onShowCityBikes={setShowCityBikes}
-        showRoadworks={showRoadworks}
-        onShowRoadworks={setShowRoadworks}
-        className="absolute top-[max(16px,calc(env(safe-area-inset-top)+8px))] right-4 z-20"
-      />
-
       <section
-        ref={sheet.sheetRef}
-        style={sheet.sheetStyle}
+        ref={sheetRef}
+        style={sheetStyle}
         aria-label={t('app.title')}
         className={cn(
           'absolute z-10 flex flex-col bg-background',
@@ -218,25 +216,27 @@ function App() {
         )}
       >
         {!wide && (
-          <div
-            ref={sheet.handleRef}
+          <button
+            ref={handleRef}
+            type="button"
             aria-label={t('map.dragHandle')}
-            className="flex h-7 shrink-0 cursor-grab touch-none items-center justify-center active:cursor-grabbing"
+            aria-expanded={snapPoint !== 'collapsed'}
+            className="flex h-7 shrink-0 cursor-grab touch-none items-center justify-center rounded-t-xl outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 active:cursor-grabbing"
           >
             <span className="h-1.5 w-12 rounded-full bg-muted" />
-          </div>
+          </button>
         )}
 
         <div
-          ref={sheet.contentRef}
-          style={sheet.contentStyle}
+          ref={contentRef}
+          style={contentStyle}
           className={cn(
             'relative flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-4',
             wide ? 'pt-5 pb-5' : 'pb-[max(16px,env(safe-area-inset-bottom))]',
           )}
         >
-          <div ref={sheet.peekRef} className="flex flex-col gap-3">
-            {wide && <h1 className="px-1 text-sm font-medium text-muted-foreground">{t('app.title')}</h1>}
+          <div ref={peekRef} className="flex flex-col gap-3">
+            <h1 className={wide ? 'px-1 text-sm font-medium text-muted-foreground' : 'sr-only'}>{t('app.title')}</h1>
             <TripPlanner
               from={from}
               to={to}
@@ -259,48 +259,77 @@ function App() {
             )}
           </div>
 
-          {planState.error && (
-            <Alert variant="destructive" className="mt-3">
-              <AlertCircle />
-              <AlertTitle>{t('routes.error')}</AlertTitle>
-              <AlertDescription>{t(`planErrors.${planState.error}`)}</AlertDescription>
-            </Alert>
-          )}
+          {/* Off-screen while the sheet is collapsed: keep it out of the tab order */}
+          <div inert={!wide && snapPoint === 'collapsed'} className="flex flex-col">
+            {planState.error && (
+              <Alert variant="destructive" className="mt-3">
+                <AlertCircle />
+                <AlertTitle>{t('routes.error')}</AlertTitle>
+                <AlertDescription>{t(`planErrors.${planState.error}`)}</AlertDescription>
+              </Alert>
+            )}
 
-          {planState.loading && !hasPlan && (
-            <div className="mt-2">
-              <RouteOptionsSkeleton />
-            </div>
-          )}
+            {planState.loading && !hasPlan && (
+              <div className="mt-2">
+                <RouteOptionsSkeleton />
+              </div>
+            )}
 
-          {planState.plan && (
-            <div className={cn('mt-2 transition-opacity', planState.loading && 'opacity-50')}>
-              <RouteOptions
-                cards={planState.plan.cards}
-                routesById={routesById}
-                selectedId={planState.selectedId}
-                onSelect={onSelectRoute}
-                roadworks={{ enabled: showRoadworks, loading: roadworks.loading, count: roadworks.items.length }}
-              />
-            </div>
-          )}
+            {planState.plan && (
+              <div className={cn('mt-2 transition-opacity', planState.loading && 'opacity-50')}>
+                <RouteOptions
+                  cards={planState.plan.cards}
+                  routesById={routesById}
+                  selectedId={planState.selectedId}
+                  onSelect={onSelectRoute}
+                  roadworks={{ enabled: showRoadworks, ...roadworks }}
+                />
+              </div>
+            )}
+          </div>
         </div>
       </section>
+
+      <OptionsMenu
+        showCityBikes={showCityBikes}
+        onShowCityBikes={setShowCityBikes}
+        showRoadworks={showRoadworks}
+        onShowRoadworks={setShowRoadworks}
+        className="absolute top-[max(16px,calc(env(safe-area-inset-top)+8px))] right-4 z-20"
+      />
+
+      {/* After the panel in the DOM so keyboard focus reaches the panel first; z-0 keeps it underneath */}
+      <div className="absolute inset-0 z-0">
+        <RouteMap
+          routes={routes}
+          selectedId={planState.selectedId}
+          onSelectRoute={onSelectRoute}
+          from={toLatLng(from)}
+          to={toLatLng(to)}
+          userLocation={userLocation}
+          fromIsUser={from?.group === 'Location'}
+          onLocate={() => geolocation.request()}
+          hazards={showRoadworks && hasPlan ? roadworks.items : []}
+          cityBikes={showCityBikes && hasPlan ? cityBikes.items : []}
+          onSetOrigin={(o) => setField('origin', o)}
+          onSetDestination={(o) => setField('destination', o)}
+          insets={insets}
+          wide={wide}
+        />
+      </div>
+
 
       <SearchPanel
         open={search.open}
         onClose={() => setSearch((s) => ({ ...s, open: false }))}
         onSelect={handleSearchSelect}
         field={search.field}
-        initialInputValue={(() => {
-          const current = search.field === 'origin' ? from : to
-          return current && current.group !== 'Location' ? current.label : ''
-        })()}
+        initialInputValue={searchField && searchField.group !== 'Location' ? searchField.label : ''}
         recentSearches={recentSearches}
         locationCoords={geolocation.coords}
         locationLoading={geolocation.loading}
         locationDenied={geolocation.denied}
-        onRequestLocation={geolocation.request}
+        onRequestLocation={() => geolocation.request()}
       />
 
       <Toaster position="top-center" />

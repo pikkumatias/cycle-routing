@@ -93,15 +93,24 @@ function parseFeature(
   }
 }
 
-export async function fetchHazards(bounds: HazardBounds): Promise<Hazard[]> {
+/** Per-layer limit; the city's WFS is usually quick, and a stuck layer shouldn't hold the rest. */
+const LAYER_TIMEOUT_MS = 20_000
+
+/**
+ * Currently active roadworks in `bounds`, from the six Helsinki WFS layers.
+ * Fails when every layer fails, so the caller can say so rather than show none.
+ * Only complete answers are cached; a partial one is retried next time.
+ */
+export async function fetchHazards(bounds: HazardBounds, signal?: AbortSignal): Promise<Hazard[]> {
   const cacheKey = hazardCacheKey(bounds)
   const cached = hazardCache.get(cacheKey)
   if (cached) return cached
 
+  const timeout = AbortSignal.timeout(LAYER_TIMEOUT_MS)
   const results = await Promise.allSettled(
     HAZARD_LAYERS.map(async (layer, li) => {
       const res = await fetch(buildWfsUrl(layer, bounds), {
-        signal: AbortSignal.timeout(60000),
+        signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
       })
       if (!res.ok) throw new Error(`WFS ${layer.name}: HTTP ${res.status}`)
       const data = (await res.json()) as { features?: unknown[] }
@@ -110,20 +119,24 @@ export async function fetchHazards(bounds: HazardBounds): Promise<Hazard[]> {
         .filter((h): h is Hazard => h !== null)
     }),
   )
+  signal?.throwIfAborted()
 
   const hazards: Hazard[] = []
+  let failed = 0
   for (const r of results) {
     if (r.status === 'fulfilled') {
       hazards.push(...r.value)
     } else {
+      failed++
       console.warn('[hazards] layer failed:', r.reason)
     }
   }
-  hazardCache.set(cacheKey, hazards)
+  if (failed === results.length) throw new Error('Roadworks could not be loaded')
+  if (failed === 0) hazardCache.set(cacheKey, hazards)
   return hazards
 }
 
-// GeoJSON coordinates are [lon, lat]; Leaflet expects [lat, lon]
+// GeoJSON coordinates are [lon, lat]; this returns [lat, lon]
 export function hazardToLatLng(hazard: Hazard): [number, number] | null {
   const geo = hazard.geometry
   if (geo.type === 'Point') {

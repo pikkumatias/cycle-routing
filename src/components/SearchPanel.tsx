@@ -6,7 +6,7 @@ import { ArrowLeft, Clock, Crosshair, Loader2, LocateFixed, MapPin, X } from 'lu
 import { fetchGeocodingAutocomplete } from '../api/digitransit'
 import { appLanguage } from '../i18n'
 import type { RecentSearch } from '../utils/recentSearches'
-import { COORD_PATTERN, coordinateOption, type AddressOption } from '../utils/address'
+import { COORD_PATTERN, coordinateOption, splitLabel, type AddressOption } from '../utils/address'
 import type { TripField } from './TripPlanner'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -47,29 +47,38 @@ export function SearchPanel({
   const [inputValue, setInputValue] = useState('')
   const [suggestions, setSuggestions] = useState<AddressOption[]>([])
   const [loading, setLoading] = useState(false)
+  const [failed, setFailed] = useState(false)
+  // "Use your location" tapped before a fix existed: pick the fix when it arrives
+  const [awaitingLocation, setAwaitingLocation] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Reset when opened
+  // Reset when opened; on close (or unmount) drop a pending search so it can't land in the next opening
   useEffect(() => {
     if (!open) return
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setInputValue(initialInputValue)
     setSuggestions([])
     setLoading(false)
-  }, [open, initialInputValue])
-
-  useEffect(
-    () => () => {
+    setFailed(false)
+    setAwaitingLocation(false)
+    return () => {
       abortRef.current?.abort()
       if (timerRef.current) clearTimeout(timerRef.current)
-    },
-    [],
-  )
+    }
+  }, [open, initialInputValue])
+
+  useEffect(() => {
+    if (!awaitingLocation || !locationCoords) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setAwaitingLocation(false)
+    onSelect({ label: '', ...locationCoords, group: 'Location' })
+  }, [awaitingLocation, locationCoords, onSelect])
 
   const handleInputChange = (value: string) => {
     setInputValue(value)
+    setFailed(false)
     abortRef.current?.abort()
     if (timerRef.current) clearTimeout(timerRef.current)
 
@@ -92,6 +101,7 @@ export function SearchPanel({
       } catch {
         if (!controller.signal.aborted) {
           setSuggestions([])
+          setFailed(true)
           setLoading(false)
         }
       }
@@ -106,11 +116,17 @@ export function SearchPanel({
   const showLocation = field === 'origin' && !locationDenied
 
   const selectLocation = () => {
-    if (locationCoords) onSelect({ label: '', ...locationCoords, group: 'Location' })
-    else onRequestLocation?.()
+    if (locationCoords) {
+      onSelect({ label: '', ...locationCoords, group: 'Location' })
+    } else {
+      setAwaitingLocation(true)
+      onRequestLocation?.()
+    }
   }
 
-  const nothingFound = query && !loading && !coords && suggestions.length === 0 && recents.length === 0
+  const nothingFound = query && !loading && !failed && !coords && suggestions.length === 0 && recents.length === 0
+  // Refreshing a known position needn't block using it
+  const locating = locationLoading && !locationCoords
 
   return (
     <DialogPrimitive.Root open={open} onOpenChange={(o) => !o && onClose()}>
@@ -186,16 +202,16 @@ export function SearchPanel({
                 <ResultItem
                   value="__location"
                   onSelect={selectLocation}
-                  disabled={locationLoading}
+                  disabled={locating}
                   icon={
-                    locationLoading ? (
+                    locating ? (
                       <Loader2 className="size-4 animate-spin" />
                     ) : (
                       <LocateFixed className="size-4" />
                     )
                   }
                   primary={
-                    locationLoading
+                    locating
                       ? t('location.locating')
                       : locationCoords
                         ? t('location.currentLocation')
@@ -242,6 +258,11 @@ export function SearchPanel({
               )}
 
               {nothingFound && <p className="px-4 py-6 text-center text-sm text-muted-foreground">{t('search.noResults')}</p>}
+              {failed && (
+                <p role="alert" className="px-4 py-6 text-center text-sm text-muted-foreground">
+                  {t('search.failed')}
+                </p>
+              )}
             </CommandPrimitive.List>
           </CommandPrimitive>
         </DialogPrimitive.Content>
@@ -252,13 +273,6 @@ export function SearchPanel({
 
 const GROUP_CLASS =
   '[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pt-3 [&_[cmdk-group-heading]]:pb-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground'
-
-/** "Mannerheimintie 1, Helsinki" → name on top, area underneath. */
-function splitLabel(label: string): { primary: string; secondary?: string } {
-  const [primary, ...rest] = label.split(',')
-  const secondary = rest.join(',').trim()
-  return { primary, secondary: secondary || undefined }
-}
 
 type ResultItemProps = {
   value: string

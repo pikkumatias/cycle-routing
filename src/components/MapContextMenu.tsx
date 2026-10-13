@@ -86,6 +86,18 @@ export function MapContextMenu({ onSetOrigin, onSetDestination, bindContextMenu 
     }
   }, [map, menu.status])
 
+  // Escape closes the menu
+  useEffect(() => {
+    if (menu.status === 'closed') return
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      abortRef.current?.abort()
+      setMenu({ status: 'closed' })
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [menu.status])
+
   useLongPress(map?.getContainer() ?? null, ({ x, y }) => {
     if (!map) return
     const rect = map.getContainer().getBoundingClientRect()
@@ -107,8 +119,14 @@ export function MapContextMenu({ onSetOrigin, onSetDestination, bindContextMenu 
     const { lat, lon } = menu
     const lookup = lookupRef.current ?? Promise.resolve(formatCoords(lat, lon))
     setMenu({ status: 'closed' })
-    const fallback = new Promise<string>((resolve) => setTimeout(() => resolve(formatCoords(lat, lon)), LOOKUP_WAIT_MS))
-    void Promise.race([lookup, fallback]).then((label) => set({ label, lat, lon, group: 'Map' }))
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const fallback = new Promise<string>((resolve) => {
+      timer = setTimeout(() => resolve(formatCoords(lat, lon)), LOOKUP_WAIT_MS)
+    })
+    void Promise.race([lookup, fallback]).then((label) => {
+      clearTimeout(timer)
+      set({ label, lat, lon, group: 'Map' })
+    })
   }
 
   return (

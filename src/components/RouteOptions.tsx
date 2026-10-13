@@ -1,14 +1,15 @@
 import { useRef, type KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Construction, Loader2 } from 'lucide-react'
+import { Construction, Loader2, TriangleAlert } from 'lucide-react'
 import type { PlannedRoute, RouteCard } from '../api/routePlan'
+import { minutes } from '../utils/format'
 import { CALM_BAND_CLASS } from './calmBand'
 import { RouteRibbon } from './RouteRibbon'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 
-type RoadworksStatus = { enabled: boolean; loading: boolean; count: number }
+type RoadworksStatus = { enabled: boolean; loading: boolean; failed: boolean; items: unknown[] }
 
 type RouteOptionsProps = {
   cards: RouteCard[]
@@ -17,8 +18,6 @@ type RouteOptionsProps = {
   onSelect: (routeId: string) => void
   roadworks?: RoadworksStatus
 }
-
-const minutes = (sec: number) => Math.round(sec / 60)
 
 /**
  * The route choices as a radio group: one row per card, the selected one
@@ -90,7 +89,7 @@ export function RouteOptions({ cards, routesById, selectedId, onSelect, roadwork
                   {t('routes.minutes', { count: minutes(route.durationSec) })}
                 </span>
                 <span className="flex gap-2 text-xs text-muted-foreground">
-                  <span>{t('routes.distance', { km: (route.distanceM / 1000).toFixed(1) })}</span>
+                  <span>{t('routes.distance', { km: route.distanceM / 1000 })}</span>
                   {extra > 0 && <span>{t('routes.extraTime', { minutes: extra })}</span>}
                 </span>
               </span>
@@ -106,20 +105,27 @@ export function RouteOptions({ cards, routesById, selectedId, onSelect, roadwork
               <span className="inline-flex items-center gap-1.5">
                 <span aria-hidden className={cn('h-1.5 w-3 rounded-full', CALM_BAND_CLASS[route.calmBand])} />
                 {t(`routes.calmBand_${route.calmBand}`)}
-                <span className="tabular" aria-label={t('routes.calmScore', { index: route.calmIndex })}>
+                <span aria-hidden className="tabular">
                   {route.calmIndex}
                 </span>
+                <span className="sr-only">{t('routes.calmScore', { index: route.calmIndex })}</span>
               </span>
             </span>
 
-            {selected && roadworks?.enabled && (roadworks.loading || roadworks.count > 0) && (
-              <span className="inline-flex items-center gap-1.5 text-xs">
+            {selected && roadworks?.enabled && (
+              <span className={cn('inline-flex items-center gap-1.5 text-xs', roadworks.failed && 'text-muted-foreground')}>
                 {roadworks.loading ? (
                   <Loader2 className="size-3.5 animate-spin text-muted-foreground" />
+                ) : roadworks.failed ? (
+                  <TriangleAlert className="size-3.5" />
                 ) : (
-                  <Construction className="size-3.5 text-works" />
+                  <Construction className={cn('size-3.5', roadworks.items.length ? 'text-works' : 'text-muted-foreground')} />
                 )}
-                {roadworks.loading ? t('roadworks.checking') : t('roadworks.count', { count: roadworks.count })}
+                {roadworks.loading
+                  ? t('roadworks.checking')
+                  : roadworks.failed
+                    ? t('roadworks.failed')
+                    : t('roadworks.count', { count: roadworks.items.length })}
               </span>
             )}
           </button>

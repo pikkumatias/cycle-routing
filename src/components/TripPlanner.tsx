@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ArrowUpDown, Loader2, LocateFixed } from 'lucide-react'
-import { COORD_PATTERN, type AddressOption } from '../utils/address'
+import { COORD_PATTERN, splitLabel, type AddressOption } from '../utils/address'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -79,7 +79,7 @@ export function TripPlanner({ from, to, onEdit, onSwap, locationLoading, locatio
 
 function placeName(o: AddressOption): string {
   if (COORD_PATTERN.test(o.label)) return o.label
-  return o.label.split(',')[0].trim() || o.label
+  return splitLabel(o.label).primary || o.label
 }
 
 type FieldButtonProps = {

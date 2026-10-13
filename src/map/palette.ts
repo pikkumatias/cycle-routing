@@ -23,6 +23,7 @@ export type MapPalette = {
   bike: string
   bikeInk: string
   works: string
+  worksInk: string
   pin: string
   pinRing: string
   calm: Record<CalmBand, string>
@@ -49,6 +50,7 @@ const TOKENS: Record<Exclude<keyof MapPalette, 'calm'>, string> = {
   bike: '--bike',
   bikeInk: '--bike-foreground',
   works: '--works',
+  worksInk: '--works-foreground',
   pin: '--pin',
   pinRing: '--pin-ring',
 }
