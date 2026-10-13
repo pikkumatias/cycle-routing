@@ -14,10 +14,6 @@ export function decodePolyline(encoded: string): LatLng[] {
   }
 }
 
-export type RouteLeg = {
-  positions: LatLng[]
-}
-
 function smoothPolyline(points: LatLng[], iterations = 2): LatLng[] {
   if (points.length < 3) return points
   let pts = points
@@ -36,15 +32,15 @@ function smoothPolyline(points: LatLng[], iterations = 2): LatLng[] {
 }
 
 /** Route legs as drawn on the map: smoothed, empty legs dropped. */
-export function toDisplayLegs(legs: LatLng[][]): RouteLeg[] {
-  return legs.filter((leg) => leg.length > 0).map((leg) => ({ positions: smoothPolyline(leg) }))
+export function toDisplayLegs(legs: LatLng[][]): LatLng[][] {
+  return legs.filter((leg) => leg.length > 0).map((leg) => smoothPolyline(leg))
 }
 
 /**
  * Get combined bounds [[south, west], [north, east]] from legs and optional points.
  */
 export function getBoundsFromLegsAndPoints(
-  legs: RouteLeg[],
+  legs: LatLng[][],
   from?: LatLng,
   to?: LatLng,
 ): LatLng[] {
@@ -65,7 +61,7 @@ export function getBoundsFromLegsAndPoints(
   // Loop instead of Math.min(...spread): smoothed routes can have tens of
   // thousands of vertices, which overflows the call stack when spread as args.
   for (const leg of legs) {
-    for (const p of leg.positions) visit(p)
+    for (const p of leg) visit(p)
   }
   if (from) visit(from)
   if (to) visit(to)

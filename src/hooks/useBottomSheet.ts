@@ -11,6 +11,7 @@ const DEAD_ZONE = 5 // px — ignore micro-movements (protects taps)
 const HANDLE_HEIGHT = 28 // px — handle area
 const SNAP_TRANSITION = 'transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)'
 const SNAP_DURATION = 350 // ms — safety timeout, slightly longer than transition
+const SNAP_ORDER: SnapPoint[] = ['collapsed', 'expanded', 'full']
 
 export type SnapPoint = 'collapsed' | 'expanded' | 'full'
 
@@ -76,22 +77,27 @@ type Options = {
  * - full: the whole panel
  *
  * The transform is written straight to the DOM during drags so React never
- * re-renders per frame.
+ * re-renders per frame. The sheet re-fits when its content changes size, and the
+ * handle is a button: click toggles collapsed/expanded, arrow keys step between snaps.
  */
 export function useBottomSheet({ enabled }: Options) {
   const sheetRef = useRef<HTMLDivElement>(null)
-  const handleRef = useRef<HTMLDivElement>(null)
+  const handleRef = useRef<HTMLButtonElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const peekRef = useRef<HTMLDivElement>(null)
 
   const [viewportHeight, setViewportHeight] = useState(() => window.innerHeight)
   const [snapPoint, setSnapPoint] = useState<SnapPoint>('collapsed')
+  const snapPointRef = useRef(snapPoint)
   const [translateY, setTranslateY] = useState(() => window.innerHeight * PANEL_FRACTION * 0.6)
 
   const isDragging = useRef(false)
   const currentTranslateY = useRef(translateY)
   const isAnimating = useRef(false)
   const animationTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Content changed size mid-animation: re-fit once the animation ends
+  const refitAfterAnimation = useRef(false)
+  const snapToRef = useRef<(target: SnapPoint) => void>(() => {})
   // Last two pointer samples, for release velocity
   const lastY = useRef(0)
   const lastTime = useRef(0)
@@ -124,6 +130,10 @@ export function useBottomSheet({ enabled }: Options) {
     }
     const sheet = sheetRef.current
     if (sheet) sheet.style.transition = ''
+    if (refitAfterAnimation.current) {
+      refitAfterAnimation.current = false
+      snapToRef.current(snapPointRef.current)
+    }
   }, [])
 
   const applyTranslateY = useCallback((ty: number) => {
@@ -136,6 +146,7 @@ export function useBottomSheet({ enabled }: Options) {
     (target: SnapPoint) => {
       if (!enabled) return
       const newTY = geometry()[target]
+      snapPointRef.current = target
       setSnapPoint(target)
       setTranslateY(newTY)
 
@@ -161,6 +172,9 @@ export function useBottomSheet({ enabled }: Options) {
     },
     [enabled, geometry, applyTranslateY, finishAnimation],
   )
+  useEffect(() => {
+    snapToRef.current = snapTo
+  }, [snapTo])
 
   const trackPointer = (y: number) => {
     const now = performance.now()
@@ -188,9 +202,12 @@ export function useBottomSheet({ enabled }: Options) {
 
     let startY = 0
     let startTY = 0
+    // A drag ends in a click on the button; that click must not toggle the sheet
+    let dragged = false
 
     const begin = (y: number) => {
       isDragging.current = true
+      dragged = false
       startY = y
       startTY = currentTranslateY.current
       startPointer(y)
@@ -198,6 +215,7 @@ export function useBottomSheet({ enabled }: Options) {
       if (sheet) sheet.style.transition = ''
     }
     const move = (y: number) => {
+      if (Math.abs(y - startY) > DEAD_ZONE) dragged = true
       applyTranslateY(clampTY(startTY + (y - startY)))
       trackPointer(y)
     }
@@ -232,19 +250,42 @@ export function useBottomSheet({ enabled }: Options) {
       window.addEventListener('mouseup', onMouseUp)
     }
 
+    const onClick = () => {
+      if (dragged) {
+        dragged = false
+        return
+      }
+      snapTo(snapPointRef.current === 'collapsed' ? 'expanded' : 'collapsed')
+    }
+    const onKeyDown = (e: KeyboardEvent) => {
+      const i = SNAP_ORDER.indexOf(snapPointRef.current)
+      const next =
+        e.key === 'ArrowUp' ? SNAP_ORDER[Math.min(i + 1, 2)]
+        : e.key === 'ArrowDown' ? SNAP_ORDER[Math.max(i - 1, 0)]
+        : e.key === 'Home' ? 'collapsed'
+        : e.key === 'End' ? 'full'
+        : null
+      if (!next) return
+      e.preventDefault()
+      snapTo(next)
+    }
+
     handle.addEventListener('touchstart', onTouchStart, { passive: true })
     handle.addEventListener('touchmove', onTouchMove, { passive: false })
     handle.addEventListener('touchend', onTouchEnd, { passive: true })
     handle.addEventListener('touchcancel', onTouchEnd, { passive: true })
     handle.addEventListener('mousedown', onMouseDown)
+    handle.addEventListener('click', onClick)
+    handle.addEventListener('keydown', onKeyDown)
     return () => {
       handle.removeEventListener('touchstart', onTouchStart)
       handle.removeEventListener('touchmove', onTouchMove)
       handle.removeEventListener('touchend', onTouchEnd)
       handle.removeEventListener('touchcancel', onTouchEnd)
       handle.removeEventListener('mousedown', onMouseDown)
+      handle.removeEventListener('click', onClick)
+      handle.removeEventListener('keydown', onKeyDown)
     }
-     
   }, [enabled, applyTranslateY, clampTY, snapTo, geometry, finishAnimation])
 
   // --- Content drag: moves the sheet until it is open, then scrolls natively ---
@@ -300,8 +341,39 @@ export function useBottomSheet({ enabled }: Options) {
       content.removeEventListener('touchend', onTouchEnd)
       content.removeEventListener('touchcancel', onTouchEnd)
     }
-     
   }, [enabled, applyTranslateY, clampTY, snapTo, geometry])
+
+  // --- Content resize: keep the current snap fitted to what the content now needs ---
+  useEffect(() => {
+    const content = contentRef.current
+    if (!content || !enabled || typeof ResizeObserver === 'undefined') return
+
+    const refit = () => {
+      if (isDragging.current) return
+      if (isAnimating.current) {
+        refitAfterAnimation.current = true
+        return
+      }
+      const target = geometry()[snapPointRef.current]
+      if (Math.abs(target - currentTranslateY.current) >= 1) snapTo(snapPointRef.current)
+    }
+    const resize = new ResizeObserver(refit)
+    // The content box itself stretches to the panel, so watch its children
+    const observeChildren = () => {
+      resize.disconnect()
+      for (const child of content.children) resize.observe(child)
+    }
+    observeChildren()
+    const children = new MutationObserver(() => {
+      observeChildren()
+      refit()
+    })
+    children.observe(content, { childList: true })
+    return () => {
+      resize.disconnect()
+      children.disconnect()
+    }
+  }, [enabled, geometry, snapTo])
 
   // --- Viewport resize ---
   useEffect(() => {

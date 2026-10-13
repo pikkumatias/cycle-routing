@@ -68,7 +68,8 @@ Every file in `api/` deploys as a function except `_`-prefixed paths; `.vercelig
 - `src/components/RouteOptions.tsx`, `RouteRibbon.tsx` — route rows as a radio group; the ribbon's length is the ride time, its colour the calm band, and its pips the traffic lights along the route
 - `src/components/TripPlanner.tsx`, `SearchPanel.tsx` — start/destination with swap; full-screen cmdk search with recents, coordinates and your location
 - `src/components/OptionsMenu.tsx` — map layers (city bikes, roadworks), language, appearance (auto/light/dark)
-- `src/hooks/useBottomSheet.ts` — draggable sheet: collapsed (to the trip planner), expanded (fits content), full; disabled at ≥768px where it is a side panel
+- `src/hooks/useBottomSheet.ts` — draggable sheet: collapsed (to the trip planner), expanded (fits content, re-fitted when it resizes), full; the handle is a button (click toggles, arrow keys step); disabled at ≥768px where it is a side panel
+- `src/hooks/useGeolocation.ts` — last known fix (kept on errors); asks on load only if permission is already granted, `refresh()` is a quiet background request
 - `src/services/hazards.ts`, `src/services/citybikes.ts` — display-only overlays
 
 ### UI

@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import '@testing-library/jest-dom'
 
+import i18n from 'i18next'
 import { RouteOptions, RouteOptionsSkeleton } from './RouteOptions'
 import type { PlannedRoute, RouteCard } from '../api/routePlan'
 
@@ -85,7 +86,7 @@ describe('RouteOptions', () => {
     expect(screen.getByText('4 lights')).toBeInTheDocument()
     expect(screen.getByText('Busy')).toBeInTheDocument()
     expect(screen.getByText('Very calm')).toBeInTheDocument()
-    expect(screen.getByLabelText('Calm score 88 of 100')).toHaveTextContent('88')
+    expect(screen.getByText('Calm score 88 of 100')).toHaveClass('sr-only')
   })
 
   it('shows extra time compared with Fastest, but not on Fastest', () => {
@@ -111,8 +112,18 @@ describe('RouteOptions', () => {
     expect(screen.getAllByText('5.0 km')).toHaveLength(3)
   })
 
+  it('formats the distance for the language', async () => {
+    await i18n.changeLanguage('fi')
+    try {
+      renderOptions()
+      expect(screen.getAllByText('5,0 km')).toHaveLength(3)
+    } finally {
+      await i18n.changeLanguage('en')
+    }
+  })
+
   it('shows roadworks status on the selected row only when enabled', () => {
-    const { rerender } = renderOptions({ roadworks: { enabled: true, loading: false, count: 2 } })
+    const { rerender } = renderOptions({ roadworks: { enabled: true, loading: false, failed: false, items: [1, 2] } })
     expect(screen.getByText('2 roadworks on this route')).toBeInTheDocument()
     rerender(
       <RouteOptions
@@ -120,9 +131,20 @@ describe('RouteOptions', () => {
         routesById={routesById}
         selectedId="a"
         onSelect={() => {}}
-        roadworks={{ enabled: false, loading: false, count: 2 }}
+        roadworks={{ enabled: false, loading: false, failed: false, items: [1, 2] }}
       />,
     )
     expect(screen.queryByText(/roadworks on this route/)).not.toBeInTheDocument()
+  })
+
+  it('says when a route has no roadworks', () => {
+    renderOptions({ roadworks: { enabled: true, loading: false, failed: false, items: [] } })
+    expect(screen.getByText('No roadworks on this route')).toBeInTheDocument()
+  })
+
+  it('says when roadworks could not be loaded instead of claiming there are none', () => {
+    renderOptions({ roadworks: { enabled: true, loading: false, failed: true, items: [] } })
+    expect(screen.getByText("Couldn't load roadworks")).toBeInTheDocument()
+    expect(screen.queryByText('No roadworks on this route')).not.toBeInTheDocument()
   })
 })

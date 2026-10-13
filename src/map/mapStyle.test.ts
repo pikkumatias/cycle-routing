@@ -23,6 +23,7 @@ const palette: MapPalette = {
   bike: '#121212',
   bikeInk: '#131313',
   works: '#141414',
+  worksInk: '#1f1f1f',
   pin: '#151515',
   pinRing: '#161616',
   calm: { veryCalm: '#171717', calm: '#181818', mixed: '#191919', busy: '#1a1a1a' },

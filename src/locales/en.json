@@ -6,17 +6,16 @@
     "origin": "Start",
     "destination": "Destination",
     "whereTo": "Where to?",
-    "placeholder": "Address, place or business",
     "back": "Back",
     "clear": "Clear",
     "noResults": "No matches. Try a street or place name.",
     "useCoordinates": "Use coordinates {{coords}}",
     "recent": "Recent",
-    "results": "Places"
+    "results": "Places",
+    "failed": "Couldn't search. Check your connection and try again."
   },
   "trip": {
-    "swap": "Swap start and destination",
-    "editTrip": "Edit trip"
+    "swap": "Swap start and destination"
   },
   "routes": {
     "findRoutes": "Find routes",
@@ -29,7 +28,7 @@
     "badge_fewestLights": "Fewest lights",
     "badge_calm": "Calmest",
     "minutes": "{{count}} min",
-    "distance": "{{km}} km",
+    "distance": "{{km, number(minimumFractionDigits: 1; maximumFractionDigits: 1)}} km",
     "extraTime": "+{{minutes}} min",
     "lights_zero": "No lights",
     "lights_one": "{{count}} light",
@@ -39,7 +38,6 @@
     "calmBand_mixed": "Some traffic",
     "calmBand_busy": "Busy",
     "calmScore": "Calm score {{index}} of 100",
-    "ribbonLabel": "{{minutes}} min ride, {{lights}}",
     "error": "Couldn't find routes",
     "retry": "Try again"
   },
@@ -60,7 +58,8 @@
     "count_zero": "No roadworks on this route",
     "count_one": "{{count}} roadwork on this route",
     "count_other": "{{count}} roadworks on this route",
-    "dates": "{{start}} to {{end}}"
+    "dates": "{{start}} to {{end}}",
+    "failed": "Couldn't load roadworks"
   },
   "options": {
     "open": "Map and settings",
@@ -81,8 +80,7 @@
     "retry": "Retry",
     "setStart": "Set as start",
     "setDestination": "Set as destination",
-    "close": "Close",
-    "dragHandle": "Drag to resize the panel"
+    "dragHandle": "Panel size. Drag, or use the arrow keys."
   },
   "hazardTypes": {
     "excavation": "Excavation",
@@ -97,6 +95,9 @@
     "currentLocation": "Your location",
     "useCurrentLocation": "Use your location",
     "locating": "Finding your location…",
-    "denied": "Location is off. Choose a start address."
+    "denied": "Location is off. Choose a start address.",
+    "error_denied": "Location access is off. Allow it in your browser settings.",
+    "error_unavailable": "Couldn't find your location.",
+    "error_timeout": "Finding your location took too long. Try again."
   }
 }

@@ -26,6 +26,9 @@ export const RETRYABLE: ReadonlySet<PlanFailure> = new Set(['NETWORK', 'OFFLINE'
 /** The server's own deadline is ~15 s; past this something between us and it has hung. */
 const CLIENT_TIMEOUT_MS = 20_000
 
+/** Where a trip goes from and to. */
+export type Endpoints = { from: LatLng; to: LatLng }
+
 /** A route as shown in the app: one per card, decoded and ready to draw. */
 export type PlannedRoute = {
   id: string

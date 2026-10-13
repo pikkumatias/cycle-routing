@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
-import { filterHazardsNearRoute, hazardToLatLng, type Hazard } from './hazards'
+import { describe, it, expect, vi, afterEach } from 'vitest'
+import { filterHazardsNearRoute, hazardToLatLng, type Hazard, fetchHazards } from './hazards'
 import type { LatLng } from '../utils/routeGeometry'
 
 // Straight north-south route in Helsinki, ~500m long
@@ -232,5 +232,53 @@ describe('hazardToLatLng', () => {
   it('returns null for a Polygon with an empty ring', () => {
     const h = makeHazard({ type: 'Polygon', coordinates: [[]] })
     expect(hazardToLatLng(h)).toBeNull()
+  })
+})
+
+describe('fetchHazards', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  let n = 0
+  /** Bounds no earlier test has cached. */
+  const freshBounds = () => {
+    n++
+    return { minLat: 60 + n * 0.1, minLon: 24.9, maxLat: 60.05 + n * 0.1, maxLon: 24.95 }
+  }
+  const layer = (features: unknown[]) => new Response(JSON.stringify({ features }))
+  const point = { id: 'p1', geometry: { type: 'Point', coordinates: [24.9, 60.1] }, properties: {} }
+
+  it('throws instead of reporting no roadworks when every layer fails', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    vi.stubGlobal('fetch', vi.fn(async () => Promise.reject(new TypeError('Failed to fetch'))))
+    await expect(fetchHazards(freshBounds())).rejects.toThrow()
+  })
+
+  it('does not cache a failed or partial answer, so the next call retries', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const bounds = freshBounds()
+    let calls = 0
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => (calls++ === 0 ? Promise.reject(new TypeError('down')) : layer([point]))),
+    )
+    expect(await fetchHazards(bounds)).toHaveLength(5)
+    expect(await fetchHazards(bounds)).toHaveLength(6)
+    const fetched = calls
+    expect(await fetchHazards(bounds)).toHaveLength(6)
+    expect(calls).toBe(fetched)
+  })
+
+  it('stops when the caller aborts', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        (_url: string, init: RequestInit) =>
+          new Promise((_resolve, reject) => init.signal!.addEventListener('abort', () => reject(init.signal!.reason))),
+      ),
+    )
+    const controller = new AbortController()
+    const pending = fetchHazards(freshBounds(), controller.signal)
+    controller.abort()
+    await expect(pending).rejects.toMatchObject({ name: 'AbortError' })
   })
 })

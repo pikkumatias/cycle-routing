@@ -5,7 +5,6 @@ import {
   toDisplayLegs,
   getBoundsFromLegsAndPoints,
   type LatLng,
-  type RouteLeg,
 } from './routeGeometry'
 
 // ── decodePolyline ────────────────────────────────────────────────────────────
@@ -47,9 +46,9 @@ describe('toDisplayLegs', () => {
   it('smooths each leg and keeps its endpoints', () => {
     const leg: LatLng[] = [[60.17, 24.94], [60.171, 24.941], [60.172, 24.94]]
     const [display] = toDisplayLegs([leg])
-    expect(display.positions.length).toBeGreaterThan(leg.length)
-    expect(display.positions[0]).toEqual(leg[0])
-    expect(display.positions[display.positions.length - 1]).toEqual(leg[2])
+    expect(display.length).toBeGreaterThan(leg.length)
+    expect(display[0]).toEqual(leg[0])
+    expect(display[display.length - 1]).toEqual(leg[2])
   })
 
   it('drops empty legs', () => {
@@ -64,10 +63,8 @@ describe('getBoundsFromLegsAndPoints', () => {
     expect(getBoundsFromLegsAndPoints([])).toHaveLength(0)
   })
 
-  it('returns [[minLat, minLon], [maxLat, maxLon]] from leg positions', () => {
-    const legs: RouteLeg[] = [{
-      positions: [[60.0, 24.0], [60.1, 24.2], [60.05, 24.1]],
-    }]
+  it('returns [[minLat, minLon], [maxLat, maxLon]] from leg points', () => {
+    const legs: LatLng[][] = [[[60.0, 24.0], [60.1, 24.2], [60.05, 24.1]]]
     const bounds = getBoundsFromLegsAndPoints(legs)
     expect(bounds).toHaveLength(2)
     expect(bounds[0]).toEqual([60.0, 24.0])
@@ -75,7 +72,7 @@ describe('getBoundsFromLegsAndPoints', () => {
   })
 
   it('includes from and to markers when computing bounds', () => {
-    const legs: RouteLeg[] = [{ positions: [[60.1, 24.1]] }]
+    const legs: LatLng[][] = [[[60.1, 24.1]]]
     const from: LatLng = [59.9, 23.8]  // south-west outlier
     const to: LatLng = [60.3, 24.5]    // north-east outlier
     const bounds = getBoundsFromLegsAndPoints(legs, from, to)
@@ -86,9 +83,9 @@ describe('getBoundsFromLegsAndPoints', () => {
   })
 
   it('works with multiple legs', () => {
-    const legs: RouteLeg[] = [
-      { positions: [[60.0, 24.0], [60.05, 24.05]] },
-      { positions: [[60.1, 24.1], [60.15, 24.15]] },
+    const legs: LatLng[][] = [
+      [[60.0, 24.0], [60.05, 24.05]],
+      [[60.1, 24.1], [60.15, 24.15]],
     ]
     const bounds = getBoundsFromLegsAndPoints(legs)
     expect(bounds[0]).toEqual([60.0, 24.0])

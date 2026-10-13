@@ -37,6 +37,7 @@
   --bike: #fcbb00; /* city bikes, the colour of the actual bikes */
   --bike-foreground: oklch(0.205 0 0);
   --works: #d96c00; /* roadworks */
+  --works-foreground: oklch(0.205 0 0);
   /* Calm bands, from cycle path to traffic */
   --calm-very-calm: #0f6e69;
   --calm-calm: #58a196;
@@ -88,6 +89,7 @@
   --bike: #fcbb00;
   --bike-foreground: oklch(0.205 0 0);
   --works: #ff9a3d;
+  --works-foreground: oklch(0.205 0 0);
   --calm-very-calm: #4bb8ad;
   --calm-calm: #2f8279;
   --calm-mixed: #8e8264;
