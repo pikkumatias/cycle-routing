@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { config as dotenvConfig } from 'dotenv'
 import type { Plugin } from 'vite'
 import type { ServerResponse } from 'node:http'
+import { VitePWA } from 'vite-plugin-pwa'
 
 // Load server-side env vars (DIGITRANSIT_API_KEY etc.) for the API dev middleware.
 // Vite only exposes VITE_* vars to the client bundle; dotenv populates process.env here.
@@ -96,7 +97,40 @@ function vercelApiDevPlugin(): Plugin {
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), vercelApiDevPlugin()],
+  plugins: [
+    react(),
+    vercelApiDevPlugin(),
+    // Installable app. The service worker precaches the built app so it opens instantly and
+    // offline; routing (/api) and map tiles always go to the network.
+    VitePWA({
+      registerType: 'autoUpdate',
+      injectRegister: 'auto',
+      includeAssets: ['favicon.svg', 'icons/apple-touch-icon.png', 'og-image.png'],
+      manifest: {
+        name: 'Helsinki bike routes',
+        short_name: 'Bike routes',
+        description: 'Bike routes across Helsinki: fastest, fewest traffic lights, or calmest.',
+        lang: 'en',
+        start_url: '/',
+        scope: '/',
+        display: 'standalone',
+        background_color: '#ffffff',
+        theme_color: '#ffffff',
+        icons: [
+          { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+          { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+          { src: '/icons/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+        ],
+      },
+      workbox: {
+        globPatterns: ['**/*.{js,mjs,css,html,svg,png,woff2}'],
+        navigateFallback: '/index.html',
+        navigateFallbackDenylist: [/^\/api\//],
+        // The map chunk is ~1.1 MB
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
+      },
+    }),
+  ],
   build: {
     // maplibre-gl alone is ~1.1 MB minified (~300 kB gzip)
     chunkSizeWarningLimit: 1200,

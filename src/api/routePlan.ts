@@ -1,6 +1,7 @@
 import type { LatLonPair } from './digitransit'
 import { decodePolyline, type LatLng } from '../utils/routeGeometry'
 import type { CalmBand, Category, RouteCard, RoutePlanErrorCode, SignalRule, StressClass } from '../routing/types'
+import { RIDING_SPEED_KMH, type RidingSpeed } from '../settings/ridingSpeed'
 
 export type { CalmBand, Category, RouteCard }
 
@@ -80,8 +81,15 @@ async function failureFor(res: Response): Promise<PlanFailure> {
  * Fails with a `RoutePlanError` carrying a `PlanFailure` code, or with the caller's
  * `AbortError` when `signal` aborts.
  */
-export async function fetchRoutePlan(from: LatLonPair, to: LatLonPair, signal?: AbortSignal): Promise<RoutePlan> {
+export async function fetchRoutePlan(
+  from: LatLonPair,
+  to: LatLonPair,
+  signal?: AbortSignal,
+  speed: RidingSpeed = 'normal',
+): Promise<RoutePlan> {
   const query = new URLSearchParams({ from: point(from), to: point(to) })
+  // Normal is the server's default; leaving it out keeps those URLs (and their edge cache) as they were
+  if (speed !== 'normal') query.set('speed', String(RIDING_SPEED_KMH[speed]))
   const key = query.toString()
   const cached = planCache.get(key)
   if (cached) {

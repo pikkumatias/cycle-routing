@@ -56,6 +56,18 @@ describe('fetchRoutePlan', () => {
     expect(params.get('to')).toMatch(/^60\.1699,24\.\d{4}$/)
   })
 
+  it('asks for a riding speed other than normal, and caches per speed', async () => {
+    const fetchMock = vi.fn(async () => json(planBody))
+    vi.stubGlobal('fetch', fetchMock)
+    const to = freshTo()
+    await fetchRoutePlan(from, to, undefined, 'fast')
+    await fetchRoutePlan(from, to, undefined, 'normal')
+    await fetchRoutePlan(from, to, undefined, 'fast')
+    const calls = fetchMock.mock.calls as unknown as [string][]
+    const urls = calls.map(([url]) => new URL(url, 'http://localhost').searchParams.get('speed'))
+    expect(urls).toEqual(['25', null])
+  })
+
   it('fills in climb and traffic runs missing from older plans', async () => {
     const older: Record<string, unknown> = { ...planBody.routes[0] }
     delete older.climbM

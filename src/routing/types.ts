@@ -13,6 +13,14 @@ export type OtpRequest = {
   to: LatLon
   via?: LatLon
   optimization: CyclingOptimization
+  /** Riding speed in m/s; OTP's default (5.56 m/s, 20 km/h) when left out. */
+  speedMps?: number
+}
+
+/** Choices for a whole plan. */
+export type PlanOptions = {
+  /** Riding speed in m/s for every route; OTP's default when left out. */
+  speedMps?: number
 }
 
 /** The subset of OTP `step` fields the engine uses. */

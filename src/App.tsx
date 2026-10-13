@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { AlertCircle, Loader2 } from 'lucide-react'
+import { AlertCircle, Loader2, WifiOff } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   defaultCard,
@@ -19,8 +19,10 @@ import { useBottomSheet } from './hooks/useBottomSheet'
 import { useCityBikes } from './hooks/useCityBikes'
 import { useGeolocation } from './hooks/useGeolocation'
 import { useMediaQuery } from './hooks/useMediaQuery'
+import { useOnline } from './hooks/useOnline'
 import { useRoadworks } from './hooks/useRoadworks'
 import type { AddressOption } from './utils/address'
+import { useRidingSpeed } from './settings/ridingSpeed'
 import { addRecentSearch, getRecentSearches } from './utils/recentSearches'
 import type { LatLng } from './utils/routeGeometry'
 import { haversineDistance } from './routing/geo'
@@ -40,7 +42,7 @@ type PlanState = {
 }
 
 const toLatLng = (o: AddressOption | null): LatLng | undefined => (o ? [o.lat, o.lon] : undefined)
-const tripKey = (from: AddressOption, to: AddressOption) => `${from.lat},${from.lon}>${to.lat},${to.lon}`
+const tripKey = (from: AddressOption, to: AddressOption, speed: string) => `${from.lat},${from.lon}>${to.lat},${to.lon}@${speed}`
 
 // The map (MapLibre, ~1 MB) and the place search load after the panel, so the trip planner is
 // usable first. The search is fetched right after the first paint, before anyone taps a field.
@@ -73,6 +75,8 @@ function App() {
   const [search, setSearch] = useState<{ open: boolean; field: TripField }>({ open: false, field: 'origin' })
 
   const geolocation = useGeolocation()
+  const speed = useRidingSpeed()
+  const online = useOnline()
   const { sheetRef, handleRef, contentRef, peekRef, sheetStyle, contentStyle, snapTo, snapPoint, visibleHeight } =
     useBottomSheet({ enabled: !wide })
 
@@ -98,7 +102,6 @@ function App() {
   useEffect(() => {
     const coords = geolocation.coords
     if (!coords) return
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- follows the device position, an external source
     setFrom((prev) => {
       const moved = prev ? haversineDistance([prev.lat, prev.lon], [coords.lat, coords.lon]) : Infinity
       if (prev && (prev.group !== 'Location' || moved < LOCATION_MOVED_M)) return prev
@@ -120,13 +123,14 @@ function App() {
     requestRef.current?.abort()
     const request = new AbortController()
     requestRef.current = request
-    plannedKey.current = tripKey(start, end)
+    plannedKey.current = tripKey(start, end, speed)
     setPlanState((prev) => ({ ...prev, loading: true, error: null }))
     try {
       const result = await fetchRoutePlan(
         { lat: start.lat, lon: start.lon },
         { lat: end.lat, lon: end.lon },
         request.signal,
+        speed,
       )
       if (request !== requestRef.current) return
       for (const o of [start, end]) {
@@ -151,14 +155,26 @@ function App() {
         endpoints: null,
       })
     }
-  }, [])
+  }, [speed])
 
   useEffect(() => {
     if (!from || !to) return
-    if (plannedKey.current === tripKey(from, to)) return
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- planning starts when both ends are set
+    // A new riding speed re-plans too: `plan` changes with it
+    if (plannedKey.current === tripKey(from, to, speed)) return
     void plan(from, to)
-  }, [from, to, plan])
+  }, [from, to, speed, plan])
+
+  // Offline: say so while it lasts. Back online: retry a plan that failed for want of a connection.
+  useEffect(() => {
+    if (!online) {
+      toast(t('app.offline'), { id: 'offline', duration: Infinity, icon: <WifiOff className="size-4" /> })
+      return
+    }
+    toast.dismiss('offline')
+    if (from && to && (planState.error === 'OFFLINE' || planState.error === 'NETWORK')) void plan(from, to)
+    // Only on a change of connection
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [online])
 
   // Open the sheet to show what is happening and what came back
   const hasPlan = planState.plan !== null

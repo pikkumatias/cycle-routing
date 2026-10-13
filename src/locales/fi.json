@@ -1,6 +1,8 @@
 {
   "app": {
-    "title": "Helsingin pyöräreitit"
+    "title": "Helsingin pyöräreitit",
+    "description": "Pyöräreitit pääkaupunkiseudulla: nopein, vähiten liikennevaloja tai rauhallisin.",
+    "offline": "Olet offline-tilassa. Reitit ja kartta tarvitsevat verkkoyhteyden."
   },
   "search": {
     "origin": "Lähtö",
@@ -77,7 +79,14 @@
     "appearance": "Ulkoasu",
     "system": "Auto",
     "light": "Vaalea",
-    "dark": "Tumma"
+    "dark": "Tumma",
+    "speed": "Ajovauhti",
+    "speed_relaxed": "Rauhallinen",
+    "speed_normal": "Tavallinen",
+    "speed_fast": "Reipas",
+    "speedHint_relaxed": "Reitit ja ajat {{kmh}} km/h matkavauhdilla.",
+    "speedHint_normal": "Reitit ja ajat {{kmh}} km/h matkavauhdilla.",
+    "speedHint_fast": "Reitit ja ajat {{kmh}} km/h matkavauhdilla, kuten sähköpyörällä."
   },
   "map": {
     "start": "Lähtö",

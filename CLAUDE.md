@@ -25,7 +25,7 @@ The app is a bicycle route planner for the Helsinki region. The user picks a sta
 
 **Routing flow** (`src/App.tsx`):
 1. User picks places via geocoding autocomplete (`SearchPanel` → `/api/digitransit-geocode`), typed coordinates, their location, or a long-press/right-click on the map (`MapContextMenu`)
-2. Once both ends are set, `fetchRoutePlan` (`src/api/routePlan.ts`) GETs `/api/route-plan?from=lat,lon&to=lat,lon` (coordinates rounded to 4 decimals so repeat trips hit Vercel's edge cache)
+2. Once both ends are set, `fetchRoutePlan` (`src/api/routePlan.ts`) GETs `/api/route-plan?from=lat,lon&to=lat,lon[&speed=15|25]` (coordinates rounded to 4 decimals so repeat trips hit Vercel's edge cache)
 3. The server runs the routing engine (`src/routing/planRoutes.ts`): OTP candidates (presets, then via-waypoint detours), measured against the prebuilt OSM layers, and `selectCards` picks the cards
 4. The client draws the shown routes, selects the card holding Fewest lights, and fetches roadworks (`useRoadworks`, from `src/services/hazards.ts`) and city bikes for display
 
@@ -67,7 +67,8 @@ Every file in `api/` deploys as a function except `_`-prefixed paths; `.vercelig
 - `src/map/` — `mapStyle.ts` (OpenFreeMap basemap, cycleways emphasised, labels in the app language), `palette.ts` (reads colours from CSS tokens), `features.ts` (GeoJSON builders), `routeProgress.ts`, `worker.ts` (MapLibre worker URL for Vite)
 - `src/components/RouteOptions.tsx`, `RouteRibbon.tsx` — route rows as a radio group with arrival time and climb; the ribbon's length is the ride time, its colours the traffic along the way (`exposure.ts`: car-free / quiet streets / next to traffic / in traffic, in the calm-band colours), and its pips the traffic lights; the selected row breaks the route down by traffic, and the map draws the selected route in the same colours
 - `src/components/TripPlanner.tsx`, `SearchPanel.tsx` — start/destination with swap; full-screen cmdk search with recents, coordinates and your location
-- `src/components/OptionsMenu.tsx` — map layers (city bikes, roadworks), language, appearance (auto/light/dark)
+- `src/components/OptionsMenu.tsx` — map layers (city bikes, roadworks), riding speed (`src/settings/ridingSpeed.ts`: 15/20/25 km/h, sent as `speed`; 20 is OTP's default and omitted), language, appearance (auto/light/dark)
+- PWA — `vite-plugin-pwa` in `vite.config.ts`: manifest, icons in `public/icons/`, a Workbox service worker precaching the built app (`/api` and map tiles stay network-only); `useOnline` shows an offline toast and retries a plan that failed offline. Link-preview tags and `public/og-image.png` are in `index.html`
 - `src/hooks/useBottomSheet.ts` — draggable sheet: collapsed (to the trip planner), expanded (fits content, re-fitted when it resizes), full; the handle is a button (click toggles, arrow keys step); disabled at ≥768px where it is a side panel
 - `src/hooks/useGeolocation.ts` — last known fix (kept on errors); asks on load only if permission is already granted, `refresh()` is a quiet background request
 - `src/services/hazards.ts`, `src/services/citybikes.ts` — display-only overlays

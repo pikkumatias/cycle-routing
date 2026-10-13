@@ -38,7 +38,7 @@ export function buildPlanQuery(req: OtpRequest): string {
     first: 1
     modes: { directOnly: true, direct: [BICYCLE] }
     ${via}
-    preferences: { street: { bicycle: { optimization: ${optimizationInput(req.optimization)} } } }
+    preferences: { street: { bicycle: { ${req.speedMps !== undefined ? `speed: ${num(req.speedMps)}, ` : ''}optimization: ${optimizationInput(req.optimization)} } } }
   ) {
     edges { node { duration legs { distance legGeometry { points } steps { distance streetName bogusName area walkingBike elevationProfile { distance elevation } } } } }
     routingErrors { code description }

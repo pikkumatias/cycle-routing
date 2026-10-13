@@ -165,4 +165,12 @@ describe('planRoutes', () => {
     expect(plan.routes.find((r) => r.id === STRAIGHT.id)!.generators).toEqual(['preset:fastest', 'preset:balanced'])
     expect(plan.routes[0].id).toBe(STRAIGHT.id)
   })
+
+  it('asks every route at the riding speed given', async () => {
+    const otp = fakeOtp()
+    await planRoutes(from, to, { otp, layers }, { speedMps: 6.94 })
+    expect(otp.requests.length).toBeGreaterThan(3)
+    expect(otp.requests.every((r) => r.speedMps === 6.94)).toBe(true)
+  })
 })
+

@@ -3,10 +3,25 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="Bike routes" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#ffffff" />
     <meta name="description" content="Bike routes across Helsinki: fastest, fewest traffic lights, or calmest." />
     <title>Helsinki bike routes</title>
+    <!-- Link previews (crawlers don't run the app, so these stay in English) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Helsinki bike routes" />
+    <meta property="og:title" content="Helsinki bike routes" />
+    <meta property="og:description" content="Fastest, fewest traffic lights, or calmest — and where the traffic is along the way." />
+    <meta property="og:url" content="https://cycle-routing.vercel.app/" />
+    <meta property="og:image" content="https://cycle-routing.vercel.app/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Helsinki bike routes: a bicycle on a lime green tile" />
+    <meta property="og:locale" content="en_GB" />
+    <meta property="og:locale:alternate" content="fi_FI" />
+    <meta name="twitter:card" content="summary_large_image" />
     <script>
       // Apply the stored light/dark choice before first paint (see src/theme/colorScheme.ts)
       ;(function () {

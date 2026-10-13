@@ -19,6 +19,10 @@ interface VercelRes {
   json(data: unknown): VercelRes
 }
 
+/** Riding speeds the app offers, km/h; 20 is OTP's default and is planned without a speed. */
+const SPEEDS_KMH = new Set([15, 20, 25])
+const DEFAULT_SPEED_KMH = 20
+
 const MIN_TRIP_M = 50
 const MAX_TRIP_M = 40_000
 /** Plans of a GET trip are shared by the edge for this long (and served stale for a day while refreshing). */
@@ -70,19 +74,35 @@ function parseQueryPoint(value: string | string[] | undefined): LatLon | null {
   return parsePoint({ lat: Number(parts[0]), lon: Number(parts[1]) })
 }
 
+type Trip = { from: LatLon | null; to: LatLon | null; speedKmh: number | null }
+
+/** km/h from a query or body value: the default when absent, null when not an offered speed. */
+function parseSpeed(value: unknown): number | null {
+  const raw = Array.isArray(value) ? value[0] : value
+  if (raw === undefined || raw === null || raw === '') return DEFAULT_SPEED_KMH
+  const kmh = Number(raw)
+  return SPEEDS_KMH.has(kmh) ? kmh : null
+}
+
 /** The trip from a GET query or a POST body; Vercel's lazy `req.body` getter throws on malformed JSON. */
-function readTrip(req: VercelReq): { from: LatLon | null; to: LatLon | null } {
-  if (req.method === 'GET') return { from: parseQueryPoint(req.query?.from), to: parseQueryPoint(req.query?.to) }
+function readTrip(req: VercelReq): Trip {
+  if (req.method === 'GET') {
+    return { from: parseQueryPoint(req.query?.from), to: parseQueryPoint(req.query?.to), speedKmh: parseSpeed(req.query?.speed) }
+  }
   try {
-    const body = (typeof req.body === 'string' ? JSON.parse(req.body) : req.body) as { from?: unknown; to?: unknown } | null
-    return { from: parsePoint(body?.from), to: parsePoint(body?.to) }
+    const body = (typeof req.body === 'string' ? JSON.parse(req.body) : req.body) as {
+      from?: unknown
+      to?: unknown
+      speed?: unknown
+    } | null
+    return { from: parsePoint(body?.from), to: parsePoint(body?.to), speedKmh: parseSpeed(body?.speed) }
   } catch {
-    return { from: null, to: null }
+    return { from: null, to: null, speedKmh: null }
   }
 }
 
 /**
- * GET ?from=lat,lon&to=lat,lon → planned routes and the cards to show. GET answers are cached
+ * GET ?from=lat,lon&to=lat,lon[&speed=15|20|25 km/h] → planned routes and the cards to show. GET answers are cached
  * at the edge, so the client rounds coordinates to share them; a deployment clears the cache.
  * POST { from: {lat, lon}, to: {lat, lon} } plans the same, uncached (clients from before GET).
  *
@@ -100,10 +120,11 @@ export default async function handler(req: VercelReq, res: VercelRes) {
     const apiKey = process.env.DIGITRANSIT_API_KEY
     if (!apiKey) return fail(res, 'SERVER_ERROR', 'DIGITRANSIT_API_KEY is not configured on the server.')
 
-    const { from, to } = readTrip(req)
+    const { from, to, speedKmh } = readTrip(req)
     if (!from || !to) {
       return fail(res, 'BAD_REQUEST', 'Give "from" and "to" as ?from=lat,lon&to=lat,lon, or POST them as { lat, lon }.')
     }
+    if (speedKmh === null) return fail(res, 'BAD_REQUEST', `"speed" must be one of ${[...SPEEDS_KMH].join(', ')} km/h.`)
 
     const { layers, bbox } = await loadLayers()
     const [south, west, north, east] = bbox
@@ -120,7 +141,7 @@ export default async function handler(req: VercelReq, res: VercelRes) {
     const otp = createOtpClient({ apiKey, timeoutMs: DEFAULT_CONFIG.otp.timeoutMs })
     let plan
     try {
-      plan = await planRoutes(from, to, { otp, layers })
+      plan = await planRoutes(from, to, { otp, layers }, speedKmh === DEFAULT_SPEED_KMH ? {} : { speedMps: speedKmh / 3.6 })
     } catch (error) {
       if (!(error instanceof PlanError)) throw error
       if (error.code !== 'NO_ROUTE') console.error('[route-plan]', error.code, error.message)
