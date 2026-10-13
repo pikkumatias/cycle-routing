@@ -41,6 +41,10 @@ export type PlannedRoute = {
   calmBand: CalmBand
   stressM: Record<StressClass, number>
   majorCrossings: number
+  /** Metres climbed (smoothed elevation model). */
+  climbM: number
+  /** [metres along the route where a run ends, its stress class], in order. */
+  stressRuns: Array<[number, StressClass]>
 }
 
 export type RoutePlan = {
@@ -49,7 +53,9 @@ export type RoutePlan = {
   meta: { calls: number; failed: number; partial: boolean; configVersion: string; dataVersion: string }
 }
 
-type WireRoute = Omit<PlannedRoute, 'legs'> & { legs: string[] }
+/** Plans from before climb and traffic runs were added lack them (old edge-cached answers). */
+type WireRoute = Omit<PlannedRoute, 'legs' | 'climbM' | 'stressRuns'> &
+  Partial<Pick<PlannedRoute, 'climbM' | 'stressRuns'>> & { legs: string[] }
 
 const MAX_PLAN_CACHE = 20
 const planCache = new Map<string, RoutePlan>()
@@ -113,7 +119,12 @@ export async function fetchRoutePlan(from: LatLonPair, to: LatLonPair, signal?: 
 
   const plan: RoutePlan = {
     ...data,
-    routes: data.routes.map((r) => ({ ...r, legs: r.legs.map(decodePolyline) })),
+    routes: data.routes.map((r) => ({
+      ...r,
+      legs: r.legs.map(decodePolyline),
+      climbM: r.climbM ?? 0,
+      stressRuns: r.stressRuns ?? [],
+    })),
   }
 
   if (planCache.size >= MAX_PLAN_CACHE) planCache.delete(planCache.keys().next().value!)

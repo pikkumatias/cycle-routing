@@ -144,6 +144,8 @@ export default async function handler(req: VercelReq, res: VercelRes) {
           calmBand: r.profile.calmBand,
           stressM: Object.fromEntries(Object.entries(r.profile.stressM).map(([k, v]) => [k, Math.round(v)])),
           majorCrossings: r.profile.majorCrossings,
+          climbM: Math.round(r.profile.climbM),
+          stressRuns: r.profile.stressRuns.map(([endM, stress]) => [Math.round(endM), stress]),
         })),
       cards: plan.selection.cards,
       meta: { ...plan.meta, dataVersion: layers.dataVersion },

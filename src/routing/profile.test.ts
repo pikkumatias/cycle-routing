@@ -187,3 +187,17 @@ describe('data coverage', () => {
     expect(outsideM).toBeLessThan(320)
   })
 })
+
+describe('stress runs', () => {
+  it('lists the route as runs of one stress class, ending at the route length', () => {
+    // Car-free for 400 m (away from the road, then beside where it starts), then 600 m on it
+    const road: TestRoad = { cls: 'secondary', name: 'Isotie', points: [[400, 0], [1000, 0]] }
+    const p = profile(makeLayers({ roads: [road] }), [pathStep(400), step(600, 'Isotie')])
+    const classes = p.stressRuns.map(([, s]) => s)
+    expect(classes[0]).toBe('away')
+    expect(classes[classes.length - 1]).toBe('mixedHigh')
+    expect(new Set(classes).size).toBe(classes.length) // neighbours never repeat a class
+    expect(p.stressRuns[p.stressRuns.length - 1][0]).toBeCloseTo(p.lengthM, 0)
+  })
+})
+

@@ -39,7 +39,14 @@
     "calmBand_busy": "Vilkas",
     "calmScore": "Rauhallisuus {{index}}/100",
     "error": "Reittejä ei löytynyt",
-    "retry": "Yritä uudelleen"
+    "retry": "Yritä uudelleen",
+    "arrive": "Perillä {{time}}",
+    "climb": "{{m}} m nousua",
+    "exposure": "Liikenne reitillä",
+    "exposure_carFree": "Autoton",
+    "exposure_quiet": "Hiljaiset kadut",
+    "exposure_adjacent": "Liikenteen vieressä",
+    "exposure_traffic": "Liikenteen seassa"
   },
   "planErrors": {
     "NO_ROUTE": "Paikkojen välille ei löydy pyöräreittiä. Siirrä lähtöpaikkaa tai määränpäätä lähemmäs katua tai polkua.",

@@ -1,9 +1,12 @@
-import { useRef, type KeyboardEvent } from 'react'
+import { useMemo, useRef, type KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Construction, Loader2, TriangleAlert } from 'lucide-react'
+import { Construction, Loader2, TrendingUp, TriangleAlert } from 'lucide-react'
 import type { PlannedRoute, RouteCard } from '../api/routePlan'
+import { useNow } from '../hooks/useNow'
+import { appLanguage } from '../i18n'
 import { minutes } from '../utils/format'
 import { CALM_BAND_CLASS } from './calmBand'
+import { BUCKET_BAND, exposureShares } from './exposure'
 import { RouteRibbon } from './RouteRibbon'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -24,7 +27,17 @@ type RouteOptionsProps = {
  * marked with a bar. Arrow keys move the selection.
  */
 export function RouteOptions({ cards, routesById, selectedId, onSelect, roadworks }: RouteOptionsProps) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const now = useNow()
+  // 24-hour clock in both languages: 08:40 / 8.40
+  const lang = appLanguage(i18n.language)
+  const clock = useMemo(
+    () =>
+      lang === 'fi'
+        ? new Intl.DateTimeFormat('fi', { hour: 'numeric', minute: '2-digit' })
+        : new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit' }),
+    [lang],
+  )
   const rowRefs = useRef<(HTMLButtonElement | null)[]>([])
   const shown = cards.filter((c) => routesById[c.routeId])
   const maxDuration = Math.max(0, ...shown.map((c) => routesById[c.routeId].durationSec))
@@ -45,6 +58,9 @@ export function RouteOptions({ cards, routesById, selectedId, onSelect, roadwork
         const route = routesById[card.routeId]
         const selected = card.routeId === selectedId
         const extra = minutes(card.extraSec)
+        // Climb to the nearest 5 m: the elevation model isn't finer than that
+        const climb = Math.round(route.climbM / 5) * 5
+        const arrival = clock.format(new Date(now.getTime() + route.durationSec * 1000))
         return (
           <button
             key={card.routeId}
@@ -92,6 +108,7 @@ export function RouteOptions({ cards, routesById, selectedId, onSelect, roadwork
                   <span>{t('routes.distance', { km: route.distanceM / 1000 })}</span>
                   {extra > 0 && <span>{t('routes.extraTime', { minutes: extra })}</span>}
                 </span>
+                <span className="tabular text-xs text-muted-foreground">{t('routes.arrive', { time: arrival })}</span>
               </span>
             </span>
 
@@ -110,7 +127,16 @@ export function RouteOptions({ cards, routesById, selectedId, onSelect, roadwork
                 </span>
                 <span className="sr-only">{t('routes.calmScore', { index: route.calmIndex })}</span>
               </span>
+              {climb > 0 && (
+                <span className="inline-flex items-center gap-1">
+                  <TrendingUp aria-hidden className="size-3.5" />
+                  <span aria-hidden className="tabular">{climb} m</span>
+                  <span className="sr-only">{t('routes.climb', { m: climb })}</span>
+                </span>
+              )}
             </span>
+
+            {selected && <ExposureBreakdown stressM={route.stressM} />}
 
             {selected && roadworks?.enabled && (
               <span className={cn('inline-flex items-center gap-1.5 text-xs', roadworks.failed && 'text-muted-foreground')}>
@@ -132,6 +158,24 @@ export function RouteOptions({ cards, routesById, selectedId, onSelect, roadwork
         )
       })}
     </div>
+  )
+}
+
+/** Share of the route car-free, on quiet streets, next to traffic and in traffic. */
+function ExposureBreakdown({ stressM }: { stressM: PlannedRoute['stressM'] }) {
+  const { t } = useTranslation()
+  const shares = exposureShares(stressM)
+  if (shares.length === 0) return null
+  // Spans with list roles: a button may only hold phrasing content
+  return (
+    <span role="list" aria-label={t('routes.exposure')} className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+      {shares.map(({ bucket, percent }) => (
+        <span role="listitem" key={bucket} className="inline-flex items-center gap-1.5">
+          <span aria-hidden className={cn('size-2 rounded-sm', CALM_BAND_CLASS[BUCKET_BAND[bucket]])} />
+          {t(`routes.exposure_${bucket}`)} <span className="tabular">{percent}%</span>
+        </span>
+      ))}
+    </span>
   )
 }
 

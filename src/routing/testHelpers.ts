@@ -104,6 +104,8 @@ export function withProfile(
       majorCrossings: 0,
       walkM: 0,
       outsideM: 0,
+      climbM: 0,
+      stressRuns: [],
       calmIndex: 50,
       calmBand: 'mixed',
       ...profile,

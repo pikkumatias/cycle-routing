@@ -1,4 +1,5 @@
 import type { RoutingConfig } from './config.js'
+import { climbM } from './elevation.js'
 import { cumulativeLengths } from './geo.js'
 import type { Layers } from './layers.js'
 import { findSignalStops } from './signals.js'
@@ -60,6 +61,13 @@ export function profileRoute(candidate: Candidate, layers: Layers, cfg: RoutingC
     if (!inside(poly[i - 1]) || !inside(poly[i])) outsideM += cum[i] - cum[i - 1]
   }
 
+  const stressRuns: Array<[number, StressClass]> = []
+  for (const s of segments) {
+    const last = stressRuns[stressRuns.length - 1]
+    if (last && last[1] === s.stress) last[0] = s.startM + s.lengthM
+    else stressRuns.push([s.startM + s.lengthM, s.stress])
+  }
+
   const majorCrossings = crossings.filter((c) => !c.signal).length
   const index = calmIndex(stressM, majorCrossings, lengthM, cfg)
 
@@ -71,6 +79,8 @@ export function profileRoute(candidate: Candidate, layers: Layers, cfg: RoutingC
     majorCrossings,
     walkM,
     outsideM,
+    climbM: climbM(candidate.legSteps.flat()),
+    stressRuns,
     calmIndex: index,
     calmBand: calmBand(index, cfg),
   }

@@ -24,6 +24,8 @@ export type OtpStep = {
   /** True when the step crosses an open area (square, plaza) rather than following a way. */
   area: boolean
   walkingBike: boolean
+  /** Elevation profile within the step: [metres from the step's start, elevation in metres]. */
+  elevation?: Array<[number, number]>
 }
 
 /** A route as returned by OTP, before scoring. */
@@ -69,6 +71,10 @@ export type RouteProfile = {
   walkM: number
   /** Metres outside the OSM data area, where no roads or signals are known (so none are counted). */
   outsideM: number
+  /** Metres climbed, from OTP's elevation profiles (smoothed). */
+  climbM: number
+  /** The route as runs of one stress class: [metres along the route where the run ends, class]. */
+  stressRuns: Array<[number, StressClass]>
   /** 0–100, absolute: the same route always gets the same number. */
   calmIndex: number
   calmBand: CalmBand

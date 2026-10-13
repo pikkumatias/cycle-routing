@@ -47,4 +47,19 @@ describe('trimSpur', () => {
     const total = result.legSteps.flat().reduce((sum, s) => sum + s.distance, 0)
     expect(total).toBeCloseTo(500 + 10 + 10 + 500, 0)
   })
+
+  it('trims the stub out of the elevation profiles too', () => {
+    const legs = [line([[0, 0], [500, 0], [500, 60]]), line([[500, 60], [500, 0], [1000, 0]])]
+    const withElevation = (s: ReturnType<typeof pathStep>) => ({
+      ...s,
+      elevation: Array.from({ length: s.distance / 10 + 1 }, (_, i) => [i * 10, i] as [number, number]),
+    })
+    const elevSteps = [[pathStep(500), withElevation(pathStep(100))], [withElevation(pathStep(100)), pathStep(500)]]
+    const result = trimSpur(legs, elevSteps, DEFAULT_CONFIG)!
+    // 60 m off the end of leg 1's last step and the start of leg 2's first step
+    expect(result.legSteps[0][1].elevation!.at(-1)![0]).toBeLessThanOrEqual(40)
+    expect(result.legSteps[1][0].elevation![0][0]).toBeCloseTo(0, 0)
+    expect(result.legSteps[1][0].elevation![0][1]).toBe(6) // the point that was 60 m in
+  })
 })
+

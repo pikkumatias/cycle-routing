@@ -20,6 +20,8 @@ const planBody = {
       calmBand: 'calm',
       stressM: { away: 2000, quiet: 0, adjacent: 0, mixedLow: 0, mixedHigh: 0 },
       majorCrossings: 0,
+      climbM: 12,
+      stressRuns: [[2000, 'away']],
     },
   ],
   cards: [{ routeId: 'r1', primary: 'fastest', badges: [], extraSec: 0 }],
@@ -52,6 +54,15 @@ describe('fetchRoutePlan', () => {
     const params = new URL(url, 'http://localhost').searchParams
     expect(params.get('from')).toBe('60.1921,24.9458')
     expect(params.get('to')).toMatch(/^60\.1699,24\.\d{4}$/)
+  })
+
+  it('fills in climb and traffic runs missing from older plans', async () => {
+    const older: Record<string, unknown> = { ...planBody.routes[0] }
+    delete older.climbM
+    delete older.stressRuns
+    vi.stubGlobal('fetch', vi.fn(async () => json({ ...planBody, routes: [older] })))
+    const plan = await fetchRoutePlan(from, freshTo())
+    expect(plan.routes[0]).toMatchObject({ climbM: 0, stressRuns: [] })
   })
 
   it('decodes route legs and caches the plan', async () => {

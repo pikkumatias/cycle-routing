@@ -1,8 +1,11 @@
-import type { Feature, FeatureCollection, MultiLineString, Point, Polygon, MultiPolygon } from 'geojson'
+import type { Feature, FeatureCollection, LineString, MultiLineString, Point, Polygon, MultiPolygon } from 'geojson'
 import type { PlannedRoute } from '../api/routePlan'
 import type { CityBikeStation } from '../services/citybikes'
 import { hazardToLatLng, type Hazard } from '../services/hazards'
+import { exposureRuns, type ExposureBucket } from '../components/exposure'
+import { cumulativeLengths } from '../routing/geo'
 import { toDisplayLegs, type LatLng } from '../utils/routeGeometry'
+
 
 /** GeoJSON is [lon, lat]; the app uses [lat, lon]. */
 const toLngLat = ([lat, lng]: LatLng): [number, number] => [lng, lat]
@@ -30,6 +33,47 @@ export function routeFeatures(routes: Pick<PlannedRoute, 'id' | 'legs'>[]): Feat
 /** Layer filter matching one route (or, negated, every other one). */
 export function isRoute(id: string | null, negate = false): ['==' | '!=', ['get', 'id'], string] {
   return [negate ? '!=' : '==', ['get', 'id'], id ?? '']
+}
+
+/**
+ * The route split where its traffic changes, one smoothed line per stretch with its exposure
+ * bucket, for drawing the selected route in traffic colours. Run ends are metres along the
+ * legs joined into one line, as the server measured them.
+ */
+export function stressFeatures(
+  route: Pick<PlannedRoute, 'legs' | 'stressRuns'>,
+): FeatureCollection<LineString, { bucket: ExposureBucket }> {
+  const poly: LatLng[] = []
+  for (const leg of route.legs) {
+    for (const p of leg) {
+      const last = poly[poly.length - 1]
+      if (!last || last[0] !== p[0] || last[1] !== p[1]) poly.push(p)
+    }
+  }
+  const runs = exposureRuns(route.stressRuns)
+  if (poly.length < 2 || runs.length === 0) return { type: 'FeatureCollection', features: [] }
+
+  const cum = cumulativeLengths(poly)
+  const length = cum[cum.length - 1]
+  const pointAt = (m: number): LatLng => {
+    let i = 1
+    while (i < poly.length - 1 && cum[i] < m) i++
+    const span = cum[i] - cum[i - 1]
+    const f = span > 0 ? Math.max(0, Math.min(1, (m - cum[i - 1]) / span)) : 0
+    return [poly[i - 1][0] + (poly[i][0] - poly[i - 1][0]) * f, poly[i - 1][1] + (poly[i][1] - poly[i - 1][1]) * f]
+  }
+
+  const features = runs.map(({ bucket, from, to }): Feature<LineString, { bucket: ExposureBucket }> => {
+    const fromM = from * length
+    const toM = to * length
+    const piece = [pointAt(fromM), ...poly.filter((_, i) => cum[i] > fromM && cum[i] < toM), pointAt(toM)]
+    return {
+      type: 'Feature',
+      properties: { bucket },
+      geometry: { type: 'LineString', coordinates: toDisplayLegs([piece])[0].map(toLngLat) },
+    }
+  })
+  return { type: 'FeatureCollection', features }
 }
 
 export function pointFeatures(points: LatLng[]): FeatureCollection<Point> {

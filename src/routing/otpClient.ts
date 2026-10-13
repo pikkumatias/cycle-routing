@@ -40,13 +40,20 @@ export function buildPlanQuery(req: OtpRequest): string {
     ${via}
     preferences: { street: { bicycle: { optimization: ${optimizationInput(req.optimization)} } } }
   ) {
-    edges { node { duration legs { distance legGeometry { points } steps { distance streetName bogusName area walkingBike } } } }
+    edges { node { duration legs { distance legGeometry { points } steps { distance streetName bogusName area walkingBike elevationProfile { distance elevation } } } } }
     routingErrors { code description }
   }
 }`
 }
 
-type RawStep = { distance?: number; streetName?: string; bogusName?: boolean; area?: boolean; walkingBike?: boolean }
+type RawStep = {
+  distance?: number
+  streetName?: string
+  bogusName?: boolean
+  area?: boolean
+  walkingBike?: boolean
+  elevationProfile?: { distance?: number; elevation?: number }[] | null
+}
 type RawLeg = { distance?: number; legGeometry?: { points?: string }; steps?: RawStep[] }
 type RawPlan = {
   data?: { planConnection?: { edges?: { node?: { duration?: number; legs?: RawLeg[] } }[] } }
@@ -71,6 +78,9 @@ export function parsePlanResponse(json: unknown): Candidate | null {
       bogusName: s.bogusName ?? false,
       area: s.area ?? false,
       walkingBike: s.walkingBike ?? false,
+      elevation: (s.elevationProfile ?? [])
+        .filter((p) => typeof p.distance === 'number' && typeof p.elevation === 'number')
+        .map((p): [number, number] => [p.distance!, p.elevation!]),
     })),
   )
   return {
