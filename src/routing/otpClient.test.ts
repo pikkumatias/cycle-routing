@@ -43,6 +43,12 @@ describe('buildPlanQuery', () => {
     expect(q).toContain('optimization: { type: FLAT_STREETS }')
   })
 
+  it('sends a riding speed only when one is asked for', () => {
+    const q = buildPlanQuery({ from, to, optimization: { type: 'FLAT_STREETS' }, speedMps: 6.94 })
+    expect(q).toContain('bicycle: { speed: 6.94, optimization: { type: FLAT_STREETS } }')
+    expect(buildPlanQuery({ from, to, optimization: { type: 'FLAT_STREETS' } })).not.toContain('speed:')
+  })
+
   it('rejects non-finite numbers instead of sending them', () => {
     const bad: OtpRequest = { from: { lat: NaN, lon: 24.9 }, to, optimization: { type: 'FLAT_STREETS' } }
     expect(() => buildPlanQuery(bad)).toThrow(/Invalid number/)

@@ -91,6 +91,24 @@ describe('/api/route-plan', () => {
     expect(res.body).toMatchObject({ code: 'BAD_REQUEST' })
   })
 
+  it.each([
+    ['15', 15 / 3.6],
+    ['25', 25 / 3.6],
+  ])('asks OTP at %s km/h when given that speed', async (speed, mps) => {
+    const straight: Array<[number, number]> = [[from.lat, from.lon], [to.lat, to.lon]]
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify(otpResponse(straight, 900))))
+    vi.stubGlobal('fetch', fetchMock)
+    await callWith({ method: 'GET', query: { from: `${from.lat},${from.lon}`, to: `${to.lat},${to.lon}`, speed } })
+    const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
+    expect(String(init.body)).toContain(`speed: ${Math.round(mps * 1e6) / 1e6}`)
+  })
+
+  it('rejects a speed outside the offered ones', async () => {
+    const res = await callWith({ method: 'GET', query: { from: `${from.lat},${from.lon}`, to: `${to.lat},${to.lon}`, speed: '90' } })
+    expect(res.statusCode).toBe(400)
+    expect(res.body).toMatchObject({ code: 'BAD_REQUEST' })
+  })
+
   it('never caches an error', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify(noRouteResponse))))
     const res = await callWith({ method: 'GET', query: { from: `${from.lat},${from.lon}`, to: `${to.lat},${to.lon}` } })

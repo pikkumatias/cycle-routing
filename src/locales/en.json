@@ -1,6 +1,8 @@
 {
   "app": {
-    "title": "Helsinki bike routes"
+    "title": "Helsinki bike routes",
+    "description": "Bike routes across Helsinki: fastest, fewest traffic lights, or calmest.",
+    "offline": "You're offline. Routes and the map need a connection."
   },
   "search": {
     "origin": "Start",
@@ -77,7 +79,14 @@
     "appearance": "Appearance",
     "system": "Auto",
     "light": "Light",
-    "dark": "Dark"
+    "dark": "Dark",
+    "speed": "Riding speed",
+    "speed_relaxed": "Relaxed",
+    "speed_normal": "Normal",
+    "speed_fast": "Fast",
+    "speedHint_relaxed": "Routes and times for cruising at {{kmh}} km/h.",
+    "speedHint_normal": "Routes and times for cruising at {{kmh}} km/h.",
+    "speedHint_fast": "Routes and times for cruising at {{kmh}} km/h, as on an e-bike."
   },
   "map": {
     "start": "Start",

@@ -6,7 +6,7 @@ import type { OtpCall } from './otpClient.js'
 import { profileRoute } from './profile.js'
 import { selectCards } from './select.js'
 import { trimSpur } from './spur.js'
-import type { Candidate, LatLng, LatLon, PlanErrorCode, ProfiledCandidate, RoutePlan } from './types.js'
+import type { Candidate, LatLng, LatLon, PlanErrorCode, PlanOptions, ProfiledCandidate, RoutePlan } from './types.js'
 
 export class PlanError extends Error {
   readonly code: PlanErrorCode
@@ -56,7 +56,7 @@ function limiter(limit: number) {
  * Via routes have out-and-back stubs trimmed; identical geometries from different generators
  * merge, listed in request order whatever order OTP answers in.
  */
-export async function planRoutes(from: LatLon, to: LatLon, deps: PlanDeps): Promise<RoutePlan> {
+export async function planRoutes(from: LatLon, to: LatLon, deps: PlanDeps, options: PlanOptions = {}): Promise<RoutePlan> {
   const cfg = deps.cfg ?? DEFAULT_CONFIG
   const now = deps.now ?? (() => Date.now())
   const start = now()
@@ -80,7 +80,10 @@ export async function planRoutes(from: LatLon, to: LatLon, deps: PlanDeps): Prom
       if (signal?.aborted) return null
       calls++
       try {
-        const answer = await deps.otp({ from, to, via: request.via, optimization: request.optimization }, signal)
+        const answer = await deps.otp(
+          { from, to, via: request.via, optimization: request.optimization, speedMps: options.speedMps },
+          signal,
+        )
         const candidate = answer && request.via ? applySpurTrim(answer, cfg) : answer
         if (candidate) answers.push({ seq: order, request, candidate })
         return candidate

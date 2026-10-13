@@ -28,6 +28,7 @@ function syncDocument(lng: string) {
   if (typeof document === 'undefined') return
   document.documentElement.lang = appLanguage(lng)
   document.title = i18n.t('app.title')
+  document.querySelector('meta[name="description"]')?.setAttribute('content', i18n.t('app.description'))
 }
 
 i18n.on('languageChanged', syncDocument)

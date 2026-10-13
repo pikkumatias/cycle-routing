@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Bike, Construction, Monitor, Moon, Settings2, Sun } from 'lucide-react'
+import { RIDING_SPEED_KMH, setRidingSpeed, useRidingSpeed, type RidingSpeed } from '../settings/ridingSpeed'
 import { appLanguage } from '../i18n'
 import { setThemePreference, useColorScheme, type ThemePreference } from '../theme/colorScheme'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -18,7 +19,7 @@ type OptionsMenuProps = {
   className?: string
 }
 
-/** Map layers, language and appearance, behind one round button on the map. */
+/** Map layers, riding speed, language and appearance, behind one round button on the map. */
 export function OptionsMenu({
   showCityBikes,
   onShowCityBikes,
@@ -28,6 +29,7 @@ export function OptionsMenu({
 }: OptionsMenuProps) {
   const { t, i18n } = useTranslation()
   const { preference } = useColorScheme()
+  const speed = useRidingSpeed()
   const lang = appLanguage(i18n.language)
 
   return (
@@ -64,6 +66,25 @@ export function OptionsMenu({
             checked={showRoadworks}
             onChange={onShowRoadworks}
           />
+        </section>
+
+        <section className="flex flex-col gap-2">
+          <h2 id="opt-speed" className="text-sm font-medium">
+            {t('options.speed')}
+          </h2>
+          <Segmented<RidingSpeed>
+            labelledBy="opt-speed"
+            value={speed}
+            onChange={setRidingSpeed}
+            options={[
+              { value: 'relaxed', label: t('options.speed_relaxed') },
+              { value: 'normal', label: t('options.speed_normal') },
+              { value: 'fast', label: t('options.speed_fast') },
+            ]}
+          />
+          <p className="text-xs text-muted-foreground">
+            {t(`options.speedHint_${speed}`, { kmh: RIDING_SPEED_KMH[speed] })}
+          </p>
         </section>
 
         <section className="flex flex-col gap-2">
