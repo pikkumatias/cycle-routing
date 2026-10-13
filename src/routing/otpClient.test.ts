@@ -34,6 +34,7 @@ describe('buildPlanQuery', () => {
     expect(q).toContain('triangle: { time: 1, safety: 0, flatness: 0 }')
     expect(q).toContain('latitude: 60.192059')
     expect(q).not.toContain('via:')
+    expect(q).toContain('elevationProfile { distance elevation }')
   })
 
   it('adds a visit-via coordinate and an optimization type', () => {
@@ -54,7 +55,14 @@ describe('parsePlanResponse', () => {
     expect(c.durationSec).toBe(900)
     expect(c.distanceM).toBe(2000)
     expect(c.legs).toHaveLength(2)
-    expect(c.legSteps[1][0]).toEqual({ distance: 1000, streetName: 'bike path', bogusName: true, area: false, walkingBike: false })
+    expect(c.legSteps[1][0]).toEqual({
+      distance: 1000,
+      streetName: 'bike path',
+      bogusName: true,
+      area: false,
+      walkingBike: false,
+      elevation: [],
+    })
     expect(c.id).toMatch(/^[0-9a-f]{8}$/)
   })
 
@@ -92,5 +100,12 @@ describe('createOtpClient', () => {
   it('rejects on HTTP errors', async () => {
     const otp = createOtpClient({ apiKey: 'k', timeoutMs: 1000, fetchFn: async () => new Response('nope', { status: 503 }) })
     await expect(otp({ from, to, optimization: { type: 'FLAT_STREETS' } })).rejects.toThrow(/503/)
+  })
+
+  it('keeps each step\'s elevation profile as [distance, elevation] pairs', () => {
+    const json = planJson([[[60.19, 24.94], [60.18, 24.94]]])
+    const step = json.data.planConnection.edges[0].node.legs[0].steps[0] as Record<string, unknown>
+    step.elevationProfile = [{ distance: 0, elevation: 12.5 }, { distance: 10, elevation: 13 }]
+    expect(parsePlanResponse(json)!.legSteps[0][0].elevation).toEqual([[0, 12.5], [10, 13]])
   })
 })

@@ -18,6 +18,8 @@ function makeRoute(id: string, overrides?: Partial<PlannedRoute>): PlannedRoute 
     calmBand: 'mixed',
     stressM: { away: 0, quiet: 0, adjacent: 0, mixedLow: 0, mixedHigh: 0 },
     majorCrossings: 0,
+    climbM: 0,
+    stressRuns: [],
     ...overrides,
   }
 }
@@ -147,4 +149,43 @@ describe('RouteOptions', () => {
     expect(screen.getByText("Couldn't load roadworks")).toBeInTheDocument()
     expect(screen.queryByText('No roadworks on this route')).not.toBeInTheDocument()
   })
+
+  it('shows when each route arrives, in the app language', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-13T08:30:00'))
+    try {
+      renderOptions() // 10 and 14 min rides among them
+      expect(screen.getByText('Arrive 08:40')).toBeInTheDocument()
+      expect(screen.getByText('Arrive 08:44')).toBeInTheDocument()
+      await i18n.changeLanguage('fi')
+      expect(await screen.findByText('Perillä 8.40')).toBeInTheDocument()
+    } finally {
+      await i18n.changeLanguage('en')
+      vi.useRealTimers()
+    }
+  })
+
+  it('shows the climb, rounded to 5 m, and nothing on flat routes', () => {
+    renderOptions({
+      routesById: { ...routesById, a: makeRoute('a', { climbM: 43 }), b: makeRoute('b', { climbM: 2 }) },
+    })
+    expect(screen.getByText('45 m')).toBeInTheDocument()
+    expect(screen.getByText('45 m climb')).toHaveClass('sr-only')
+    expect(screen.queryByText('0 m')).not.toBeInTheDocument()
+  })
+
+  it('breaks the selected route down by traffic exposure', () => {
+    renderOptions({
+      routesById: {
+        ...routesById,
+        a: makeRoute('a', { stressM: { away: 600, quiet: 250, adjacent: 0, mixedLow: 50, mixedHigh: 100 } }),
+      },
+    })
+    const breakdown = screen.getByRole('list', { name: 'Traffic on this route' })
+    expect(breakdown).toHaveTextContent('Car-free 60%')
+    expect(breakdown).toHaveTextContent('Quiet streets 25%')
+    expect(breakdown).toHaveTextContent('In traffic 15%')
+    expect(breakdown).not.toHaveTextContent('Next to traffic')
+  })
 })
+

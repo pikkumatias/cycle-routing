@@ -184,7 +184,7 @@ describe('/api/route-plan', () => {
     const res = await call('POST', { from, to })
     expect(res.statusCode).toBe(200)
     const body = res.body as {
-      routes: Array<{ id: string; legs: string[]; lights: number; calmBand: string }>
+      routes: Array<{ id: string; legs: string[]; lights: number; calmBand: string; climbM: number; stressRuns: unknown[] }>
       cards: Array<{ routeId: string; primary: string }>
       meta: { dataVersion: string; calls: number }
     }
@@ -192,6 +192,7 @@ describe('/api/route-plan', () => {
     expect(body.cards[0].primary).toBe('fastest')
     expect(body.routes.map((r) => r.id)).toEqual([body.cards[0].routeId])
     expect(polyline.decode(body.routes[0].legs[0])).toHaveLength(2)
+    expect(body.routes[0]).toMatchObject({ climbM: expect.any(Number), stressRuns: expect.any(Array) })
     expect(body.meta.dataVersion).toBe('2026-10-01T00:00:00Z')
     expect(body.meta.calls).toBeGreaterThanOrEqual(3)
   })

@@ -16,7 +16,7 @@ import { toast } from 'sonner'
 import { LocateFixed } from 'lucide-react'
 import type { PlannedRoute } from '../api/routePlan'
 import { appLanguage } from '../i18n'
-import { bikeFeatures, hazardFeatures, isRoute, pointFeatures, routeFeatures } from '../map/features'
+import { bikeFeatures, hazardFeatures, isRoute, pointFeatures, routeFeatures, stressFeatures } from '../map/features'
 import { buildMapStyle } from '../map/mapStyle'
 import { readMapPalette } from '../map/palette'
 import { mostDistinctPoint } from '../map/routeProgress'
@@ -26,6 +26,7 @@ import { useColorScheme } from '../theme/colorScheme'
 import type { AddressOption } from '../utils/address'
 import { minutes } from '../utils/format'
 import { getBoundsFromLegsAndPoints, type LatLng } from '../utils/routeGeometry'
+import { BUCKET_BAND } from './exposure'
 import { MapContextMenu } from './MapContextMenu'
 import { RoadworkDetails } from './RoadworkDetails'
 import { Button } from '@/components/ui/button'
@@ -105,6 +106,7 @@ export function RouteMap({
 
   const selected = routes.find((r) => r.id === selectedId)
   const routeData = useMemo(() => routeFeatures(routes), [routes])
+  const stressData = useMemo(() => (selected ? stressFeatures(selected) : stressFeatures({ legs: [], stressRuns: [] })), [selected])
   const signalData = useMemo(() => pointFeatures((selected?.signalStops ?? []).map((s) => s.at)), [selected])
   const bikeData = useMemo(() => bikeFeatures(cityBikes), [cityBikes])
   const hazardData = useMemo(() => hazardFeatures(hazards), [hazards])
@@ -388,6 +390,32 @@ export function RouteMap({
             filter={isRoute(selectedId)}
             layout={{ 'line-cap': 'round', 'line-join': 'round' }}
             paint={{ 'line-color': palette.routeSelected, 'line-width': 6 }}
+          />
+        </Source>
+
+        {/* The selected route in traffic colours, over its plain line (shown if a plan has no runs) */}
+        <Source id="route-stress" type="geojson" data={stressData}>
+          <Layer
+            id="route-stress"
+            type="line"
+            beforeId={BELOW_LABELS}
+            layout={{ 'line-cap': 'round', 'line-join': 'round' }}
+            paint={{
+              'line-color': [
+                'match',
+                ['get', 'bucket'],
+                'carFree',
+                palette.calm[BUCKET_BAND.carFree],
+                'quiet',
+                palette.calm[BUCKET_BAND.quiet],
+                'adjacent',
+                palette.calm[BUCKET_BAND.adjacent],
+                'traffic',
+                palette.calm[BUCKET_BAND.traffic],
+                palette.routeSelected,
+              ],
+              'line-width': 6,
+            }}
           />
         </Source>
 

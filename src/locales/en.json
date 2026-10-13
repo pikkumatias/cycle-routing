@@ -39,7 +39,14 @@
     "calmBand_busy": "Busy",
     "calmScore": "Calm score {{index}} of 100",
     "error": "Couldn't find routes",
-    "retry": "Try again"
+    "retry": "Try again",
+    "arrive": "Arrive {{time}}",
+    "climb": "{{m}} m climb",
+    "exposure": "Traffic on this route",
+    "exposure_carFree": "Car-free",
+    "exposure_quiet": "Quiet streets",
+    "exposure_adjacent": "Next to traffic",
+    "exposure_traffic": "In traffic"
   },
   "planErrors": {
     "NO_ROUTE": "There's no bike route between these places. Try moving the start or destination closer to a street or path.",

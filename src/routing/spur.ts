@@ -40,7 +40,10 @@ export function trimSpur(
   }
 }
 
-/** Copy of `steps` with `byM` metres removed from its `end` or `start`, step by step. */
+/**
+ * Copy of `steps` with `byM` metres removed from its `end` or `start`, step by step. Elevation
+ * profiles lose the same stretch (from the start, the rest shifts to start at 0).
+ */
 function shorten(steps: OtpStep[], byM: number, from: 'start' | 'end'): OtpStep[] {
   const out = steps.map((s) => ({ ...s }))
   let left = byM
@@ -48,6 +51,12 @@ function shorten(steps: OtpStep[], byM: number, from: 'start' | 'end'): OtpStep[
     const s = out[from === 'end' ? out.length - 1 - k : k]
     const cut = Math.min(s.distance, left)
     s.distance -= cut
+    if (s.elevation) {
+      s.elevation =
+        from === 'end'
+          ? s.elevation.filter(([m]) => m <= s.distance)
+          : s.elevation.filter(([m]) => m >= cut).map(([m, e]): [number, number] => [m - cut, e])
+    }
     left -= cut
   }
   return out

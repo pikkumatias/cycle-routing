@@ -67,6 +67,15 @@ calmIndex = 100 × (1 − (Σ weight × metres + 50 m × unsignalisedCrossings) 
 Clamped to 0–100 and **absolute**: the same route always gets the same number. Bands
 (prior): very calm ≥ 85, calm ≥ 70, some traffic ≥ 50, busy below.
 
+### Climb (`elevation.ts`)
+
+OTP steps carry an elevation profile (a point every ~10 m). OTP's own `elevationGained`
+counts every wobble of the elevation model — about twice the profile's raw climb — so the
+profile is smoothed with a 100 m moving average and rises count once they clear 2 m above
+the last low. Cards show the climb rounded to 5 m. Stress runs (`profile.stressRuns`: where
+each stretch of one stress class ends) are sent with each route so the app can show where
+the traffic is.
+
 ## Selection (`select.ts`)
 
 1. **Fastest** — minimum duration.
