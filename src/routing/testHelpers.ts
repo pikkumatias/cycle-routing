@@ -34,6 +34,8 @@ export function makeLayers(opts: {
   roads?: TestRoad[]
   calmNodes?: Array<[number, number]>
   gradeSeparated?: Array<Array<[number, number]>>
+  /** [south, west, north, east] of the data; default: far around the test area. */
+  bbox?: [number, number, number, number]
 }): Layers {
   const signals: LatLng[] = (opts.signals ?? []).map((p) => at(...p))
   const roads: RoadRecord[] = (opts.roads ?? []).map(({ points, signals: roadSignals, ...rest }) => {
@@ -44,7 +46,7 @@ export function makeLayers(opts: {
     version: 1,
     generatedAt: 'test',
     osmTimestamp: 'test-data',
-    bbox: [60, 24, 61, 26],
+    bbox: opts.bbox ?? [60, 24, 61, 26],
     signals,
     roads,
     calmNodes: (opts.calmNodes ?? []).map((p) => at(...p)),
@@ -101,6 +103,7 @@ export function withProfile(
       stressM: { away: 0, quiet: 0, adjacent: 0, mixedLow: 0, mixedHigh: 0 },
       majorCrossings: 0,
       walkM: 0,
+      outsideM: 0,
       calmIndex: 50,
       calmBand: 'mixed',
       ...profile,

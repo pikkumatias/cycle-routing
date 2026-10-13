@@ -173,3 +173,17 @@ describe('calmIndex', () => {
     expect(calmBand(10, DEFAULT_CONFIG)).toBe('busy')
   })
 })
+
+describe('data coverage', () => {
+  it('measures nothing outside for a route inside the data area', () => {
+    expect(profile(makeLayers({})).outsideM).toBe(0)
+  })
+
+  it('measures how far a route runs past the edge of the data area', () => {
+    // The data ends 700 m along the 1 km route
+    const edge = at(700, 0)[1]
+    const outsideM = profile(makeLayers({ bbox: [60, 24, 61, edge] })).outsideM
+    expect(outsideM).toBeGreaterThan(280)
+    expect(outsideM).toBeLessThan(320)
+  })
+})

@@ -53,6 +53,13 @@ export function profileRoute(candidate: Candidate, layers: Layers, cfg: RoutingC
     stressM[s.stress] += s.lengthM
     if (s.step?.walkingBike) walkM += s.lengthM
   }
+  const [south, west, north, east] = layers.bbox
+  const inside = ([lat, lon]: LatLng) => lat >= south && lat <= north && lon >= west && lon <= east
+  let outsideM = 0
+  for (let i = 1; i < poly.length; i++) {
+    if (!inside(poly[i - 1]) || !inside(poly[i])) outsideM += cum[i] - cum[i - 1]
+  }
+
   const majorCrossings = crossings.filter((c) => !c.signal).length
   const index = calmIndex(stressM, majorCrossings, lengthM, cfg)
 
@@ -63,6 +70,7 @@ export function profileRoute(candidate: Candidate, layers: Layers, cfg: RoutingC
     stressM,
     majorCrossings,
     walkM,
+    outsideM,
     calmIndex: index,
     calmBand: calmBand(index, cfg),
   }

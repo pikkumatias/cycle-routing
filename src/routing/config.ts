@@ -51,6 +51,11 @@ export type RoutingConfig = {
   minCalmGain: number
   /** A non-distinct route may still get a card if it beats the gain by this factor. */
   variantGainFactor: number
+  /**
+   * A route riding further than this outside the OSM data area can't win Fewest lights or Calm:
+   * nothing is known there, so its lights and calm index would be flattering guesses.
+   */
+  maxOutsideM: number
   generators: {
     round1: PresetGenerator[]
     /** Round-2 via waypoints per family; 0 disables the family. */
@@ -69,7 +74,7 @@ export type RoutingConfig = {
 }
 
 export const DEFAULT_CONFIG: RoutingConfig = {
-  configVersion: 'prior-1',
+  configVersion: 'prior-2',
   signals: { onM: 3, crossM: 18, nearM: 12, windowM: 40 },
   stress: {
     weights: { away: 0, quiet: 0.15, adjacent: 0.35, mixedLow: 0.6, mixedHigh: 1 },
@@ -93,6 +98,7 @@ export const DEFAULT_CONFIG: RoutingConfig = {
   minLightGain: 2,
   minCalmGain: 10,
   variantGainFactor: 1.5,
+  maxOutsideM: 100,
   generators: {
     round1: [
       { name: 'preset:fastest', optimization: { triangle: { time: 1, safety: 0, flatness: 0 } } },

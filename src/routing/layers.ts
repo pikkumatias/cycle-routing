@@ -58,6 +58,8 @@ export type Layers = {
   roadSegments: GridIndex<RoadSegment>
   calmNodes: GridIndex<LatLng>
   gradeSeparated: GridIndex<GradeSegment>
+  /** [south, west, north, east] the data covers. */
+  bbox: [number, number, number, number]
   /** Identifies the data the plan was computed from. */
   dataVersion: string
 }
@@ -93,5 +95,5 @@ export function buildLayers(file: OsmLayersFile): Layers {
     }
   }
 
-  return { signals, roadSegments, calmNodes, gradeSeparated, dataVersion: file.osmTimestamp }
+  return { signals, roadSegments, calmNodes, gradeSeparated, bbox: file.bbox, dataVersion: file.osmTimestamp }
 }

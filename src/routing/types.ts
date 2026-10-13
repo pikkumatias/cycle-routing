@@ -67,6 +67,8 @@ export type RouteProfile = {
   /** At-grade crossings of a major road without a signal nearby. */
   majorCrossings: number
   walkM: number
+  /** Metres outside the OSM data area, where no roads or signals are known (so none are counted). */
+  outsideM: number
   /** 0–100, absolute: the same route always gets the same number. */
   calmIndex: number
   calmBand: CalmBand

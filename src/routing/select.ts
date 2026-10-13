@@ -18,6 +18,10 @@ const CATEGORY_ORDER: Category[] = ['fastest', 'fewestLights', 'calm']
  * 4. Roles are then re-assigned over the shown cards by metric — fewest lights among cards
  *   within the lights cap, highest calm index overall — so a later card that beats an earlier
  *   one takes over its badge. A card that ends up winning nothing is dropped.
+ *
+ * Only routes inside the OSM data area (`maxOutsideM`) take part in Fewest lights and Calm, and
+ * gains are measured against such routes only: outside it nothing is known, so a route there
+ * looks better than it is. With no such route shown, those categories make no claims.
  */
 export function selectCards(pool: ProfiledCandidate[], cfg: RoutingConfig): SelectionResult {
   if (pool.length === 0) throw new Error('No candidate routes available')
@@ -42,6 +46,10 @@ export function selectCards(pool: ProfiledCandidate[], cfg: RoutingConfig): Sele
 
   const shown: Array<{ route: ProfiledCandidate; addedFor: Category }> = [{ route: fastest, addedFor: 'fastest' }]
   const isShown = (c: ProfiledCandidate) => shown.some((s) => s.route.id === c.id)
+  const known = (c: ProfiledCandidate) => c.profile.outsideM <= cfg.maxOutsideM
+  /** Shown routes whose metrics can be trusted, as the baseline for a gain. */
+  const knownShown = () => shown.map((s) => s.route).filter(known)
+  if (!known(fastest)) reasons.push('Fastest leaves the OSM data area: no lights or calm comparisons')
 
   /** First candidate (in ranked order) that clears the gain and is distinct, or a strong variant. */
   const pick = (ranked: ProfiledCandidate[], gainOf: (c: ProfiledCandidate) => number, minGain: number) =>
@@ -55,11 +63,11 @@ export function selectCards(pool: ProfiledCandidate[], cfg: RoutingConfig): Sele
 
   const lightCost = (c: ProfiledCandidate) => c.profile.lights + extraMin(c) / cfg.minutesPerLight
   const lightRanked = pool
-    .filter((c) => withinCap(c, cfg.caps.fewestLights))
+    .filter((c) => known(c) && withinCap(c, cfg.caps.fewestLights))
     .sort((a, b) => lightCost(a) - lightCost(b) || a.durationSec - b.durationSec)
   const lightsPick = pick(
     lightRanked,
-    (c) => Math.min(...shown.map((s) => s.route.profile.lights)) - c.profile.lights,
+    (c) => (knownShown().length ? Math.min(...knownShown().map((r) => r.profile.lights)) - c.profile.lights : -Infinity),
     cfg.minLightGain,
   )
   if (lightsPick) shown.push({ route: lightsPick, addedFor: 'fewestLights' })
@@ -67,11 +75,11 @@ export function selectCards(pool: ProfiledCandidate[], cfg: RoutingConfig): Sele
 
   const calmUtility = (c: ProfiledCandidate) => c.profile.calmIndex - cfg.calmPointsPerMinute * extraMin(c)
   const calmRanked = pool
-    .filter((c) => withinCap(c, cfg.caps.calm))
+    .filter((c) => known(c) && withinCap(c, cfg.caps.calm))
     .sort((a, b) => calmUtility(b) - calmUtility(a) || a.durationSec - b.durationSec)
   const calmPick = pick(
     calmRanked,
-    (c) => c.profile.calmIndex - Math.max(...shown.map((s) => s.route.profile.calmIndex)),
+    (c) => (knownShown().length ? c.profile.calmIndex - Math.max(...knownShown().map((r) => r.profile.calmIndex)) : -Infinity),
     cfg.minCalmGain,
   )
   if (calmPick) shown.push({ route: calmPick, addedFor: 'calm' })
@@ -80,21 +88,22 @@ export function selectCards(pool: ProfiledCandidate[], cfg: RoutingConfig): Sele
   // Re-assign roles by metric over the shown cards; prefer the card added for a role on ties.
   const prefer = (role: Category) => (a: (typeof shown)[number], b: (typeof shown)[number]) =>
     Number(b.addedFor === role) - Number(a.addedFor === role)
+  // Without a known route among the cards, the category falls back to Fastest but is not badged
   const lightsWinner = shown
-    .filter((s) => withinCap(s.route, cfg.caps.fewestLights))
+    .filter((s) => known(s.route) && withinCap(s.route, cfg.caps.fewestLights))
     .sort((a, b) => a.route.profile.lights - b.route.profile.lights || prefer('fewestLights')(a, b))[0]
-  const calmWinner = [...shown].sort(
-    (a, b) => b.route.profile.calmIndex - a.route.profile.calmIndex || prefer('calm')(a, b),
-  )[0]
+  const calmWinner = shown
+    .filter((s) => known(s.route))
+    .sort((a, b) => b.route.profile.calmIndex - a.route.profile.calmIndex || prefer('calm')(a, b))[0]
   const winners: Record<Category, string> = {
     fastest: fastest.id,
-    fewestLights: lightsWinner.route.id,
-    calm: calmWinner.route.id,
+    fewestLights: lightsWinner?.route.id ?? fastest.id,
+    calm: calmWinner?.route.id ?? fastest.id,
   }
 
   const cards: RouteCard[] = []
   for (const s of shown) {
-    const roles = CATEGORY_ORDER.filter((role) => winners[role] === s.route.id)
+    const roles = CATEGORY_ORDER.filter((role) => winners[role] === s.route.id && (role === 'fastest' || known(s.route)))
     if (roles.length === 0) {
       reasons.push(`Dropped the ${s.addedFor} card: another shown route beats it`)
       continue

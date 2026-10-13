@@ -104,4 +104,21 @@ describe('selectCards', () => {
     ]
     expect(selectCards([...pool].reverse(), cfg)).toEqual(selectCards(pool, cfg))
   })
+
+  it('does not let a route that leaves the data area win Calm or Fewest lights', () => {
+    // Outside the data there are no roads or signals, so such a route looks calmer than it is
+    const fast = withProfile('fast', STRAIGHT, 600, { lights: 5, calmIndex: 40 })
+    const edge = withProfile('edge', NORTH, 660, { lights: 0, calmIndex: 95, outsideM: 900 })
+    const result = selectCards([fast, edge], cfg)
+    expect(result.cards.map((c) => c.routeId)).toEqual(['fast'])
+    expect(result.cards[0].badges).toEqual(['fewestLights', 'calm'])
+  })
+
+  it('makes no lights or calm claims when the fastest route leaves the data area', () => {
+    // Nothing trustworthy to compare against: show Fastest alone, without badges
+    const fast = withProfile('fast', STRAIGHT, 600, { lights: 0, calmIndex: 95, outsideM: 900 })
+    const inside = withProfile('inside', NORTH, 700, { lights: 4, calmIndex: 60 })
+    const result = selectCards([fast, inside], cfg)
+    expect(result.cards).toEqual([{ routeId: 'fast', primary: 'fastest', badges: [], extraSec: 0 }])
+  })
 })
