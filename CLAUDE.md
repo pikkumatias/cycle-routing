@@ -76,3 +76,15 @@ Every file in `api/` deploys as a function except `_`-prefixed paths; `.vercelig
 ### UI
 
 Tailwind CSS v4 + shadcn/ui (Radix, `src/components/ui/`, generated) + lucide icons, font Geist: the stock shadcn neutral (black and white) look. **All colours are tokens in `src/styles/theme.css`**: shadcn's standard variables (paste a theme from ui.shadcn.com/themes over them), plus the data colours (traffic lights, calm bands, city bikes, roadworks) and the greyscale map. The map reads the same tokens (any CSS colour, converted by `src/lib/color.ts`). Light/dark follows the system unless set in the options menu (`src/theme/colorScheme.ts`). `@/` aliases `src/`. Copy is in `src/locales/{en,fi}.json`.
+
+## Working remotely (Claude app and @claude)
+
+Changes here are often requested from a phone, through a Claude Code web session or an `@claude` issue or comment. The owner reviews the PR on their phone, then merges.
+
+- Work on a branch and open a PR. Never push to `main`.
+- Before pushing, these must pass: `npm run lint`, `npm run build` and `npm test -- --run`.
+- Keep the PR to what was asked. If the request is ambiguous, make the reasonable choice and say so in the PR description rather than stopping to ask.
+- PR description: what changed and why in two to four lines, how you verified it, and what to look at on the preview.
+- Vercel builds a preview for every PR; link it in the PR description if it is up.
+- `DIGITRANSIT_API_KEY` is not available in web sessions or the Action, so the `api/` functions cannot be exercised against Digitransit. Rely on the unit tests and synthetic layers in `src/routing/testHelpers.ts`.
+- Do not regenerate `data/osm-layers.json` (`npm run data:osm` needs Overpass) or change `vercel.json` unless asked.
