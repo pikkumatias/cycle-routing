@@ -45,22 +45,22 @@
   --calm-busy: #7a8488;
 
   /* Map */
-  --map-land: oklch(0.985 0 0);
-  --map-water: oklch(0.89 0 0);
-  --map-park: oklch(0.955 0 0);
-  --map-wood: oklch(0.94 0 0);
-  --map-building: oklch(0.945 0 0);
-  --map-road: oklch(1 0 0);
-  --map-road-major: oklch(1 0 0);
-  --map-road-casing: oklch(0.87 0 0);
-  --map-path: oklch(0.82 0 0);
-  --map-cycleway: oklch(0.6 0 0);
-  --map-rail: oklch(0.78 0 0);
-  --map-label: oklch(0.5 0 0);
-  --map-label-halo: oklch(1 0 0);
+  --map-land: #eef1ef;
+  --map-water: #b7d0d8;
+  --map-park: #d6e4d2;
+  --map-wood: #cadcc6;
+  --map-building: #e1e5e3;
+  --map-road: #ffffff;
+  --map-road-major: #ffffff;
+  --map-road-casing: #d0d7d4;
+  --map-path: #c9d0cd;
+  --map-cycleway: #3f978d;
+  --map-rail: #b3bbb8;
+  --map-label: #586266;
+  --map-label-halo: #ffffff;
   --route-selected: var(--primary);
   --route-casing: var(--background);
-  --route-alt: oklch(0.68 0 0);
+  --route-alt: #7f8c90;
   --pin: var(--foreground);
   --pin-ring: var(--background);
 }
@@ -95,22 +95,22 @@
   --calm-mixed: #8e8264;
   --calm-busy: #5d696d;
 
-  --map-land: oklch(0.16 0 0);
-  --map-water: oklch(0.23 0 0);
-  --map-park: oklch(0.185 0 0);
-  --map-wood: oklch(0.195 0 0);
-  --map-building: oklch(0.2 0 0);
-  --map-road: oklch(0.27 0 0);
-  --map-road-major: oklch(0.31 0 0);
-  --map-road-casing: oklch(0.12 0 0);
-  --map-path: oklch(0.3 0 0);
-  --map-cycleway: oklch(0.48 0 0);
-  --map-rail: oklch(0.32 0 0);
-  --map-label: oklch(0.68 0 0);
-  --map-label-halo: oklch(0.16 0 0);
+  --map-land: #172023;
+  --map-water: #0d2830;
+  --map-park: #1a2a25;
+  --map-wood: #1c2e27;
+  --map-building: #20292c;
+  --map-road: #2a3538;
+  --map-road-major: #34403f;
+  --map-road-casing: #151d20;
+  --map-path: #2b3639;
+  --map-cycleway: #2f8a81;
+  --map-rail: #3a4649;
+  --map-label: #8f9b9e;
+  --map-label-halo: #121a1c;
   --route-selected: var(--primary);
   --route-casing: var(--background);
-  --route-alt: oklch(0.5 0 0);
+  --route-alt: #6a787c;
   --pin: var(--foreground);
   --pin-ring: var(--background);
 }
