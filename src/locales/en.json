@@ -48,7 +48,11 @@
     "exposure_carFree": "Car-free",
     "exposure_quiet": "Quiet streets",
     "exposure_adjacent": "Next to traffic",
-    "exposure_traffic": "In traffic"
+    "exposure_traffic": "In traffic",
+    "winter": "{{km, number(minimumFractionDigits: 1; maximumFractionDigits: 1)}} km on winter routes",
+    "winterMaintenance": "Winter maintenance on this route",
+    "winter_brush": "Brush-salted {{km, number(minimumFractionDigits: 1; maximumFractionDigits: 1)}} km",
+    "winter_plough": "Priority ploughing {{km, number(minimumFractionDigits: 1; maximumFractionDigits: 1)}} km"
   },
   "planErrors": {
     "NO_ROUTE": "There's no bike route between these places. Try moving the start or destination closer to a street or path.",
@@ -86,7 +90,16 @@
     "speed_fast": "Fast",
     "speedHint_relaxed": "Routes and times for cruising at {{kmh}} km/h.",
     "speedHint_normal": "Routes and times for cruising at {{kmh}} km/h.",
-    "speedHint_fast": "Routes and times for cruising at {{kmh}} km/h, as on an e-bike."
+    "speedHint_fast": "Routes and times for cruising at {{kmh}} km/h, as on an e-bike.",
+    "sources": "Data sources",
+    "source_digitransit": "Digitransit, HSL",
+    "source_digitransit_use": "Route options, address search and city bikes",
+    "source_osm": "© OpenStreetMap contributors",
+    "source_osm_use": "Traffic lights, roads and paths used to compare routes",
+    "source_map": "OpenFreeMap, © OpenMapTiles",
+    "source_map_use": "Map tiles, from OpenStreetMap data",
+    "source_helsinki": "City of Helsinki",
+    "source_helsinki_use": "Winter maintenance routes and roadworks"
   },
   "map": {
     "start": "Start",

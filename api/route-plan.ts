@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import polyline from '@mapbox/polyline'
 import { DEFAULT_CONFIG } from '../src/routing/config.js'
 import { haversineDistance } from '../src/routing/geo.js'
-import { buildLayers, type Layers, type OsmLayersFile } from '../src/routing/layers.js'
+import { buildLayers, type Layers, type OsmLayersFile, type WinterRoutesFile } from '../src/routing/layers.js'
 import { createOtpClient } from '../src/routing/otpClient.js'
 import { PlanError, planRoutes } from '../src/routing/planRoutes.js'
 import type { LatLon, RoutePlanErrorCode } from '../src/routing/types.js'
@@ -44,15 +44,17 @@ const fail = (res: VercelRes, code: RoutePlanErrorCode, error: string) => {
   return res.status(STATUS[code]).json({ error, code })
 }
 
-// Parsed once per function instance; the file ships with the deployment (vercel.json includeFiles).
+const readJson = async <T>(path: string) => JSON.parse(await readFile(join(process.cwd(), path), 'utf8')) as T
+
+// Parsed once per function instance; the files ship with the deployment (vercel.json includeFiles).
 // A failed load is forgotten so the next request retries instead of failing for the instance's lifetime.
 let layerData: Promise<{ layers: Layers; bbox: OsmLayersFile['bbox'] }> | null = null
 function loadLayers() {
-  layerData ??= readFile(join(process.cwd(), 'data/osm-layers.json'), 'utf8')
-    .then((text) => {
-      const file = JSON.parse(text) as OsmLayersFile
-      return { layers: buildLayers(file), bbox: file.bbox }
-    })
+  layerData ??= Promise.all([
+    readJson<OsmLayersFile>('data/osm-layers.json'),
+    readJson<WinterRoutesFile>('data/winter-routes.json'),
+  ])
+    .then(([file, winter]) => ({ layers: buildLayers(file, winter), bbox: file.bbox }))
     .catch((error: unknown) => {
       layerData = null
       throw error
@@ -167,6 +169,7 @@ export default async function handler(req: VercelReq, res: VercelRes) {
           majorCrossings: r.profile.majorCrossings,
           climbM: Math.round(r.profile.climbM),
           stressRuns: r.profile.stressRuns.map(([endM, stress]) => [Math.round(endM), stress]),
+          winterM: { brush: Math.round(r.profile.winterM.brush), plough: Math.round(r.profile.winterM.plough) },
         })),
       cards: plan.selection.cards,
       meta: { ...plan.meta, dataVersion: layers.dataVersion },

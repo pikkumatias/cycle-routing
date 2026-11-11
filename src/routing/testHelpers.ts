@@ -2,7 +2,7 @@
 import polyline from '@mapbox/polyline'
 import { DEFAULT_CONFIG } from './config.js'
 import { offsetPoint } from './geo.js'
-import { buildLayers, type Layers, type RoadRecord } from './layers.js'
+import { buildLayers, type Layers, type RoadRecord, type WinterKind } from './layers.js'
 import { profileRoute } from './profile.js'
 import type { Candidate, LatLng, OtpStep, ProfiledCandidate, RouteProfile } from './types.js'
 
@@ -34,6 +34,7 @@ export function makeLayers(opts: {
   roads?: TestRoad[]
   calmNodes?: Array<[number, number]>
   gradeSeparated?: Array<Array<[number, number]>>
+  winter?: Array<{ kind: WinterKind; points: Array<[number, number]> }>
   /** [south, west, north, east] of the data; default: far around the test area. */
   bbox?: [number, number, number, number]
 }): Layers {
@@ -51,6 +52,11 @@ export function makeLayers(opts: {
     roads,
     calmNodes: (opts.calmNodes ?? []).map((p) => at(...p)),
     gradeSeparated: (opts.gradeSeparated ?? []).map((g) => polyline.encode(line(g), 6)),
+  }, {
+    version: 1,
+    fetchedAt: 'test',
+    source: 'test',
+    routes: (opts.winter ?? []).map(({ kind, points }) => ({ kind, name: 'test', geom: polyline.encode(line(points), 6) })),
   })
 }
 
@@ -106,6 +112,7 @@ export function withProfile(
       outsideM: 0,
       climbM: 0,
       stressRuns: [],
+      winterM: { brush: 0, plough: 0 },
       calmIndex: 50,
       calmBand: 'mixed',
       ...profile,

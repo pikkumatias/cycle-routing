@@ -11,6 +11,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npx vitest run src/routing/profile.test.ts` — Run a single test file
 - `npm run route` — CLI script to query Digitransit routing API interactively
 - `npm run data:osm` — Rebuild `data/osm-layers.json` from Overpass (cached in `.cache/osm/`; `-- --refresh` to refetch)
+- `npm run data:winter` — Refetch `data/winter-routes.json` (Helsinki's priority winter maintenance routes) from the city's WFS; each autumn
 
 ## Environment Variables
 
@@ -38,6 +39,7 @@ Pure TypeScript — no DOM or Node APIs — so the endpoint, the calibration san
 - `otpClient.ts` — Digitransit `planConnection` (direct bicycle, optional via point, steps)
 - `generators.ts`, `spur.ts` — round-2 via waypoints snapped to the calm network; out-and-back stub trimming
 - `signals.ts`, `stress.ts`, `profile.ts` — signal stops, per-segment traffic stress, absolute calm index
+- `winter.ts` — metres on Helsinki's priority winter routes (`data/winter-routes.json`), display only for now
 - `similarity.ts`, `select.ts` — distinctness and card selection with badges
 - `layers.ts` — format and spatial index of `data/osm-layers.json`
 - `testHelpers.ts` — synthetic geometry/layers for unit tests
@@ -87,4 +89,5 @@ Changes here are often requested from a phone, through a Claude Code web session
 - PR description: what changed and why in two to four lines, how you verified it, and what to look at on the preview.
 - Vercel builds a preview for every PR; link it in the PR description if it is up.
 - `DIGITRANSIT_API_KEY` is not available in web sessions or the Action, so the `api/` functions cannot be exercised against Digitransit. Rely on the unit tests and synthetic layers in `src/routing/testHelpers.ts`.
-- Do not regenerate `data/osm-layers.json` (`npm run data:osm` needs Overpass) or change `vercel.json` unless asked.
+- Do not regenerate `data/osm-layers.json` (`npm run data:osm` needs Overpass) or `data/winter-routes.json`, or change `vercel.json`, unless asked.
+- New data sources need a credit in the README (Data sources and credits) and in `DATA_SOURCES` in `OptionsMenu.tsx`.

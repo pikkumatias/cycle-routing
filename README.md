@@ -51,7 +51,11 @@ Opens at `http://localhost:5173`. Enter two addresses (or `lat,lon` coordinates)
 | **Fewest lights** | Fewest traffic-signal stops among routes at most +30 % (≥ +4 min) slower, trading lights against extra minutes; shown only if it avoids ≥ 2 lights and is a distinct route |
 | **Calm** | Highest calm index (how much of the route is away from car traffic) among routes at most +40 % (≥ +5 min) slower; shown only if ≥ 10 points calmer and distinct |
 
-Every card shows time, distance, extra time versus Fastest, light count and calm band.
+Every card shows time, distance, extra time versus Fastest, light count and calm band. From mid-October to mid-April it also shows how far the route rides on Helsinki's priority winter routes, and the selected card splits that into brush-salted and priority-ploughed kilometres.
+
+### Winter maintenance
+
+Helsinki maintains about 160 km of walking and cycling routes to a higher winter standard: **brush-salting** (snow swept off, slipperiness treated with salt solution, no grit; quality promise 7–19 on weekdays, 7–17 at weekends) and **intensified ploughing** (ploughed by 07:00, and within 4 h of a daytime snowfall). Each route's metres on them are measured server-side against `data/winter-routes.json`. Only Helsinki publishes this network, so routes in Espoo and Vantaa show nothing rather than "unmaintained". For now this is information on the card only; it does not yet change which routes are chosen.
 
 ### Traffic light overlay
 
@@ -73,6 +77,31 @@ npm run data:osm -- --source=overpass  # alternative source; slow when Overpass 
 ```
 
 `data/meta.json` records the OSM timestamp and counts.
+
+## Winter route data
+
+`data/winter-routes.json` holds Helsinki's prioritised winter maintenance network for walking and cycling, fetched from the city's open WFS (layer `avoindata:Talvihoidon_priorisoitu_reitisto`, ~55 KB). The city updates the network for each winter season, so refresh it every autumn:
+
+```bash
+npm run data:winter
+```
+
+The script stops if the city introduces a maintenance type it doesn't know.
+
+---
+
+## Data sources and credits
+
+The app is built on open data. The same credits are in the app, under **Map and settings → Data sources**.
+
+| Source | Used for | Licence |
+|---|---|---|
+| [Digitransit](https://digitransit.fi/en/) (HSL, Fintraffic, Waltti) | Route candidates (OpenTripPlanner), elevation, address search, city bike stations | [CC BY 4.0](https://digitransit.fi/en/developers/apis/7-terms-of-use/) |
+| [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors, via [BBBike](https://download.bbbike.org/osm/) extracts | Traffic signals, major roads, the car-free path network, bridges and tunnels used to score routes (`data/osm-layers.json`) | [ODbL](https://opendatacommons.org/licenses/odbl/) |
+| [OpenFreeMap](https://openfreemap.org/), [OpenMapTiles](https://openmaptiles.org/) | Basemap vector tiles and fonts (OpenStreetMap data) | OpenMapTiles schema [BSD-3/CC BY](https://github.com/openmaptiles/openmaptiles/blob/master/LICENSE.md); data ODbL |
+| [City of Helsinki](https://hri.fi/en_gb/) (Helsinki Region Infoshare) | Prioritised winter maintenance network ([dataset](https://hri.fi/data/en_GB/dataset/helsingin-jalankulun-ja-pyorailyn-talvihoidon-priorisoitu-reitisto)), roadworks and temporary traffic arrangements | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
+
+The map also shows the standard MapLibre attribution (the ⓘ button).
 
 ---
 

@@ -1,6 +1,7 @@
 import type { LatLonPair } from './digitransit'
 import { decodePolyline, type LatLng } from '../utils/routeGeometry'
 import type { CalmBand, Category, RouteCard, RoutePlanErrorCode, SignalRule, StressClass } from '../routing/types'
+import type { WinterKind } from '../routing/layers'
 import { RIDING_SPEED_KMH, type RidingSpeed } from '../settings/ridingSpeed'
 
 export type { CalmBand, Category, RouteCard }
@@ -46,6 +47,8 @@ export type PlannedRoute = {
   climbM: number
   /** [metres along the route where a run ends, its stress class], in order. */
   stressRuns: Array<[number, StressClass]>
+  /** Metres on Helsinki's priority winter-maintained routes (brush-salted, intensified ploughing). */
+  winterM: Record<WinterKind, number>
 }
 
 export type RoutePlan = {
@@ -54,9 +57,9 @@ export type RoutePlan = {
   meta: { calls: number; failed: number; partial: boolean; configVersion: string; dataVersion: string }
 }
 
-/** Plans from before climb and traffic runs were added lack them (old edge-cached answers). */
-type WireRoute = Omit<PlannedRoute, 'legs' | 'climbM' | 'stressRuns'> &
-  Partial<Pick<PlannedRoute, 'climbM' | 'stressRuns'>> & { legs: string[] }
+/** Plans from before climb, traffic runs and winter metres were added lack them (old edge-cached answers). */
+type WireRoute = Omit<PlannedRoute, 'legs' | 'climbM' | 'stressRuns' | 'winterM'> &
+  Partial<Pick<PlannedRoute, 'climbM' | 'stressRuns' | 'winterM'>> & { legs: string[] }
 
 const MAX_PLAN_CACHE = 20
 const planCache = new Map<string, RoutePlan>()
@@ -132,6 +135,7 @@ export async function fetchRoutePlan(
       legs: r.legs.map(decodePolyline),
       climbM: r.climbM ?? 0,
       stressRuns: r.stressRuns ?? [],
+      winterM: r.winterM ?? { brush: 0, plough: 0 },
     })),
   }
 

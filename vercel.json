@@ -3,7 +3,7 @@
   "regions": ["arn1"],
   "functions": {
     "api/route-plan.ts": {
-      "includeFiles": "data/osm-layers.json",
+      "includeFiles": "data/*.json",
       "maxDuration": 15
     }
   }

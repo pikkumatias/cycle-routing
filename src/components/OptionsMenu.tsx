@@ -11,6 +11,14 @@ import { Switch } from '@/components/ui/switch'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { cn } from '@/lib/utils'
 
+/** Every source the app's routes, scores and map draw on, with its licence. */
+const DATA_SOURCES = [
+  { key: 'digitransit', href: 'https://digitransit.fi/en/', licence: 'CC BY 4.0' },
+  { key: 'osm', href: 'https://www.openstreetmap.org/copyright', licence: 'ODbL' },
+  { key: 'map', href: 'https://openfreemap.org/', licence: null },
+  { key: 'helsinki', href: 'https://hri.fi/en_gb/', licence: 'CC BY 4.0' },
+] as const
+
 type OptionsMenuProps = {
   showCityBikes: boolean
   onShowCityBikes: (show: boolean) => void
@@ -19,7 +27,7 @@ type OptionsMenuProps = {
   className?: string
 }
 
-/** Map layers, riding speed, language and appearance, behind one round button on the map. */
+/** Map layers, riding speed, language, appearance and data sources, behind one round button on the map. */
 export function OptionsMenu({
   showCityBikes,
   onShowCityBikes,
@@ -48,7 +56,7 @@ export function OptionsMenu({
         align="end"
         sideOffset={8}
         collisionPadding={16}
-        className="flex w-[min(320px,calc(100vw-32px))] flex-col gap-5"
+        className="flex max-h-(--radix-popover-content-available-height) w-[min(320px,calc(100vw-32px))] flex-col gap-5 overflow-y-auto"
       >
         <section className="flex flex-col gap-1.5">
           <h2 className="text-sm font-medium">{t('options.showOnMap')}</h2>
@@ -116,6 +124,29 @@ export function OptionsMenu({
               { value: 'dark', label: t('options.dark'), icon: <Moon className="size-4" /> },
             ]}
           />
+        </section>
+
+        <section className="flex flex-col gap-2 border-t pt-4">
+          <h2 id="opt-sources" className="text-sm font-medium">
+            {t('options.sources')}
+          </h2>
+          <ul aria-labelledby="opt-sources" className="flex flex-col gap-2 text-xs text-muted-foreground">
+            {DATA_SOURCES.map((s) => (
+              <li key={s.key}>
+                <a
+                  href={s.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-foreground underline underline-offset-4"
+                >
+                  {t(`options.source_${s.key}`)}
+                </a>
+                {s.licence && <> · {s.licence}</>}
+                <br />
+                {t(`options.source_${s.key}_use`)}
+              </li>
+            ))}
+          </ul>
         </section>
       </PopoverContent>
     </Popover>
