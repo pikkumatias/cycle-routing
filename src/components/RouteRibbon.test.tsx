@@ -17,6 +17,7 @@ const route = (stressRuns: PlannedRoute['stressRuns']): PlannedRoute => ({
   majorCrossings: 0,
   climbM: 0,
   stressRuns,
+  winterM: { brush: 0, plough: 0 },
 })
 
 describe('RouteRibbon', () => {

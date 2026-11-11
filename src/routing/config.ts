@@ -31,6 +31,11 @@ export type RoutingConfig = {
     /** Lower calmIndex bound of each band, highest first (prior). */
     bands: Array<{ band: CalmBand; min: number }>
   }
+  winter: {
+    /** A route segment this close to a priority winter route, running parallel, rides on it. */
+    matchM: number
+    parallelDeg: number
+  }
   similarity: {
     /** Route points farther than this from another route count as different. */
     tolM: number
@@ -88,6 +93,7 @@ export const DEFAULT_CONFIG: RoutingConfig = {
       { band: 'busy', min: 0 },
     ],
   },
+  winter: { matchM: 12, parallelDeg: 25 },
   similarity: { tolM: 25, minDistinctM: 400, minDistinctFrac: 0.2 },
   caps: {
     fewestLights: { frac: 0.3, minSec: 240 },

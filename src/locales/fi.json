@@ -48,7 +48,11 @@
     "exposure_carFree": "Autoton",
     "exposure_quiet": "Hiljaiset kadut",
     "exposure_adjacent": "Liikenteen vieressä",
-    "exposure_traffic": "Liikenteen seassa"
+    "exposure_traffic": "Liikenteen seassa",
+    "winter": "{{km, number(minimumFractionDigits: 1; maximumFractionDigits: 1)}} km tehostetun talvihoidon reiteillä",
+    "winterMaintenance": "Talvihoito tällä reitillä",
+    "winter_brush": "Harjasuolattu {{km, number(minimumFractionDigits: 1; maximumFractionDigits: 1)}} km",
+    "winter_plough": "Tehostettu auraus {{km, number(minimumFractionDigits: 1; maximumFractionDigits: 1)}} km"
   },
   "planErrors": {
     "NO_ROUTE": "Paikkojen välille ei löydy pyöräreittiä. Siirrä lähtöpaikkaa tai määränpäätä lähemmäs katua tai polkua.",
@@ -86,7 +90,16 @@
     "speed_fast": "Reipas",
     "speedHint_relaxed": "Reitit ja ajat {{kmh}} km/h matkavauhdilla.",
     "speedHint_normal": "Reitit ja ajat {{kmh}} km/h matkavauhdilla.",
-    "speedHint_fast": "Reitit ja ajat {{kmh}} km/h matkavauhdilla, kuten sähköpyörällä."
+    "speedHint_fast": "Reitit ja ajat {{kmh}} km/h matkavauhdilla, kuten sähköpyörällä.",
+    "sources": "Tietolähteet",
+    "source_digitransit": "Digitransit, HSL",
+    "source_digitransit_use": "Reittivaihtoehdot, osoitehaku ja kaupunkipyörät",
+    "source_osm": "© OpenStreetMapin tekijät",
+    "source_osm_use": "Liikennevalot, kadut ja väylät reittien vertailuun",
+    "source_map": "OpenFreeMap, © OpenMapTiles",
+    "source_map_use": "Karttapohja OpenStreetMap-aineistosta",
+    "source_helsinki": "Helsingin kaupunki",
+    "source_helsinki_use": "Talvihoidon priorisoidut reitit ja tietyöt"
   },
   "map": {
     "start": "Lähtö",

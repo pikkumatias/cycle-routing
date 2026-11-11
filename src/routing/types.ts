@@ -1,3 +1,5 @@
+import type { WinterKind } from './layers.js'
+
 /** [lat, lon] in WGS84 degrees. */
 export type LatLng = [number, number]
 
@@ -83,6 +85,11 @@ export type RouteProfile = {
   climbM: number
   /** The route as runs of one stress class: [metres along the route where the run ends, class]. */
   stressRuns: Array<[number, StressClass]>
+  /**
+   * Metres on Helsinki's priority winter-maintained routes, per kind. Only Helsinki publishes
+   * them, so the rest of a route is unknown rather than unmaintained.
+   */
+  winterM: Record<WinterKind, number>
   /** 0–100, absolute: the same route always gets the same number. */
   calmIndex: number
   calmBand: CalmBand

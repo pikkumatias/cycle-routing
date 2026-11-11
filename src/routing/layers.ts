@@ -43,6 +43,26 @@ export type OsmLayersFile = {
   gradeSeparated: string[]
 }
 
+export type WinterKind = 'brush' | 'plough'
+
+/**
+ * Helsinki's prioritised winter maintenance network, produced by `npm run data:winter`
+ * (scripts/build-winter-routes.ts) from the city's open WFS (CC BY 4.0).
+ */
+export type WinterRoutesFile = {
+  version: 1
+  fetchedAt: string
+  /** WFS layer the routes came from. */
+  source: string
+  /**
+   * `brush`: brush-salted (swept, salted, no grit); `plough`: intensified ploughing (ploughed
+   * by 07:00 and within 4 h of a daytime snowfall).
+   */
+  routes: Array<{ kind: WinterKind; name: string; /** Encoded polyline, precision 6. */ geom: string }>
+}
+
+export type WinterSegment = { kind: WinterKind; a: LatLng; b: LatLng }
+
 export type Road = Omit<RoadRecord, 'geom' | 'signals'> & {
   geom: LatLng[]
   signals: LatLng[]
@@ -58,6 +78,8 @@ export type Layers = {
   roadSegments: GridIndex<RoadSegment>
   calmNodes: GridIndex<LatLng>
   gradeSeparated: GridIndex<GradeSegment>
+  /** Helsinki's priority winter-maintained routes; empty when no winter file is given. */
+  winter: GridIndex<WinterSegment>
   /** [south, west, north, east] the data covers. */
   bbox: [number, number, number, number]
   /** Identifies the data the plan was computed from. */
@@ -66,7 +88,7 @@ export type Layers = {
 
 const CELL_M = 100
 
-export function buildLayers(file: OsmLayersFile): Layers {
+export function buildLayers(file: OsmLayersFile, winterFile?: WinterRoutesFile): Layers {
   const signals = new GridIndex<LatLng>(CELL_M)
   for (const s of file.signals) signals.insert(s, [s])
 
@@ -95,5 +117,14 @@ export function buildLayers(file: OsmLayersFile): Layers {
     }
   }
 
-  return { signals, roadSegments, calmNodes, gradeSeparated, bbox: file.bbox, dataVersion: file.osmTimestamp }
+  const winter = new GridIndex<WinterSegment>(CELL_M)
+  for (const route of winterFile?.routes ?? []) {
+    const geom = polyline.decode(route.geom, 6)
+    for (let i = 0; i < geom.length - 1; i++) {
+      const seg = { kind: route.kind, a: geom[i], b: geom[i + 1] }
+      winter.insert(seg, [seg.a, seg.b])
+    }
+  }
+
+  return { signals, roadSegments, calmNodes, gradeSeparated, winter, bbox: file.bbox, dataVersion: file.osmTimestamp }
 }

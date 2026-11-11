@@ -4,6 +4,7 @@ import { cumulativeLengths } from './geo.js'
 import type { Layers } from './layers.js'
 import { findSignalStops } from './signals.js'
 import { classifySegments, findMajorCrossings } from './stress.js'
+import { winterMetres } from './winter.js'
 import type { CalmBand, Candidate, LatLng, RouteProfile, StressClass } from './types.js'
 
 /** The whole route as one polyline; the shared point where two legs meet appears once. */
@@ -81,6 +82,7 @@ export function profileRoute(candidate: Candidate, layers: Layers, cfg: RoutingC
     outsideM,
     climbM: climbM(candidate.legSteps.flat()),
     stressRuns,
+    winterM: winterMetres(segments, layers, cfg),
     calmIndex: index,
     calmBand: calmBand(index, cfg),
   }

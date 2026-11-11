@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { readFile } from 'node:fs/promises'
 import polyline from '@mapbox/polyline'
-import type { OsmLayersFile } from '../src/routing/layers'
+import type { OsmLayersFile, WinterRoutesFile } from '../src/routing/layers'
 import { mockRes } from './_lib/testing'
 
 const layerFile: OsmLayersFile = {
@@ -16,8 +16,10 @@ const layerFile: OsmLayersFile = {
   gradeSeparated: [],
 }
 
+const winterFile: WinterRoutesFile = { version: 1, fetchedAt: 'test', source: 'test', routes: [] }
+
 vi.mock('node:fs/promises', () => ({
-  readFile: vi.fn(async () => JSON.stringify(layerFile)),
+  readFile: vi.fn(async (path: string) => JSON.stringify(path.endsWith('winter-routes.json') ? winterFile : layerFile)),
 }))
 
 const from = { lat: 60.192059, lon: 24.945831 }
@@ -210,7 +212,7 @@ describe('/api/route-plan', () => {
     expect(body.cards[0].primary).toBe('fastest')
     expect(body.routes.map((r) => r.id)).toEqual([body.cards[0].routeId])
     expect(polyline.decode(body.routes[0].legs[0])).toHaveLength(2)
-    expect(body.routes[0]).toMatchObject({ climbM: expect.any(Number), stressRuns: expect.any(Array) })
+    expect(body.routes[0]).toMatchObject({ climbM: expect.any(Number), stressRuns: expect.any(Array), winterM: { brush: 0, plough: 0 } })
     expect(body.meta.dataVersion).toBe('2026-10-01T00:00:00Z')
     expect(body.meta.calls).toBeGreaterThanOrEqual(3)
   })

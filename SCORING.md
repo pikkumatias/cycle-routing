@@ -107,6 +107,12 @@ timestamp. The API rejects trips outside the file's bbox (autocomplete doesn't o
 outside it either); routes between two points inside can still leave it (see Selection, 5).
 Covering more of north Vantaa and west Espoo needs a larger source than the BBBike extract.
 
+`data/winter-routes.json` (`npm run data:winter`, `scripts/build-winter-routes.ts`) is Helsinki's
+prioritised winter maintenance network from the city's WFS: brush-salted and intensified-ploughing
+routes. `profile.winterM` counts the metres per kind where a route segment's midpoint is within
+12 m of a winter route running the same way (within 25°); brush-salting wins where both match
+(`winter.ts`). It is shown on the cards in winter and doesn't affect selection yet.
+
 ## File map
 
 | File | Role |

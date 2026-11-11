@@ -1,10 +1,11 @@
 import { useMemo, useRef, type KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Construction, Loader2, TrendingUp, TriangleAlert } from 'lucide-react'
+import { Construction, Loader2, Snowflake, TrendingUp, TriangleAlert } from 'lucide-react'
 import type { PlannedRoute, RouteCard } from '../api/routePlan'
 import { useNow } from '../hooks/useNow'
 import { appLanguage } from '../i18n'
 import { minutes } from '../utils/format'
+import { isWinterSeason } from '../utils/winterSeason'
 import { CALM_BAND_CLASS } from './calmBand'
 import { BUCKET_BAND, exposureShares } from './exposure'
 import { RouteRibbon } from './RouteRibbon'
@@ -41,6 +42,7 @@ export function RouteOptions({ cards, routesById, selectedId, onSelect, roadwork
   const rowRefs = useRef<(HTMLButtonElement | null)[]>([])
   const shown = cards.filter((c) => routesById[c.routeId])
   const maxDuration = Math.max(0, ...shown.map((c) => routesById[c.routeId].durationSec))
+  const winter = isWinterSeason(now)
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     const step = e.key === 'ArrowDown' || e.key === 'ArrowRight' ? 1 : e.key === 'ArrowUp' || e.key === 'ArrowLeft' ? -1 : 0
@@ -61,6 +63,8 @@ export function RouteOptions({ cards, routesById, selectedId, onSelect, roadwork
         // Climb to the nearest 5 m: the elevation model isn't finer than that
         const climb = Math.round(route.climbM / 5) * 5
         const arrival = clock.format(new Date(now.getTime() + route.durationSec * 1000))
+        // Under 100 m is a crossing or a junction, not riding on a winter route
+        const winterKm = winter ? (route.winterM.brush + route.winterM.plough) / 1000 : 0
         return (
           <button
             key={card.routeId}
@@ -134,9 +138,17 @@ export function RouteOptions({ cards, routesById, selectedId, onSelect, roadwork
                   <span className="sr-only">{t('routes.climb', { m: climb })}</span>
                 </span>
               )}
+              {winterKm >= 0.1 && (
+                <span className="inline-flex items-center gap-1">
+                  <Snowflake aria-hidden className="size-3.5" />
+                  {t('routes.winter', { km: winterKm })}
+                </span>
+              )}
             </span>
 
             {selected && <ExposureBreakdown stressM={route.stressM} />}
+
+            {selected && winterKm >= 0.1 && <WinterBreakdown winterM={route.winterM} />}
 
             {selected && roadworks?.enabled && (
               <span className={cn('inline-flex items-center gap-1.5 text-xs', roadworks.failed && 'text-muted-foreground')}>
@@ -173,6 +185,22 @@ function ExposureBreakdown({ stressM }: { stressM: PlannedRoute['stressM'] }) {
         <span role="listitem" key={bucket} className="inline-flex items-center gap-1.5">
           <span aria-hidden className={cn('size-2 rounded-sm', CALM_BAND_CLASS[BUCKET_BAND[bucket]])} />
           {t(`routes.exposure_${bucket}`)} <span className="tabular">{percent}%</span>
+        </span>
+      ))}
+    </span>
+  )
+}
+
+/** Metres brush-salted and on intensified-ploughing routes. */
+function WinterBreakdown({ winterM }: { winterM: PlannedRoute['winterM'] }) {
+  const { t } = useTranslation()
+  const kinds = (['brush', 'plough'] as const).filter((k) => winterM[k] >= 100)
+  return (
+    <span role="list" aria-label={t('routes.winterMaintenance')} className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+      {kinds.map((kind) => (
+        <span role="listitem" key={kind} className="inline-flex items-center gap-1.5">
+          <Snowflake aria-hidden className="size-3" />
+          {t(`routes.winter_${kind}`, { km: winterM[kind] / 1000 })}
         </span>
       ))}
     </span>

@@ -20,6 +20,7 @@ function makeRoute(id: string, overrides?: Partial<PlannedRoute>): PlannedRoute 
     majorCrossings: 0,
     climbM: 0,
     stressRuns: [],
+    winterM: { brush: 0, plough: 0 },
     ...overrides,
   }
 }
@@ -187,5 +188,43 @@ describe('RouteOptions', () => {
     expect(breakdown).toHaveTextContent('In traffic 15%')
     expect(breakdown).not.toHaveTextContent('Next to traffic')
   })
-})
 
+  describe('winter routes', () => {
+    const wintry = {
+      ...routesById,
+      a: makeRoute('a', { winterM: { brush: 2340, plough: 1100 } }),
+      b: makeRoute('b', { winterM: { brush: 0, plough: 60 } }),
+    }
+    const at = (iso: string) => {
+      vi.useFakeTimers({ toFake: ['Date'] })
+      vi.setSystemTime(new Date(iso))
+    }
+
+    it('shows the distance on winter routes in winter, and the split for the selected route', () => {
+      at('2026-12-01T08:00:00')
+      try {
+        renderOptions({ routesById: wintry })
+        const [a, b] = screen.getAllByRole('radio')
+        expect(a).toHaveTextContent('3.4 km on winter routes')
+        // A few metres is a crossing, not riding on a winter route
+        expect(b).not.toHaveTextContent('on winter routes')
+        const split = screen.getByRole('list', { name: 'Winter maintenance on this route' })
+        expect(split).toHaveTextContent('Brush-salted 2.3 km')
+        expect(split).toHaveTextContent('Priority ploughing 1.1 km')
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it('says nothing about winter routes in summer', () => {
+      at('2026-07-01T08:00:00')
+      try {
+        renderOptions({ routesById: wintry })
+        expect(screen.queryByText(/winter routes/)).not.toBeInTheDocument()
+        expect(screen.queryByRole('list', { name: 'Winter maintenance on this route' })).not.toBeInTheDocument()
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+  })
+})
